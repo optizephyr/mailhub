@@ -52,34 +52,8 @@ class EventStore:
                 external_id TEXT NOT NULL,
                 PRIMARY KEY (event_row_id, sink)
             );
-
-            -- legacy table may still exist; keep readable for migration
-            CREATE TABLE IF NOT EXISTS synced_events (
-                message_id TEXT NOT NULL,
-                sink TEXT NOT NULL,
-                title TEXT,
-                start_at TEXT,
-                external_id TEXT,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (message_id, sink)
-            );
             """
         )
-        self._conn.commit()
-        self._migrate_legacy()
-
-    def _migrate_legacy(self) -> None:
-        rows = self._conn.execute("SELECT message_id FROM synced_events").fetchall()
-        now = datetime.utcnow().isoformat(timespec="seconds")
-        for row in rows:
-            self._conn.execute(
-                """
-                INSERT OR IGNORE INTO processed_messages
-                (message_id, action, event_row_id, processed_at)
-                VALUES (?, 'create', NULL, ?)
-                """,
-                (row["message_id"], now),
-            )
         self._conn.commit()
 
     def get_last_uid(self, folder: str = "INBOX") -> Optional[int]:
@@ -145,6 +119,12 @@ class EventStore:
             source_message_id=row["source_message_id"] or "",
             sinks=self._load_sinks(row["id"]),
         )
+
+    def get_event(self, event_row_id: int) -> Optional[StoredEvent]:
+        row = self._conn.execute(
+            "SELECT * FROM calendar_events WHERE id = ?", (event_row_id,)
+        ).fetchone()
+        return self._row_to_event(row) if row else None
 
     def find_active_event(
         self,

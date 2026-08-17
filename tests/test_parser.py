@@ -212,8 +212,9 @@ def test_parse_mail_coarse_reject_skips_llm(tmp_path: Path, monkeypatch):
     mail = _mail(subject="账单通知", text="本月话费 30 元。")
     assert parse_mail(mail, settings) is None
     assert called["n"] == 0
-    log = (tmp_path / "logs" / "coarse_filter.jsonl").read_text(encoding="utf-8")
+    log = (tmp_path / "logs" / "mail_lifecycle.jsonl").read_text(encoding="utf-8")
     assert "no_recruit_signal" in log
+    assert "rejected_coarse" in log
 
 
 def test_parse_mail_model_reject_no_heuristic_fallback(tmp_path: Path, monkeypatch):
@@ -268,21 +269,42 @@ def test_parse_mail_model_reject_no_heuristic_fallback(tmp_path: Path, monkeypat
     assert parse_mail(mail, settings) is None
     assert called["heuristic"] == 0
 
+    lifecycle = [
+        json.loads(line)
+        for line in (tmp_path / "logs" / "mail_lifecycle.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if line.strip()
+    ]
+    assert len(lifecycle) == 1
+    assert lifecycle[0]["outcome"]["status"] == "rejected_parse"
+    assert lifecycle[0]["outcome"]["summary"] == "模型判定选时间邀约，不建日程"
+    assert lifecycle[0]["stages"][-1]["result"] == "reject_by_model"
+    assert lifecycle[0]["stages"][-1]["llm"] == {
+        "decision": "reject_by_model",
+        "latency_ms": lifecycle[0]["stages"][-1]["llm"]["latency_ms"],
+        "model": "gpt-4o-mini",
+    }
+    assert "reject_reason" not in lifecycle[0]["stages"][-1]["llm"]
+
     records = [
         json.loads(line)
-        for line in (tmp_path / "logs" / "llm_parse.jsonl")
+        for line in (tmp_path / "logs" / "llm_io.jsonl")
         .read_text(encoding="utf-8")
         .splitlines()
         if line.strip()
     ]
     assert len(records) == 1
     assert records[0]["decision"] == "reject_by_model"
+    assert records[0]["trace_id"] == lifecycle[0]["trace_id"]
     assert records[0]["input"]
     assert records[0]["output_raw"]
     assert records[0]["output_parsed"]["relevant"] is False
 
 
-def test_parse_mail_logs_think_block_as_reasoning(tmp_path: Path, monkeypatch):
+def test_parse_mail_keeps_think_in_raw_but_not_as_separate_field(
+    tmp_path: Path, monkeypatch
+):
     settings = _settings(
         tmp_path,
         llm_api_base="https://api.example.com/v1",
@@ -327,13 +349,27 @@ def test_parse_mail_logs_think_block_as_reasoning(tmp_path: Path, monkeypatch):
     assert event is not None
     assert event.start_at == "2026-08-20T10:00:00"
 
+    lifecycle = json.loads(
+        (tmp_path / "logs" / "mail_lifecycle.jsonl").read_text(encoding="utf-8").strip()
+    )
+    assert lifecycle["outcome"]["status"] == "dry_run"
+    parse_stage = next(s for s in lifecycle["stages"] if s["name"] == "parse")
+    assert parse_stage["engine"] == "llm"
+    assert parse_stage["result"] == "accept"
+    assert lifecycle["stages"][-1]["name"] == "apply"
+    assert lifecycle["stages"][-1]["result"] == "dry_run"
+    assert "match" not in lifecycle["stages"][-1]
+
     record = json.loads(
-        (tmp_path / "logs" / "llm_parse.jsonl").read_text(encoding="utf-8").strip()
+        (tmp_path / "logs" / "llm_io.jsonl").read_text(encoding="utf-8").strip()
     )
     assert record["decision"] == "accept"
-    assert record["output_reasoning"] == reasoning
-    # 原始响应仍完整保留 think 标签
+    assert record["trace_id"] == lifecycle["trace_id"]
+    assert "output_reasoning" not in record
+    # 原始响应完整保留（含 think）；解析结果不含思考过程
     assert "<think>" in record["output_raw"]
+    assert reasoning in record["output_raw"]
+    assert record["output_parsed"]["start_at"] == "2026-08-20T10:00:00"
 
 
 def test_parse_mail_llm_error_falls_back_heuristic(tmp_path: Path, monkeypatch):
@@ -358,11 +394,20 @@ def test_parse_mail_llm_error_falls_back_heuristic(tmp_path: Path, monkeypatch):
     event = parse_mail(mail, settings)
     assert event is not None
     assert event.start_at.startswith("2026-08-25T10:00")
+
+    lifecycle = json.loads(
+        (tmp_path / "logs" / "mail_lifecycle.jsonl").read_text(encoding="utf-8").strip()
+    )
+    parse_stage = next(s for s in lifecycle["stages"] if s["name"] == "parse")
+    assert parse_stage["engine"] == "llm_then_heuristic"
+    assert parse_stage["result"] == "error_fallback"
+
     record = json.loads(
-        (tmp_path / "logs" / "llm_parse.jsonl").read_text(encoding="utf-8").strip()
+        (tmp_path / "logs" / "llm_io.jsonl").read_text(encoding="utf-8").strip()
     )
     assert record["decision"] == "error"
     assert "network down" in (record["error"] or "")
+    assert record["trace_id"] == lifecycle["trace_id"]
 
 
 def test_store_cursor_and_active_event(tmp_path: Path):

@@ -36,6 +36,9 @@ cp .env.example .env
 # 列出本机 Apple 日历名
 python3 -m mail_to_calendar list-apple
 
+# 列出目标日历里已有的日程（核对匹配用）
+python3 -m mail_to_calendar scan-apple --days 60
+
 # 先干跑：只解析不写入
 python3 -m mail_to_calendar sync --dry-run
 
@@ -61,13 +64,50 @@ python3 -m mail_to_calendar sync --dry-run --json
 
 ### 解析与日程生命周期
 
-1. **规则粗过滤**（`rules.coarse_filter`）：无招聘信号、或命中宣推 / 投递确认 / 福利等噪声信号时丢弃（不调 LLM）；主题命中宣讲会 / 直播预约的群发活动同样丢弃（`broadcast_signal`）；拒绝记录写入 `data/logs/coarse_filter.jsonl`
-2. **精解析**：启用 `LLM_API_*`（需同时配置 `LLM_API_BASE` + `LLM_API_KEY`）时先走模型（I/O 写入 `data/logs/llm_parse.jsonl`）；模型明确拒绝（无关 / 选时间邀约）不兜底；仅在超时 / 坏 JSON / 字段残缺时回退启发式。未启用 LLM 时直接走启发式
+1. **规则粗过滤**（`rules.coarse_filter`）：无招聘信号、或命中宣推 / 投递确认 / 福利等噪声信号时丢弃（不调 LLM）；主题命中宣讲会 / 直播预约的群发活动同样丢弃（`broadcast_signal`）
+2. **精解析**：启用 `LLM_API_*`（需同时配置 `LLM_API_BASE` + `LLM_API_KEY`）时先走模型；模型明确拒绝（无关 / 选时间邀约）不兜底；仅在超时 / 坏 JSON / 字段残缺时回退启发式。未启用 LLM 时直接走启发式
 3. 阶段：`schedule_invite`（选时间）→ 不建日程；`confirmed` → 建日程；开放窗口测评（无固定开考时刻）也不建日程
 4. 动作：
    - `create`：新建（同公司同学段若已有不同时间，则更新旧日程）
-   - `reschedule`：按公司名或邮件回复链匹配旧日程并更新
+   - `reschedule`：匹配旧日程并更新
    - `cancel`：匹配旧日程并从 Apple 日历删除
+5. 写入日历时会在描述末尾埋 `[mail-to-calendar] mid=<message-id>`，供日后从日历反查归属
+
+### 查日志
+
+同步后日志在 `data/logs/`（JSONL，一行一封邮件 / 一次 LLM 调用）：
+
+| 文件 | 内容 |
+|------|------|
+| `mail_lifecycle.jsonl` | 主日志：一封邮件从粗过滤 → 解析 → 写入的全流程 |
+| `llm_io.jsonl` | 旁路：完整 prompt / `output_raw` / `output_parsed`（不含 thinking） |
+
+两份日志用同一字段 **`trace_id`** 对应：处理一封邮件时生成一个 id，主日志必有；调了 LLM 时旁路也会写同一 id。粗过滤直接拒绝或纯启发式、未调模型时，只有主日志、没有旁路行。
+
+**怎么读主日志**：先看 `outcome.summary`（中文结论），再扫 `stages`（`coarse_filter` → `parse` → `apply`）。`outcome.status` 常见值：`applied` / `rejected_coarse` / `rejected_parse` / `skipped_duplicate` / `skipped_same` / `dry_run` / `failed`。
+
+```bash
+# 最近几封的结论
+jq -r '.outcome.summary' data/logs/mail_lifecycle.jsonl | tail
+
+# 按主题查全流程
+jq 'select(.mail.subject | contains("快手"))' data/logs/mail_lifecycle.jsonl
+
+# 只看写入成功 / 失败
+jq 'select(.outcome.status == "applied")' data/logs/mail_lifecycle.jsonl
+jq 'select(.outcome.status == "failed")' data/logs/mail_lifecycle.jsonl
+
+# 粗过滤被丢掉的
+jq 'select(.outcome.status == "rejected_coarse") | {subject: .mail.subject, summary: .outcome.summary}' \
+  data/logs/mail_lifecycle.jsonl
+
+# 先取主日志的 trace_id，再对照 LLM 旁路
+TRACE=$(jq -r 'select(.mail.subject | contains("快手")) | .trace_id' \
+  data/logs/mail_lifecycle.jsonl | head -1)
+jq --arg t "$TRACE" 'select(.trace_id == $t)' data/logs/llm_io.jsonl
+```
+
+未装 `jq` 时可：`brew install jq`，或直接用编辑器打开 jsonl（每行是一个完整 JSON）。
 
 ### LLM 配置
 
@@ -85,14 +125,27 @@ LLM_MODEL=deepseek-v4-flash
 # LLM_MODEL=MiniMax-M3
 ```
 
-推理模型（把思考过程写在 `<think>` 里或独立的 `reasoning_content` 字段）也可直接用：解析前会剥掉思考过程再取 JSON，`data/logs/llm_parse.jsonl` 里 `output_raw` 保留原始响应、`output_reasoning` 单独存思考过程。
+推理模型（把思考过程写在 `<think>` 里或独立的 `reasoning_content` 字段）也可直接用：解析前会剥掉思考过程再取 JSON。`data/logs/llm_io.jsonl` 保留完整 `output_raw` 与 `output_parsed`，不单独落 thinking。
 
 ### 匹配旧日程的方式
+
+先查本地库 `data/synced.sqlite`：
 
 1. 优先：`In-Reply-To` / `References` 指向此前建日程的邮件
 2. 其次：同一 `company` + `event_type` 的最新活跃日程
 
-> 升级前用旧逻辑创建、且 Apple 未保存 uid 的日程，无法自动改期/删除，需手动清一次；之后新建的日程会保存 uid/event_id。
+本地库没命中时，**回到 Apple 日历里找已有日程并接管**（`CALENDAR_SCAN_DAYS` 天窗口，默认 90，设 0 关闭）：
+
+3. 描述里埋的来源邮件 id（`[mail-to-calendar] mid=...`）落在本封邮件的回复链上
+4. 标题形如 `[面试] 公司名` 且公司名对得上、学段不冲突的最近一场
+
+接管后会把该日程的 Apple `uid` 写回本地库，后续改期 / 取消直接更新同一条，不会再扫日历。只有标题带 `[标签]` 前缀的日程才参与第 4 步，避免误改手动创建的同名日程。
+
+核对日历里读到了什么：
+
+```bash
+python3 -m mail_to_calendar scan-apple --days 60
+```
 
 ## 规则引擎评测
 
@@ -115,18 +168,21 @@ mail_to_calendar/
   mail_qq.py      # QQ IMAP（增量 UID）
   rules.py        # 规则粗过滤
   parser.py       # 启发式 / LLM 精解析、改期 / 取消
-  apple.py        # macOS Calendar
+  apple.py        # macOS Calendar 读写
+  calendar_match.py # 邮件 ↔ 日历已有日程的匹配
   store.py        # 游标 + 去重 + 活跃日程
   config.py       # .env 配置
   models.py       # 数据结构
-  llm_log.py      # LLM / 粗过滤日志
+  lifecycle_log.py # 邮件生命周期 + LLM I/O 旁路
   cli.py          # 命令行
 data/
   email_example/  # 评测用 .eml + labels.json
   synced.sqlite   # 运行后生成：游标与活跃日程
-  logs/           # 运行后生成：coarse_filter / llm_parse
+  logs/           # 运行后生成：mail_lifecycle / llm_io
 tests/
   eml_loader.py
   test_parser.py
+  test_calendar_match.py
+  test_sync_lifecycle.py
   test_rules_corpus.py
 ```

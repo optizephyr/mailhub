@@ -3,15 +3,19 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timedelta
 from typing import Optional
 
 from .apple import (
     create_apple_event,
     delete_apple_event,
     list_apple_calendars,
+    list_apple_events,
     update_apple_event,
 )
+from .calendar_match import match_calendar_event
 from .config import load_settings, require_mail_credentials
+from .lifecycle_log import MailTrace
 from .mail_qq import fetch_mails
 from .models import CandidateEvent, StoredEvent, SyncResult
 from .parser import parse_mail
@@ -25,12 +29,78 @@ def cmd_list_apple(_: argparse.Namespace) -> None:
         print(f"  - {name}")
 
 
-def _find_target(store: EventStore, event: CandidateEvent) -> Optional[StoredEvent]:
-    return store.find_active_event(
+def _scan_window(days: int) -> tuple[datetime, datetime]:
+    now = datetime.now()
+    return now - timedelta(days=1), now + timedelta(days=days)
+
+
+def cmd_scan_apple(args: argparse.Namespace) -> None:
+    settings = load_settings()
+    days = args.days or settings.calendar_scan_days or 90
+    start, end = _scan_window(days)
+    events = list_apple_events(settings.apple_calendar_name, start, end)
+    print(f"日历「{settings.apple_calendar_name}」未来 {days} 天内 {len(events)} 条日程：")
+    for ev in events:
+        marker = f"  来源={ev.marker_message_id}" if ev.marker_message_id else ""
+        print(f"  - {ev.start_at}  {ev.summary}  uid={ev.uid}{marker}")
+
+
+def _adopt_from_calendar(
+    store: EventStore,
+    event: CandidateEvent,
+    settings,
+) -> Optional[StoredEvent]:
+    """本地库没记录时（库被清过 / 旧版本建的 / 人工改过），回到日历里找并接管。"""
+    if settings.calendar_scan_days <= 0:
+        return None
+
+    start, end = _scan_window(settings.calendar_scan_days)
+    try:
+        existing = list_apple_events(settings.apple_calendar_name, start, end)
+    except RuntimeError as exc:
+        print(f"  - 日历兜底匹配跳过（读取失败）: {exc}")
+        return None
+
+    matched = match_calendar_event(event, existing)
+    if not matched:
+        return None
+
+    row_id = store.create_event(
+        company=event.company,
+        event_type=event.event_type,
+        title=matched.summary,
+        start_at=matched.start_at,
+        end_at=matched.end_at,
+        source_message_id=matched.marker_message_id or event.message_id,
+        sinks={"apple": matched.uid},
+    )
+    print(f"  - 日历中已有「{matched.summary}」{matched.start_at}，接管为 #{row_id}")
+    return store.get_event(row_id)
+
+
+def _find_target(
+    store: EventStore,
+    event: CandidateEvent,
+    settings,
+) -> tuple[Optional[StoredEvent], str]:
+    """返回 (目标日程, 匹配途径)。途径: references | company_type | calendar_adopt | none。"""
+    refs = [r for r in event.references if r]
+    if refs:
+        target = store.find_active_event(references=refs)
+        if target:
+            return target, "references"
+
+    target = store.find_active_event(
         company=event.company,
         event_type=event.event_type if event.event_type != "other" else "",
-        references=event.references,
     )
+    if target:
+        return target, "company_type"
+
+    adopted = _adopt_from_calendar(store, event, settings)
+    if adopted:
+        return adopted, "calendar_adopt"
+    return None, "none"
 
 
 def _apply_create(
@@ -87,6 +157,57 @@ def _apply_cancel(
     store.cancel_event(target.id, event.message_id)
 
 
+def _finish_apply(
+    trace: MailTrace,
+    *,
+    result: str,
+    status: str,
+    summary: str,
+    match_via: str = "none",
+    event_row_id: Optional[int] = None,
+    sinks: Optional[dict[str, str]] = None,
+    error: Optional[str] = None,
+) -> None:
+    stage: dict[str, object] = {
+        "name": "apply",
+        "result": result,
+        "match": {"via": match_via},
+    }
+    if event_row_id is not None:
+        stage["event_row_id"] = event_row_id
+    if sinks:
+        stage["sinks"] = sinks
+    if error:
+        stage["error"] = error
+    trace.add_stage(stage)
+    trace.finish(status, summary)
+
+
+def _finish_applied(
+    trace: MailTrace,
+    store: EventStore,
+    *,
+    result: str,
+    summary: str,
+    match_via: str,
+    event_row_id: int,
+    sinks: Optional[dict[str, str]] = None,
+) -> None:
+    """写入成功后的统一收尾：从 store 补 sinks（可显式传入）。"""
+    if sinks is None:
+        row = store.get_event(event_row_id)
+        sinks = row.sinks if row else None
+    _finish_apply(
+        trace,
+        result=result,
+        status="applied",
+        summary=summary,
+        match_via=match_via,
+        event_row_id=event_row_id,
+        sinks=sinks,
+    )
+
+
 def cmd_sync(args: argparse.Namespace) -> None:
     settings = load_settings()
     require_mail_credentials(settings)
@@ -120,8 +241,19 @@ def cmd_sync(args: argparse.Namespace) -> None:
         f"（max_uid={fetched.max_uid}）"
     )
 
+    run_meta = {
+        "mode": fetched.mode,
+        "dry_run": dry_run,
+        "full": full,
+    }
+
     for mail in fetched.mails:
-        event = parse_mail(mail, settings)
+        trace = MailTrace(
+            lifecycle_path=settings.lifecycle_log_path,
+            mail=mail,
+            run=run_meta,
+        )
+        event = parse_mail(mail, settings, trace=trace)
         if not event:
             continue
         result.matched += 1
@@ -139,58 +271,135 @@ def cmd_sync(args: argparse.Namespace) -> None:
         )
 
         if dry_run:
+            trace.finish_dry_run(
+                f"解析为{event.action}「{event.title}」，dry-run 未写入"
+            )
             continue
 
         if store.already_processed(event.message_id):
             result.skipped += 1
             print("  - 该邮件已处理，跳过")
+            _finish_apply(
+                trace,
+                result="skipped_duplicate",
+                status="skipped_duplicate",
+                summary="该邮件已处理过，跳过",
+            )
             continue
 
         try:
             if event.action == "cancel":
-                target = _find_target(store, event)
+                target, via = _find_target(store, event, settings)
                 if not target:
-                    result.failed.append(f"cancel: 未找到可取消的旧日程 company={event.company}")
+                    result.failed.append(
+                        f"cancel: 未找到可取消的旧日程 company={event.company}"
+                    )
                     print("  - 未找到可取消的旧日程（需公司名匹配或回复链）")
                     store.mark_processed(event.message_id, "cancel", None)
+                    _finish_apply(
+                        trace,
+                        result="failed",
+                        status="failed",
+                        summary="取消失败：未找到可取消的旧日程",
+                        match_via=via,
+                        error="no matching active event",
+                    )
                     continue
                 _apply_cancel(target, event, store)
                 store.mark_processed(event.message_id, "cancel", target.id)
                 result.cancelled += 1
                 print(f"  - 已删除旧日程 #{target.id}")
+                _finish_applied(
+                    trace,
+                    store,
+                    result="cancelled",
+                    summary=f"已取消日程 #{target.id}",
+                    match_via=via,
+                    event_row_id=target.id,
+                    sinks=target.sinks,
+                )
             elif event.action == "reschedule":
-                target = _find_target(store, event)
+                target, via = _find_target(store, event, settings)
                 if target:
                     _apply_update(target, event, settings, store)
                     store.mark_processed(event.message_id, "reschedule", target.id)
                     result.updated += 1
                     print(f"  - 已更新日程 #{target.id}")
+                    _finish_applied(
+                        trace,
+                        store,
+                        result="updated",
+                        summary=f"改期并更新日程 #{target.id}",
+                        match_via=via,
+                        event_row_id=target.id,
+                    )
                 else:
                     row_id = _apply_create(event, settings, store)
                     store.mark_processed(event.message_id, "reschedule", row_id)
                     result.created += 1
                     print("  - 未找到旧日程，已新建")
+                    _finish_applied(
+                        trace,
+                        store,
+                        result="created",
+                        summary=f"改期未匹配到旧日程，已新建 #{row_id}",
+                        match_via=via,
+                        event_row_id=row_id,
+                    )
             else:
                 # create：若同公司同学段已有活跃日程且时间不同，视为改期覆盖
-                target = _find_target(store, event)
+                target, via = _find_target(store, event, settings)
                 if target and target.start_at and target.start_at != event.start_at:
                     _apply_update(target, event, settings, store)
                     store.mark_processed(event.message_id, "create", target.id)
                     result.updated += 1
                     print(f"  - 检测到时间变化，已更新日程 #{target.id}")
+                    _finish_applied(
+                        trace,
+                        store,
+                        result="updated",
+                        summary=f"检测到时间变化，已更新日程 #{target.id}",
+                        match_via=via,
+                        event_row_id=target.id,
+                    )
                 elif target and target.start_at == event.start_at:
                     store.mark_processed(event.message_id, "create", target.id)
                     result.skipped += 1
                     print(f"  - 已存在相同时间日程 #{target.id}，跳过")
+                    _finish_apply(
+                        trace,
+                        result="skipped_same",
+                        status="skipped_same",
+                        summary=f"已存在相同时间日程 #{target.id}，跳过",
+                        match_via=via,
+                        event_row_id=target.id,
+                        sinks=target.sinks,
+                    )
                 else:
                     row_id = _apply_create(event, settings, store)
                     store.mark_processed(event.message_id, "create", row_id)
                     result.created += 1
                     print("  - 已创建")
+                    _finish_applied(
+                        trace,
+                        store,
+                        result="created",
+                        summary=f"已新建日程 #{row_id}",
+                        match_via=via,
+                        event_row_id=row_id,
+                    )
         except Exception as exc:
             msg = str(exc)
             result.failed.append(msg)
             print(f"  - 失败: {msg}")
+            if not trace.finished:
+                _finish_apply(
+                    trace,
+                    result="failed",
+                    status="failed",
+                    summary=f"写入失败：{msg}",
+                    error=msg,
+                )
 
     if not dry_run and fetched.max_uid:
         prev = store.get_last_uid("INBOX") or 0
@@ -226,6 +435,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     apple = sub.add_parser("list-apple", help="列出本机 Apple 日历名称")
     apple.set_defaults(func=cmd_list_apple)
+
+    scan = sub.add_parser("scan-apple", help="列出目标日历里已有的日程（用于核对匹配）")
+    scan.add_argument(
+        "--days", type=int, default=0, help="往后看多少天，默认取 CALENDAR_SCAN_DAYS"
+    )
+    scan.set_defaults(func=cmd_scan_apple)
 
     return parser
 

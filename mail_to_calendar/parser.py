@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 import requests
 
 from .config import Settings
-from .llm_log import log_coarse_reject, log_llm_call
+from .lifecycle_log import MailTrace, event_brief, log_llm_io, new_trace_id
 from .mail_qq import MailItem
 from .models import CandidateEvent, LlmParseResult
 from .rules import coarse_filter
@@ -400,12 +400,6 @@ def _iter_json_object_spans(text: str):
             break
 
 
-def extract_reasoning(content: str) -> str:
-    """取出 <think> 里的推理过程，供日志留档。"""
-    blocks = [m.group(1).strip() for m in THINK_BLOCK_RE.finditer(content or "")]
-    return "\n\n".join(b for b in blocks if b)
-
-
 def parse_llm_json(content: str) -> dict:
     """Parse JSON from compatible APIs (Markdown fence / MiniMax <think> / trailing junk)."""
     text = content.strip()
@@ -556,10 +550,16 @@ def normalize_event(event: CandidateEvent) -> CandidateEvent:
 
 def _event_from_llm_data(mail: MailItem, data: dict[str, Any]) -> LlmParseResult:
     """把已解析的 JSON 转成 LlmParseResult（明确拒绝 vs 残缺）。"""
-    if not data.get("relevant"):
-        return LlmParseResult(decision="reject_by_model")
     if data.get("stage") == "schedule_invite":
-        return LlmParseResult(decision="reject_by_model")
+        return LlmParseResult(
+            decision="reject_by_model",
+            reject_reason="schedule_invite",
+        )
+    if not data.get("relevant"):
+        return LlmParseResult(
+            decision="reject_by_model",
+            reject_reason="irrelevant",
+        )
 
     action = data.get("action") or "create"
     if action not in ("create", "reschedule", "cancel"):
@@ -593,8 +593,13 @@ def _event_from_llm_data(mail: MailItem, data: dict[str, Any]) -> LlmParseResult
     return LlmParseResult(decision="accept", event=normalize_event(event))
 
 
-def llm_parse(mail: MailItem, settings: Settings) -> LlmParseResult:
-    """Stage C: LLM 精解析；每次调用都写完整 I/O log。"""
+def llm_parse(
+    mail: MailItem,
+    settings: Settings,
+    *,
+    trace: Optional[MailTrace] = None,
+) -> LlmParseResult:
+    """Stage C: LLM 精解析；完整 I/O 写入 llm_io 旁路（经 trace_id 关联）。"""
     if not settings.llm_enabled:
         return LlmParseResult(decision="error", error="llm not enabled")
 
@@ -628,7 +633,6 @@ def llm_parse(mail: MailItem, settings: Settings) -> LlmParseResult:
     ]
 
     output_raw: Optional[str] = None
-    output_reasoning: Optional[str] = None
     output_parsed: Optional[dict[str, Any]] = None
     decision = "error"
     error: Optional[str] = None
@@ -655,12 +659,6 @@ def llm_parse(mail: MailItem, settings: Settings) -> LlmParseResult:
         if not isinstance(content, str):
             raise ValueError("LLM 返回的 message.content 不是文本")
         output_raw = content
-        # DeepSeek 等把推理放在独立字段，MiniMax 等内联在 <think> 里
-        output_reasoning = (
-            str(message.get("reasoning_content") or "").strip()
-            or extract_reasoning(content)
-            or None
-        )
         output_parsed = parse_llm_json(content)
         result = _event_from_llm_data(mail, output_parsed)
         decision = result.decision
@@ -670,50 +668,179 @@ def llm_parse(mail: MailItem, settings: Settings) -> LlmParseResult:
         error = str(exc)
         result = LlmParseResult(decision="error", error=error)
 
-    log_llm_call(
-        settings.llm_log_path,
+    latency_ms = int((time.monotonic() - started) * 1000)
+    log_llm_io(
+        settings.llm_io_log_path,
+        trace_id=trace.trace_id if trace else new_trace_id(),
         message_id=mail.message_id,
         subject=mail.subject,
         model=settings.llm_model,
         api_base=settings.llm_api_base,
         input_messages=messages,
         output_raw=output_raw,
-        output_reasoning=output_reasoning,
         output_parsed=output_parsed,
         ok=output_parsed is not None,
         decision=decision,
         error=error,
-        latency_ms=int((time.monotonic() - started) * 1000),
+        latency_ms=latency_ms,
     )
+    result.latency_ms = latency_ms
     return result
 
 
-def parse_mail(mail: MailItem, settings: Settings) -> Optional[CandidateEvent]:
+def _llm_stage_meta(settings: Settings, llm_result: LlmParseResult) -> dict[str, Any]:
+    """主日志 parse.llm 只留摘要字段（完整 I/O 在 llm_io 旁路）。"""
+    return {
+        "decision": llm_result.decision,
+        "latency_ms": llm_result.latency_ms,
+        "model": settings.llm_model,
+    }
+
+
+def _add_parse_stage(
+    trace: MailTrace,
+    *,
+    engine: str,
+    result: str,
+    event: Optional[CandidateEvent] = None,
+    llm: Optional[dict[str, Any]] = None,
+) -> None:
+    stage: dict[str, Any] = {"name": "parse", "engine": engine, "result": result}
+    if llm is not None:
+        stage["llm"] = llm
+    if event is not None:
+        stage["event"] = event_brief(event)
+    trace.add_stage(stage)
+
+
+def parse_mail(
+    mail: MailItem,
+    settings: Settings,
+    *,
+    trace: Optional[MailTrace] = None,
+) -> Optional[CandidateEvent]:
     """
     解析流水线：
-      Stage A 规则粗过滤 → Stage C LLM（可选，含 I/O log）→ Stage D 启发式兜底 → Stage E 规范化
+      Stage A 规则粗过滤 → Stage C LLM（可选）→ Stage D 启发式兜底 → Stage E 规范化
     模型明确拒绝（irrelevant / schedule_invite）不走启发式。
+
+    若传入 trace，写入 coarse/parse 阶段；拒绝路径会 finish。
+    成功产出事件时不 finish，留给 apply 侧补全。
+    未传入 trace 时自建一条并在本函数内 finish（便于单测）。
     """
+    own_trace = trace is None
+    if own_trace:
+        trace = MailTrace(
+            lifecycle_path=settings.lifecycle_log_path,
+            mail=mail,
+            run={"mode": "parse_only", "dry_run": True},
+        )
+    assert trace is not None
+
     # Stage A
     coarse = coarse_filter(mail)
     if not coarse.passed:
-        log_coarse_reject(
-            settings.coarse_log_path,
-            message_id=mail.message_id,
-            subject=mail.subject,
-            reason=coarse.reason,
+        trace.add_stage(
+            {
+                "name": "coarse_filter",
+                "result": "reject",
+                "reason": coarse.reason,
+            }
         )
+        trace.finish("rejected_coarse", f"粗过滤拒绝：{coarse.reason}")
         return None
+
+    trace.add_stage(
+        {
+            "name": "coarse_filter",
+            "result": "pass",
+            "reason": coarse.reason,
+        }
+    )
 
     # Stage B/C
     if settings.llm_enabled:
-        llm_result = llm_parse(mail, settings)
-        if llm_result.decision == "accept" and llm_result.event:
-            return llm_result.event
-        if llm_result.decision == "reject_by_model":
-            return None
-        # incomplete / error → Stage D 启发式兜底
+        llm_result = llm_parse(mail, settings, trace=trace)
+        llm_meta = _llm_stage_meta(settings, llm_result)
 
-    # Stage D (+ E via normalize)
+        if llm_result.decision == "accept" and llm_result.event:
+            _add_parse_stage(
+                trace,
+                engine="llm",
+                result="accept",
+                llm=llm_meta,
+                event=llm_result.event,
+            )
+            if own_trace:
+                trace.finish_dry_run(
+                    f"解析为{llm_result.event.action}「{llm_result.event.title}」，未执行 apply"
+                )
+            return llm_result.event
+
+        if llm_result.decision == "reject_by_model":
+            reason = llm_result.reject_reason or "irrelevant"
+            if reason == "schedule_invite":
+                summary = "模型判定选时间邀约，不建日程"
+            else:
+                summary = "模型判定无关邮件，不建日程"
+            _add_parse_stage(
+                trace,
+                engine="llm",
+                result="reject_by_model",
+                llm=llm_meta,
+            )
+            trace.finish("rejected_parse", summary)
+            return None
+
+        # incomplete / error → Stage D 启发式兜底
+        fallback_result = (
+            "incomplete_fallback"
+            if llm_result.decision == "incomplete"
+            else "error_fallback"
+        )
+        event = heuristic_parse(mail)
+        if event:
+            normalized = normalize_event(event)
+            assert normalized is not None
+            _add_parse_stage(
+                trace,
+                engine="llm_then_heuristic",
+                result=fallback_result,
+                llm=llm_meta,
+                event=normalized,
+            )
+            if own_trace:
+                trace.finish_dry_run(
+                    f"LLM 后启发式解析为{normalized.action}「{normalized.title}」，未执行 apply"
+                )
+            return normalized
+
+        _add_parse_stage(
+            trace,
+            engine="llm_then_heuristic",
+            result="reject_heuristic",
+            llm=llm_meta,
+        )
+        trace.finish("rejected_parse", "LLM 失败且启发式未能抽出日程")
+        return None
+
+    # Stage D only（未启用 LLM）
     event = heuristic_parse(mail)
-    return normalize_event(event) if event else None
+    if event:
+        normalized = normalize_event(event)
+        assert normalized is not None
+        _add_parse_stage(
+            trace,
+            engine="heuristic",
+            result="accept",
+            event=normalized,
+        )
+        if own_trace:
+            trace.finish_dry_run(
+                f"启发式解析为{normalized.action}「{normalized.title}」，未执行 apply"
+            )
+        return normalized
+
+    _add_parse_stage(trace, engine="heuristic", result="reject_heuristic")
+    trace.finish("rejected_parse", "启发式未能抽出日程")
+    return None

@@ -41,6 +41,17 @@ class StoredEvent:
 
 
 @dataclass
+class AppleEventRef:
+    """Apple 日历里已存在的一条日程（读回用）。"""
+
+    uid: str
+    summary: str
+    start_at: str = ""
+    end_at: str = ""
+    marker_message_id: str = ""  # 描述里埋的来源邮件 message-id
+
+
+@dataclass
 class SyncResult:
     scanned: int = 0
     matched: int = 0
@@ -59,3 +70,5 @@ class LlmParseResult:
     decision: str  # accept | reject_by_model | incomplete | error
     event: Optional[CandidateEvent] = None
     error: Optional[str] = None
+    latency_ms: Optional[int] = None
+    reject_reason: Optional[str] = None  # irrelevant | schedule_invite

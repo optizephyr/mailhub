@@ -19,18 +19,19 @@ class Settings:
     llm_api_key: str
     llm_model: str
     data_dir: Path
+    calendar_scan_days: int = 90  # 本地无记录时回扫日历的天数；0 表示关闭
 
     @property
     def llm_enabled(self) -> bool:
         return bool(self.llm_api_key and self.llm_api_base)
 
     @property
-    def llm_log_path(self) -> Path:
-        return self.data_dir / "logs" / "llm_parse.jsonl"
+    def lifecycle_log_path(self) -> Path:
+        return self.data_dir / "logs" / "mail_lifecycle.jsonl"
 
     @property
-    def coarse_log_path(self) -> Path:
-        return self.data_dir / "logs" / "coarse_filter.jsonl"
+    def llm_io_log_path(self) -> Path:
+        return self.data_dir / "logs" / "llm_io.jsonl"
 
 
 def load_settings(env_file: str | None = None) -> Settings:
@@ -51,6 +52,7 @@ def load_settings(env_file: str | None = None) -> Settings:
         llm_api_key=os.getenv("LLM_API_KEY", "").strip(),
         llm_model=os.getenv("LLM_MODEL", "gpt-4o-mini").strip(),
         data_dir=data_dir,
+        calendar_scan_days=int(os.getenv("CALENDAR_SCAN_DAYS", "90")),
     )
 
 
