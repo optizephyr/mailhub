@@ -5,10 +5,13 @@ from zoneinfo import ZoneInfo
 
 from mail_to_calendar.config import Settings, load_settings
 from mail_to_calendar.mail_qq import MailItem
+from mail_to_calendar.models import CandidateEvent
 from mail_to_calendar.parser import (
+    build_title,
     classify_stage,
     detect_action,
     heuristic_parse,
+    normalize_event,
     parse_datetime,
     parse_llm_json,
     parse_mail,
@@ -410,6 +413,117 @@ def test_parse_mail_llm_error_falls_back_heuristic(tmp_path: Path, monkeypatch):
     assert record["trace_id"] == lifecycle["trace_id"]
 
 
+def test_build_title_deterministic_format():
+    # 直接用英文类型，不转中文
+    assert build_title("interview", "美团", "create") == "[interview] 美团"
+    assert build_title("exam", "字节", "create") == "[exam] 字节"
+    assert build_title("assessment", "腾讯", "create") == "[assessment] 腾讯"
+    # reschedule 保留学段类型
+    assert build_title("interview", "美团", "reschedule") == "[interview] 美团"
+    # cancel → [cancel]
+    assert build_title("interview", "美团", "cancel") == "[cancel] 美团"
+    # 公司为空 → 回退主题前 40 字，仍带类型前缀
+    assert build_title("interview", "", "create", subject="快手校招面试通知") == (
+        "[interview] 快手校招面试通知"
+    )
+
+
+def test_normalize_rewrites_subject_like_title():
+    """主题原文含「笔试/面试」也必须重建为 [type] 公司，而非沿用主题。"""
+    event = CandidateEvent(
+        message_id="<m@qq.com>",
+        subject="2027届AI Agent研发工程师笔试（0816）",
+        title="2027届AI Agent研发工程师笔试（0816）",
+        event_type="exam",
+        action="create",
+        start_at="2026-08-16T19:00:00",
+        end_at="2026-08-16T21:00:00",
+        company="快手",
+    )
+    out = normalize_event(event)
+    assert out.title == "[exam] 快手"
+
+
+def test_normalize_reschedule_keeps_stage_label():
+    event = CandidateEvent(
+        message_id="<m@qq.com>",
+        subject="【美团】面试改期通知",
+        title="【美团】面试改期通知",
+        event_type="interview",
+        action="reschedule",
+        start_at="2026-08-28T15:00:00",
+        end_at="2026-08-28T16:00:00",
+        company="美团",
+    )
+    out = normalize_event(event)
+    assert out.title == "[interview] 美团"
+
+
+def test_normalize_empty_company_falls_back_to_subject():
+    event = CandidateEvent(
+        message_id="<m@qq.com>",
+        subject="2027应届生校园招聘-AI应用开发工程师面试",
+        title="随便的模型标题",
+        event_type="interview",
+        action="create",
+        start_at="2026-08-24T16:00:00",
+        end_at="2026-08-24T17:00:00",
+        company="",
+    )
+    out = normalize_event(event)
+    assert out.title.startswith("[interview] ")
+    assert "2027应届生校园招聘" in out.title
+
+
+def test_llm_empty_company_falls_back_to_guess(tmp_path: Path, monkeypatch):
+    settings = _settings(
+        tmp_path,
+        llm_api_base="https://api.example.com/v1",
+        llm_api_key="k",
+    )
+    mail = _mail(
+        message_id="<c@qq.com>",
+        subject="【美团】面试通知",
+        text="面试时间：2026年8月20日 10:00，请准时参加。",
+    )
+
+    class FakeResp:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(
+                                {
+                                    "relevant": True,
+                                    "action": "create",
+                                    "stage": "confirmed",
+                                    "event_type": "interview",
+                                    "company": "",
+                                    "start_at": "2026-08-20T10:00:00",
+                                    "end_at": "2026-08-20T11:00:00",
+                                    "confidence": 0.9,
+                                },
+                                ensure_ascii=False,
+                            )
+                        }
+                    }
+                ]
+            }
+
+    monkeypatch.setattr(
+        "mail_to_calendar.parser.requests.post",
+        lambda *a, **k: FakeResp(),
+    )
+    event = parse_mail(mail, settings)
+    assert event is not None
+    assert event.company == "美团"
+    assert event.title == "[interview] 美团"
+
+
 def test_store_cursor_and_active_event(tmp_path: Path):
     store = EventStore(tmp_path / "t.sqlite")
     assert store.get_last_uid() is None
@@ -419,7 +533,7 @@ def test_store_cursor_and_active_event(tmp_path: Path):
     eid = store.create_event(
         company="美团",
         event_type="interview",
-        title="[面试] 美团",
+        title="[interview] 美团",
         start_at="2026-08-21T14:00:00",
         end_at="2026-08-21T15:00:00",
         source_message_id="<notice@qq.com>",

@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from .calendar_match import companies_match
 from .models import StoredEvent
 
 
@@ -148,18 +149,20 @@ class EventStore:
                 return self._row_to_event(row)
 
         if company:
-            row = self._conn.execute(
+            # 模糊匹配公司名：拼多多 ≈ 拼多多集团-PDD（与日历认领一致）
+            rows = self._conn.execute(
                 """
                 SELECT * FROM calendar_events
-                WHERE status = 'active' AND company = ?
+                WHERE status = 'active'
                   AND (? = '' OR event_type = ?)
                 ORDER BY start_at DESC, id DESC
-                LIMIT 1
                 """,
-                (company, event_type, event_type),
-            ).fetchone()
-            if row:
-                return self._row_to_event(row)
+                (event_type, event_type),
+            ).fetchall()
+            for row in rows:
+                candidate = self._row_to_event(row)
+                if companies_match(company, candidate.company):
+                    return candidate
 
         return None
 

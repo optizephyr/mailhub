@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -13,13 +14,54 @@ from .apple import (
     list_apple_events,
     update_apple_event,
 )
-from .calendar_match import match_calendar_event
+from .calendar_match import companies_match, match_calendar_event
 from .config import load_settings, require_mail_credentials
-from .lifecycle_log import MailTrace
+from .lifecycle_log import MailTrace, planned_event_brief
 from .mail_qq import fetch_mails
-from .models import CandidateEvent, StoredEvent, SyncResult
+from .models import AppleEventRef, CandidateEvent, StoredEvent, SyncResult
 from .parser import parse_mail
 from .store import EventStore
+
+
+@dataclass
+class ApplyPlan:
+    result: str
+    summary: str
+    match_via: str = "none"
+    event_row_id: Optional[int] = None
+    error: Optional[str] = None
+
+
+def _session_event_from_candidate(event: CandidateEvent) -> StoredEvent:
+    """本轮 sync/dry-run 内「已规划新建」的虚拟日程，供后续邮件去重。"""
+    return StoredEvent(
+        id=0,
+        company=event.company,
+        event_type=event.event_type,
+        title=event.title,
+        start_at=event.start_at,
+        end_at=event.end_at,
+        status="active",
+        source_message_id=event.message_id,
+        sinks={},
+    )
+
+
+def _match_session(
+    event: CandidateEvent,
+    session: list[StoredEvent],
+) -> Optional[StoredEvent]:
+    company = (event.company or "").strip()
+    if not company or not session:
+        return None
+    want_type = event.event_type if event.event_type != "other" else ""
+    # 后出现的优先（同场次重复邀请取本轮最新规划）
+    for candidate in reversed(session):
+        if want_type and candidate.event_type not in ("", "other", want_type):
+            continue
+        if companies_match(company, candidate.company):
+            return candidate
+    return None
 
 
 def cmd_list_apple(_: argparse.Namespace) -> None:
@@ -45,12 +87,8 @@ def cmd_scan_apple(args: argparse.Namespace) -> None:
         print(f"  - {ev.start_at}  {ev.summary}  uid={ev.uid}{marker}")
 
 
-def _adopt_from_calendar(
-    store: EventStore,
-    event: CandidateEvent,
-    settings,
-) -> Optional[StoredEvent]:
-    """本地库没记录时（库被清过 / 旧版本建的 / 人工改过），回到日历里找并接管。"""
+def _peek_calendar_match(event: CandidateEvent, settings) -> Optional[AppleEventRef]:
+    """只读扫描 Apple 日历，不写库。"""
     if settings.calendar_scan_days <= 0:
         return None
 
@@ -61,7 +99,16 @@ def _adopt_from_calendar(
         print(f"  - 日历兜底匹配跳过（读取失败）: {exc}")
         return None
 
-    matched = match_calendar_event(event, existing)
+    return match_calendar_event(event, existing)
+
+
+def _adopt_from_calendar(
+    store: EventStore,
+    event: CandidateEvent,
+    settings,
+) -> Optional[StoredEvent]:
+    """本地库没记录时（库被清过 / 旧版本建的 / 人工改过），回到日历里找并接管。"""
+    matched = _peek_calendar_match(event, settings)
     if not matched:
         return None
 
@@ -78,17 +125,44 @@ def _adopt_from_calendar(
     return store.get_event(row_id)
 
 
+def _virtual_from_calendar(matched: AppleEventRef, event: CandidateEvent) -> StoredEvent:
+    """dry-run 用：日历命中但不落库，id=0 表示无 event_row_id。"""
+    return StoredEvent(
+        id=0,
+        company=event.company,
+        event_type=event.event_type,
+        title=matched.summary,
+        start_at=matched.start_at,
+        end_at=matched.end_at,
+        status="active",
+        source_message_id=matched.marker_message_id or event.message_id,
+        sinks={"apple": matched.uid},
+    )
+
+
 def _find_target(
     store: EventStore,
     event: CandidateEvent,
     settings,
+    *,
+    adopt: bool = True,
+    session: Optional[list[StoredEvent]] = None,
 ) -> tuple[Optional[StoredEvent], str]:
-    """返回 (目标日程, 匹配途径)。途径: references | company_type | calendar_adopt | none。"""
+    """返回 (目标日程, 匹配途径)。
+
+    途径: references | session | company_type | calendar_adopt | none。
+    adopt=False 时只读匹配日历，不写库（dry-run）。
+    session 为本轮已规划/已写入的活跃日程，用于同批重复邀请去重。
+    """
     refs = [r for r in event.references if r]
     if refs:
         target = store.find_active_event(references=refs)
         if target:
             return target, "references"
+
+    session_hit = _match_session(event, session or [])
+    if session_hit:
+        return session_hit, "session"
 
     target = store.find_active_event(
         company=event.company,
@@ -97,10 +171,123 @@ def _find_target(
     if target:
         return target, "company_type"
 
-    adopted = _adopt_from_calendar(store, event, settings)
-    if adopted:
-        return adopted, "calendar_adopt"
+    if adopt:
+        adopted = _adopt_from_calendar(store, event, settings)
+        if adopted:
+            return adopted, "calendar_adopt"
+    else:
+        matched = _peek_calendar_match(event, settings)
+        if matched:
+            return _virtual_from_calendar(matched, event), "calendar_adopt"
     return None, "none"
+
+
+def _plan_apply(
+    store: EventStore,
+    event: CandidateEvent,
+    settings,
+    *,
+    session: Optional[list[StoredEvent]] = None,
+) -> ApplyPlan:
+    """dry-run：按正式逻辑只读判定最终动作，不写任何数据。"""
+    if store.already_processed(event.message_id):
+        return ApplyPlan(
+            result="would_skip_duplicate",
+            summary="该邮件已处理过，将跳过",
+        )
+
+    target, via = _find_target(
+        store, event, settings, adopt=False, session=session
+    )
+    row_id = target.id if target and target.id > 0 else None
+
+    if event.action == "cancel":
+        if not target:
+            return ApplyPlan(
+                result="would_fail",
+                summary="取消失败：未找到可取消的旧日程",
+                match_via=via,
+                error="no matching active event",
+            )
+        return ApplyPlan(
+            result="would_cancel",
+            summary="将取消匹配到的旧日程",
+            match_via=via,
+            event_row_id=row_id,
+        )
+
+    if event.action == "reschedule":
+        if target:
+            return ApplyPlan(
+                result="would_update",
+                summary="将改期并更新匹配到的旧日程",
+                match_via=via,
+                event_row_id=row_id,
+            )
+        return ApplyPlan(
+            result="would_create",
+            summary="改期未匹配到旧日程，将新建",
+            match_via=via,
+        )
+
+    # create
+    if target and target.start_at and target.start_at != event.start_at:
+        return ApplyPlan(
+            result="would_update",
+            summary="检测到时间变化，将更新匹配到的旧日程",
+            match_via=via,
+            event_row_id=row_id,
+        )
+    if target and target.start_at == event.start_at:
+        return ApplyPlan(
+            result="would_skip_same",
+            summary="已存在相同时间日程，将跳过",
+            match_via=via,
+            event_row_id=row_id,
+        )
+    return ApplyPlan(
+        result="would_create",
+        summary="将新建日程",
+        match_via=via,
+    )
+
+
+def _print_event_details(event: CandidateEvent) -> None:
+    time_part = (
+        f"{event.start_at} → {event.end_at}"
+        if event.action != "cancel"
+        else "(取消)"
+    )
+    desc = event.description or ""
+    if len(desc) > 200:
+        desc = desc[:200] + "…"
+
+    lines = [
+        f"\n• [{event.action}] {event.title}",
+        f"  公司={event.company or '-'}  类型={event.event_type}",
+        f"  时间={time_part}",
+    ]
+    if event.location:
+        lines.append(f"  地点={event.location}")
+    if event.meeting_url:
+        lines.append(f"  会议={event.meeting_url}")
+    if desc:
+        lines.append(f"  描述={desc}")
+    lines.append(f"  置信度={event.confidence:.2f}  主题={event.subject[:60]}")
+    print("\n".join(lines))
+
+
+def _tally_dry_run(result: SyncResult, plan: ApplyPlan) -> None:
+    if plan.result == "would_create":
+        result.created += 1
+    elif plan.result == "would_update":
+        result.updated += 1
+    elif plan.result == "would_cancel":
+        result.cancelled += 1
+    elif plan.result in ("would_skip_duplicate", "would_skip_same"):
+        result.skipped += 1
+    elif plan.result == "would_fail":
+        result.failed.append(plan.summary)
 
 
 def _apply_create(
@@ -246,6 +433,8 @@ def cmd_sync(args: argparse.Namespace) -> None:
         "dry_run": dry_run,
         "full": full,
     }
+    # 本轮已规划/已写入的活跃日程：同批重复邀请（如两封拼多多笔试）合并到同一条
+    session: list[StoredEvent] = []
 
     for mail in fetched.mails:
         trace = MailTrace(
@@ -259,6 +448,37 @@ def cmd_sync(args: argparse.Namespace) -> None:
         result.matched += 1
         result.events.append(event)
 
+        if dry_run:
+            plan = _plan_apply(store, event, settings, session=session)
+            _print_event_details(event)
+            _tally_dry_run(result, plan)
+            planned = planned_event_brief(event)
+            result.dry_run_reports.append(
+                {
+                    "apply": plan.result,
+                    "match_via": plan.match_via,
+                    "event": event.to_dict(),
+                }
+            )
+            if plan.result == "would_create":
+                session.append(_session_event_from_candidate(event))
+            elif plan.result == "would_update" and plan.match_via == "session":
+                # 更新本轮虚拟日程的时间
+                hit = _match_session(event, session)
+                if hit:
+                    hit.start_at = event.start_at
+                    hit.end_at = event.end_at
+                    hit.title = event.title
+            trace.finish_dry_run(
+                plan.summary,
+                result=plan.result,
+                match_via=plan.match_via,
+                event_row_id=plan.event_row_id,
+                planned_event=planned,
+                error=plan.error,
+            )
+            continue
+
         time_part = (
             f"{event.start_at} → {event.end_at}"
             if event.action != "cancel"
@@ -269,12 +489,6 @@ def cmd_sync(args: argparse.Namespace) -> None:
             f"  {time_part}\n"
             f"  置信度={event.confidence:.2f}  主题={event.subject[:60]}"
         )
-
-        if dry_run:
-            trace.finish_dry_run(
-                f"解析为{event.action}「{event.title}」，dry-run 未写入"
-            )
-            continue
 
         if store.already_processed(event.message_id):
             result.skipped += 1
@@ -289,7 +503,7 @@ def cmd_sync(args: argparse.Namespace) -> None:
 
         try:
             if event.action == "cancel":
-                target, via = _find_target(store, event, settings)
+                target, via = _find_target(store, event, settings, session=session)
                 if not target:
                     result.failed.append(
                         f"cancel: 未找到可取消的旧日程 company={event.company}"
@@ -308,6 +522,14 @@ def cmd_sync(args: argparse.Namespace) -> None:
                 _apply_cancel(target, event, store)
                 store.mark_processed(event.message_id, "cancel", target.id)
                 result.cancelled += 1
+                if target.id > 0:
+                    session[:] = [s for s in session if s.id != target.id]
+                else:
+                    session[:] = [
+                        s
+                        for s in session
+                        if s.source_message_id != target.source_message_id
+                    ]
                 print(f"  - 已删除旧日程 #{target.id}")
                 _finish_applied(
                     trace,
@@ -319,7 +541,7 @@ def cmd_sync(args: argparse.Namespace) -> None:
                     sinks=target.sinks,
                 )
             elif event.action == "reschedule":
-                target, via = _find_target(store, event, settings)
+                target, via = _find_target(store, event, settings, session=session)
                 if target:
                     _apply_update(target, event, settings, store)
                     store.mark_processed(event.message_id, "reschedule", target.id)
@@ -337,6 +559,9 @@ def cmd_sync(args: argparse.Namespace) -> None:
                     row_id = _apply_create(event, settings, store)
                     store.mark_processed(event.message_id, "reschedule", row_id)
                     result.created += 1
+                    created = store.get_event(row_id)
+                    if created:
+                        session.append(created)
                     print("  - 未找到旧日程，已新建")
                     _finish_applied(
                         trace,
@@ -348,7 +573,7 @@ def cmd_sync(args: argparse.Namespace) -> None:
                     )
             else:
                 # create：若同公司同学段已有活跃日程且时间不同，视为改期覆盖
-                target, via = _find_target(store, event, settings)
+                target, via = _find_target(store, event, settings, session=session)
                 if target and target.start_at and target.start_at != event.start_at:
                     _apply_update(target, event, settings, store)
                     store.mark_processed(event.message_id, "create", target.id)
@@ -372,13 +597,16 @@ def cmd_sync(args: argparse.Namespace) -> None:
                         status="skipped_same",
                         summary=f"已存在相同时间日程 #{target.id}，跳过",
                         match_via=via,
-                        event_row_id=target.id,
+                        event_row_id=target.id if target.id > 0 else None,
                         sinks=target.sinks,
                     )
                 else:
                     row_id = _apply_create(event, settings, store)
                     store.mark_processed(event.message_id, "create", row_id)
                     result.created += 1
+                    created = store.get_event(row_id)
+                    if created:
+                        session.append(created)
                     print("  - 已创建")
                     _finish_applied(
                         trace,
@@ -408,12 +636,23 @@ def cmd_sync(args: argparse.Namespace) -> None:
             print(f"\n游标已更新：INBOX last_uid={fetched.max_uid}")
 
     store.close()
-    print(
-        f"\n完成：相关 {result.matched}，新建 {result.created}，更新 {result.updated}，"
-        f"取消 {result.cancelled}，跳过 {result.skipped}，失败 {len(result.failed)}"
-    )
+    if dry_run:
+        print(
+            f"\n干跑完成：相关 {result.matched}，将新建 {result.created}，将更新 {result.updated}，"
+            f"将取消 {result.cancelled}，将跳过 {result.skipped}，将失败 {len(result.failed)}"
+        )
+    else:
+        print(
+            f"\n完成：相关 {result.matched}，新建 {result.created}，更新 {result.updated}，"
+            f"取消 {result.cancelled}，跳过 {result.skipped}，失败 {len(result.failed)}"
+        )
     if args.json:
-        print(json.dumps([e.to_dict() for e in result.events], ensure_ascii=False, indent=2))
+        payload = (
+            result.dry_run_reports
+            if dry_run
+            else [e.to_dict() for e in result.events]
+        )
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -424,7 +663,11 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     sync = sub.add_parser("sync", help="扫描邮件并创建/更新/删除日程")
-    sync.add_argument("--dry-run", action="store_true", help="只解析不写入")
+    sync.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="只读匹配并展示最终动作与日程，不写入、不推进游标",
+    )
     sync.add_argument(
         "--full",
         action="store_true",

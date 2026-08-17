@@ -39,7 +39,7 @@ python3 -m mail_to_calendar list-apple
 # 列出目标日历里已有的日程（核对匹配用）
 python3 -m mail_to_calendar scan-apple --days 60
 
-# 先干跑：只解析不写入
+# 先干跑：只读匹配，展示最终动作与日程，不写入
 python3 -m mail_to_calendar sync --dry-run
 
 # 正式同步（有游标后自动增量）
@@ -48,13 +48,20 @@ python3 -m mail_to_calendar sync
 # 忽略游标，按 LOOKBACK_DAYS 重扫
 python3 -m mail_to_calendar sync --full
 
-# 同步后额外打印解析结果 JSON
+# 干跑并输出 JSON（含 apply / match_via / event）
 python3 -m mail_to_calendar sync --dry-run --json
 ```
 
 建议用 launchd / cron 每 15～30 分钟跑一次 `sync`。
 
 ## 行为说明
+
+### dry-run
+
+- 解析后做**只读匹配**（本地库 + Apple 日历兜底），判定将新建 / 更新 / 取消 / 跳过 / 失败
+- 终端打印最终动作与完整日程字段；不写库、不写日历、不推进游标
+- 已处理过的邮件仍报「将跳过(已处理)」，但会打印解析出的日程便于核对
+- `--json` 每项为 `{apply, match_via, event}`；生命周期日志 `outcome.status=dry_run`，`apply.result` 为 `would_*`，并带 `planned_event`
 
 ### 增量拉取
 
@@ -132,14 +139,17 @@ LLM_MODEL=deepseek-v4-flash
 先查本地库 `data/synced.sqlite`：
 
 1. 优先：`In-Reply-To` / `References` 指向此前建日程的邮件
-2. 其次：同一 `company` + `event_type` 的最新活跃日程
+2. 其次：本轮 sync 已规划/已写入的同学段日程（公司名模糊匹配，如 `拼多多` ≈ `拼多多集团-PDD`）
+3. 再次：本地库中同学段 + 公司名模糊匹配的最新活跃日程
 
 本地库没命中时，**回到 Apple 日历里找已有日程并接管**（`CALENDAR_SCAN_DAYS` 天窗口，默认 90，设 0 关闭）：
 
-3. 描述里埋的来源邮件 id（`[mail-to-calendar] mid=...`）落在本封邮件的回复链上
-4. 标题形如 `[面试] 公司名` 且公司名对得上、学段不冲突的最近一场
+4. 描述里埋的来源邮件 id（`[mail-to-calendar] mid=...`）落在本封邮件的回复链上
+5. 标题形如 `[interview] 公司名` 且公司名对得上、学段不冲突的最近一场
 
-接管后会把该日程的 Apple `uid` 写回本地库，后续改期 / 取消直接更新同一条，不会再扫日历。只有标题带 `[标签]` 前缀的日程才参与第 4 步，避免误改手动创建的同名日程。
+同公司同学段若已存在**相同开始时间**的日程，后到的邮件会跳过（不重复建）；时间不同则更新旧日程。同一轮里两封重复邀请（不同 message-id）会因此合并成一条。
+
+接管后会把该日程的 Apple `uid` 写回本地库，后续改期 / 取消直接更新同一条，不会再扫日历。只有标题带 `[标签]` 前缀的日程才参与第 5 步，避免误改手动创建的同名日程。
 
 核对日历里读到了什么：
 

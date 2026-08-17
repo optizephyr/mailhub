@@ -325,13 +325,21 @@ def default_duration_hours(event_type: str) -> float:
     return 1.0
 
 
-def type_label(event_type: str) -> str:
-    return {
-        "interview": "面试",
-        "exam": "笔试",
-        "assessment": "测评",
-        "other": "日程",
-    }.get(event_type, "日程")
+def build_title(
+    event_type: str,
+    company: str,
+    action: str,
+    subject: str = "",
+) -> str:
+    """确定性重建日历标题为「[type|cancel] 公司」，供 calendar_match 认领旧日程。
+
+    - cancel → [cancel] 公司
+    - create / reschedule → [interview|exam|assessment|other] 公司（直接用类型，不转中文）
+    - 公司为空时回退到主题前 40 字，保证至少带 [标签] 前缀。
+    """
+    name = (company or "").strip() or (subject or "").strip()[:40]
+    label = "cancel" if action == "cancel" else (event_type or "other")
+    return f"[{label}] {name}".strip()[:200]
 
 
 def extract_meeting_url(text: str) -> str:
@@ -442,14 +450,12 @@ def heuristic_parse(mail: MailItem) -> Optional[CandidateEvent]:
     action = detect_action(blob)
     company = guess_company(mail.subject, body)
     event_type = detect_event_type(blob)
-    label = type_label(event_type)
 
     if action == "cancel":
-        title = f"[取消] {company}" if company else f"[取消] {mail.subject[:40]}"
         return CandidateEvent(
             message_id=mail.message_id,
             subject=mail.subject,
-            title=title[:200],
+            title=build_title(event_type, company, "cancel", mail.subject),
             event_type=event_type,
             action="cancel",
             company=company,
@@ -473,8 +479,7 @@ def heuristic_parse(mail: MailItem) -> Optional[CandidateEvent]:
 
     hours = default_duration_hours(event_type)
     end = start + timedelta(hours=hours)
-    prefix = "[改期]" if action == "reschedule" else f"[{label}]"
-    title = f"{prefix} {company}" if company else f"{prefix} {mail.subject[:40]}"
+    title = build_title(event_type, company, action, mail.subject)
     meeting_url = extract_meeting_url(body)
     location = extract_location(body) or meeting_url
     stage = classify_stage(blob)
@@ -515,20 +520,8 @@ def normalize_event(event: CandidateEvent) -> CandidateEvent:
     """Stage E: 统一整形字段。"""
     action = event.action if event.action in ("create", "reschedule", "cancel") else "create"
     event_type = event.event_type or "other"
-    title = (event.title or event.subject or "").strip()
     company = (event.company or "").strip()[:40]
-
-    if action == "cancel" and not title.startswith("[取消]"):
-        title = f"[取消] {company or title}"
-    elif (
-        action != "cancel"
-        and company
-        and type_label(event_type) not in title
-        and not title.startswith("[改期]")
-    ):
-        prefix = "[改期]" if action == "reschedule" else f"[{type_label(event_type)}]"
-        if not title.startswith(prefix):
-            title = f"{prefix} {company}"
+    title = build_title(event_type, company, action, event.subject)
 
     return CandidateEvent(
         message_id=event.message_id,
@@ -572,7 +565,9 @@ def _event_from_llm_data(mail: MailItem, data: dict[str, Any]) -> LlmParseResult
 
     event_type = data.get("event_type") or "other"
     title = data.get("title") or mail.subject
-    company = data.get("company") or ""
+    company = str(data.get("company") or "").strip() or guess_company(
+        mail.subject, mail.body
+    )
 
     event = CandidateEvent(
         message_id=mail.message_id,
@@ -621,6 +616,8 @@ def llm_parse(
                 "title, company, start_at(YYYY-MM-DDTHH:MM:SS, Asia/Shanghai), "
                 "end_at, location, meeting_url, confidence(0-1).\n"
                 "规则:\n"
+                "- company 必填：填招聘方公司/机构简称（如 美团、字节跳动、快手）；"
+                "实在无法判断时填空串。\n"
                 "- 取消面试/无需参加：action=cancel，relevant=true，可不填时间。\n"
                 "- 改期/时间变更为：action=reschedule，必须填新的 start_at/end_at。\n"
                 "- 若是让候选人「选择/预约/挑选」面试时间：stage=schedule_invite，relevant=false。\n"

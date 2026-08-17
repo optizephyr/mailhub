@@ -36,6 +36,16 @@ def event_brief(event: CandidateEvent) -> dict[str, Any]:
     }
 
 
+def planned_event_brief(event: CandidateEvent, *, desc_limit: int = 200) -> dict[str, Any]:
+    """dry-run 计划日程：event_brief + 截断 description。"""
+    brief = event_brief(event)
+    desc = event.description or ""
+    if len(desc) > desc_limit:
+        desc = desc[:desc_limit] + "…"
+    brief["description"] = desc
+    return brief
+
+
 def log_llm_io(
     path: Path,
     *,
@@ -117,9 +127,27 @@ class MailTrace:
             },
         )
 
-    def finish_dry_run(self, summary: str) -> None:
-        """parse_only / dry-run：补 apply 阶段再落盘（形状与方案一致，仅 result）。"""
-        self.add_stage({"name": "apply", "result": "dry_run"})
+    def finish_dry_run(
+        self,
+        summary: str,
+        *,
+        result: str = "dry_run",
+        match_via: str = "none",
+        event_row_id: Optional[int] = None,
+        planned_event: Optional[dict[str, Any]] = None,
+        error: Optional[str] = None,
+    ) -> None:
+        """parse_only / dry-run：补 apply 阶段再落盘。sync dry-run 可带 would_* 与 planned_event。"""
+        stage: dict[str, Any] = {"name": "apply", "result": result}
+        if result != "dry_run":
+            stage["match"] = {"via": match_via}
+        if event_row_id is not None:
+            stage["event_row_id"] = event_row_id
+        if planned_event is not None:
+            stage["planned_event"] = planned_event
+        if error:
+            stage["error"] = error
+        self.add_stage(stage)
         self.finish("dry_run", summary)
 
     @property

@@ -61,6 +61,7 @@ class SyncResult:
     skipped: int = 0
     failed: list[str] = field(default_factory=list)
     events: list[CandidateEvent] = field(default_factory=list)
+    dry_run_reports: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
