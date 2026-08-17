@@ -48,7 +48,7 @@ python -m pytest tests/ -q
 | `calendar_match.py` | 邮件 ↔ 已有日程匹配 |
 | `apple.py` | macOS Calendar 读写 |
 | `store.py` | 游标、去重、活跃日程 |
-| `lifecycle_log.py` | `mail_lifecycle.jsonl` + `llm_io.jsonl`（`trace_id` 关联） |
+| `lifecycle_log.py` | `mail_lifecycle.jsonl` + `llm_io.jsonl`（`trace_id` 关联；每文件最多 100 行） |
 | `cli.py` | 编排与命令行 |
 | `models.py` | `CandidateEvent` 等数据结构 |
 | `config.py` | `.env` → `Settings` |

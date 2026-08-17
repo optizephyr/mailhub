@@ -83,7 +83,7 @@ python3 -m mail_to_calendar sync --dry-run --json
 
 ### 查日志
 
-同步后日志在 `data/logs/`（JSONL，一行一封邮件 / 一次 LLM 调用）：
+同步后日志在 `data/logs/`（JSONL，一行一封邮件 / 一次 LLM 调用）。每个文件最多保留最近 **100** 行，超出则删掉最旧记录：
 
 | 文件 | 内容 |
 |------|------|

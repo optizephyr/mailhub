@@ -9,11 +9,27 @@ from typing import Any, Optional
 from .mail_qq import MailItem
 from .models import CandidateEvent
 
+# 每个 JSONL 日志文件最多保留的行数（超出则删最旧、留最新）
+JSONL_MAX_LINES = 100
+
 
 def append_jsonl(path: Path, record: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    _trim_jsonl(path, JSONL_MAX_LINES)
+
+
+def _trim_jsonl(path: Path, max_lines: int) -> None:
+    """超过 max_lines 时只保留文件末尾的最新行。"""
+    lines = [
+        line
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    if len(lines) <= max_lines:
+        return
+    path.write_text("\n".join(lines[-max_lines:]) + "\n", encoding="utf-8")
 
 
 def new_trace_id() -> str:
