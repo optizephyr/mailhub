@@ -34,7 +34,7 @@ def _event(**kwargs) -> CandidateEvent:
     base = dict(
         message_id="<new@qq.com>",
         subject="面试改期通知",
-        title="[interview] 美团",
+        title="[面试] 美团",
         event_type="interview",
         action="reschedule",
         start_at="2026-08-26T10:00:00",
@@ -48,7 +48,7 @@ def _event(**kwargs) -> CandidateEvent:
 def _ref(**kwargs) -> AppleEventRef:
     base = dict(
         uid="uid-1",
-        summary="[interview] 美团",
+        summary="[面试] 美团",
         start_at="2026-08-21T14:00:00",
         end_at="2026-08-21T15:00:00",
     )
@@ -63,17 +63,18 @@ def test_marker_round_trip():
 
 
 def test_split_title():
+    assert split_title("[面试] 美团") == ("面试", "美团")
+    assert split_title("[测评] 腾讯") == ("测评", "腾讯")
+    assert split_title("[取消] 字节跳动") == ("取消", "字节跳动")
     assert split_title("[interview] 美团") == ("interview", "美团")
-    assert split_title("[assessment] 腾讯") == ("assessment", "腾讯")
-    assert split_title("[cancel] 字节跳动") == ("cancel", "字节跳动")
     assert split_title("和朋友吃饭") == ("", "")
 
 
 def test_match_prefers_reply_chain_over_company():
     chained = _ref(
-        uid="uid-chain", summary="[interview] 某司", marker_message_id="<old@qq.com>"
+        uid="uid-chain", summary="[面试] 某司", marker_message_id="<old@qq.com>"
     )
-    same_company = _ref(uid="uid-company", summary="[interview] 美团")
+    same_company = _ref(uid="uid-company", summary="[面试] 美团")
     event = _event(references=["<old@qq.com>"])
 
     assert match_calendar_event(event, [same_company, chained]) is chained
@@ -88,12 +89,12 @@ def test_match_by_company_picks_latest():
 
 
 def test_match_skips_other_type_and_foreign_titles():
-    exam = _ref(uid="uid-exam", summary="[exam] 美团")
+    exam = _ref(uid="uid-exam", summary="[笔试] 美团")
     manual = _ref(uid="uid-manual", summary="美团 面试")
 
     assert match_calendar_event(_event(event_type="interview"), [exam, manual]) is None
     # 学段未知时不拦：cancel / other 这类标题也能接管
-    cancelled = _ref(uid="uid-cancel", summary="[cancel] 美团")
+    cancelled = _ref(uid="uid-cancel", summary="[取消] 美团")
     matched = match_calendar_event(_event(event_type="other"), [exam, cancelled])
     assert matched is not None and matched.uid in ("uid-exam", "uid-cancel")
 
@@ -112,7 +113,7 @@ def test_find_target_adopts_existing_calendar_event(tmp_path: Path, monkeypatch)
             _ref(uid="uid-apple-9", start_at="2026-08-21T14:00:00"),
             _ref(
                 uid="uid-other",
-                summary="[interview] 京东",
+                summary="[面试] 京东",
                 start_at="2026-08-23T14:00:00",
             ),
         ],

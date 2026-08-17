@@ -105,7 +105,7 @@ def test_confirmed_notice_after_invite_still_works():
         date=None,
         text=(
             "您的面试时间已确认：2026年8月21日 14:00，请准时参加。"
-            "会议号 123456，入会密码 0000。"
+            "会议链接 https://meeting.tencent.com/dm/confirmed，会议号 123456。"
         ),
         html="",
     )
@@ -113,6 +113,14 @@ def test_confirmed_notice_after_invite_still_works():
     event = heuristic_parse(mail)
     assert event is not None
     assert event.start_at.startswith("2026-08-21T14:00")
+
+
+def test_confirmed_notice_without_location_is_rejected():
+    mail = _mail(
+        subject="【美团】面试通知",
+        text="您的面试时间已确认：2026年8月21日 14:00，请准时参加。",
+    )
+    assert heuristic_parse(mail) is None
 
 
 def test_cancel_mail_action():
@@ -137,7 +145,10 @@ def test_reschedule_mail_action():
         subject="【美团】面试改期通知",
         from_="campus@meituan.com",
         date=None,
-        text="原面试改期，新的面试时间为2026年8月28日 15:00，请准时参加。",
+        text=(
+            "原面试改期，新的面试时间为2026年8月28日 15:00，请准时参加。"
+            "会议链接 https://meeting.tencent.com/dm/rescheduled"
+        ),
         html="",
     )
     assert detect_action(f"{mail.subject}\n{mail.text}") == "reschedule"
@@ -330,6 +341,7 @@ def test_parse_mail_keeps_think_in_raw_but_not_as_separate_field(
                 "company": "美团",
                 "start_at": "2026-08-20T10:00:00",
                 "end_at": "2026-08-20T11:00:00",
+                "location": "https://meeting.tencent.com/dm/test",
                 "confidence": 0.9,
             },
             ensure_ascii=False,
@@ -414,17 +426,17 @@ def test_parse_mail_llm_error_falls_back_heuristic(tmp_path: Path, monkeypatch):
 
 
 def test_build_title_deterministic_format():
-    # 直接用英文类型，不转中文
-    assert build_title("interview", "美团", "create") == "[interview] 美团"
-    assert build_title("exam", "字节", "create") == "[exam] 字节"
-    assert build_title("assessment", "腾讯", "create") == "[assessment] 腾讯"
+    assert build_title("interview", "美团", "create") == "[面试] 美团"
+    assert build_title("exam", "字节", "create") == "[笔试] 字节"
+    assert build_title("assessment", "腾讯", "create") == "[测评] 腾讯"
+    assert build_title("other", "某机构", "create") == "[其他] 某机构"
     # reschedule 保留学段类型
-    assert build_title("interview", "美团", "reschedule") == "[interview] 美团"
-    # cancel → [cancel]
-    assert build_title("interview", "美团", "cancel") == "[cancel] 美团"
+    assert build_title("interview", "美团", "reschedule") == "[面试] 美团"
+    # cancel → [取消]
+    assert build_title("interview", "美团", "cancel") == "[取消] 美团"
     # 公司为空 → 回退主题前 40 字，仍带类型前缀
     assert build_title("interview", "", "create", subject="快手校招面试通知") == (
-        "[interview] 快手校招面试通知"
+        "[面试] 快手校招面试通知"
     )
 
 
@@ -441,7 +453,7 @@ def test_normalize_rewrites_subject_like_title():
         company="快手",
     )
     out = normalize_event(event)
-    assert out.title == "[exam] 快手"
+    assert out.title == "[笔试] 快手"
 
 
 def test_normalize_reschedule_keeps_stage_label():
@@ -456,7 +468,7 @@ def test_normalize_reschedule_keeps_stage_label():
         company="美团",
     )
     out = normalize_event(event)
-    assert out.title == "[interview] 美团"
+    assert out.title == "[面试] 美团"
 
 
 def test_normalize_empty_company_falls_back_to_subject():
@@ -471,7 +483,7 @@ def test_normalize_empty_company_falls_back_to_subject():
         company="",
     )
     out = normalize_event(event)
-    assert out.title.startswith("[interview] ")
+    assert out.title.startswith("[面试] ")
     assert "2027应届生校园招聘" in out.title
 
 
@@ -505,6 +517,7 @@ def test_llm_empty_company_falls_back_to_guess(tmp_path: Path, monkeypatch):
                                     "company": "",
                                     "start_at": "2026-08-20T10:00:00",
                                     "end_at": "2026-08-20T11:00:00",
+                                    "location": "https://meeting.tencent.com/dm/test",
                                     "confidence": 0.9,
                                 },
                                 ensure_ascii=False,
@@ -521,7 +534,7 @@ def test_llm_empty_company_falls_back_to_guess(tmp_path: Path, monkeypatch):
     event = parse_mail(mail, settings)
     assert event is not None
     assert event.company == "美团"
-    assert event.title == "[interview] 美团"
+    assert event.title == "[面试] 美团"
 
 
 def test_store_cursor_and_active_event(tmp_path: Path):

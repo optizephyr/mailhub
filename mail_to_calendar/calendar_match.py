@@ -10,12 +10,11 @@ from .models import AppleEventRef, CandidateEvent
 MARKER_PREFIX = "[mail-to-calendar]"
 _MARKER_RE = re.compile(re.escape(MARKER_PREFIX) + r"\s*mid=(\S+)")
 
-# 本工具写入的标题形如「[interview] 美团」；cancel / other / 旧中文标签不参与学段冲突
+# 当前标题使用中文标签；英文标签保留用于兼容既有日程。
 LABEL_TO_TYPE = {
     "interview": "interview",
     "exam": "exam",
     "assessment": "assessment",
-    # 兼容历史上写过的中文标签
     "面试": "interview",
     "笔试": "exam",
     "测评": "assessment",
@@ -40,7 +39,7 @@ def companies_match(company: str, title_company: str) -> bool:
 
 
 def split_title(summary: str) -> tuple[str, str]:
-    """`[interview] 美团` → `("interview", "美团")`；非本工具格式返回两个空串。"""
+    """`[面试] 美团` → `("面试", "美团")`；非本工具格式返回两个空串。"""
     match = _TITLE_RE.match(summary or "")
     if not match:
         return "", ""

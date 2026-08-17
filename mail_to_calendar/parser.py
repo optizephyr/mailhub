@@ -331,14 +331,20 @@ def build_title(
     action: str,
     subject: str = "",
 ) -> str:
-    """确定性重建日历标题为「[type|cancel] 公司」，供 calendar_match 认领旧日程。
+    """确定性重建日历标题为「[中文标签] 公司」，供 calendar_match 认领旧日程。
 
-    - cancel → [cancel] 公司
-    - create / reschedule → [interview|exam|assessment|other] 公司（直接用类型，不转中文）
+    - cancel → [取消] 公司
+    - create / reschedule → [面试|笔试|测评|其他] 公司
     - 公司为空时回退到主题前 40 字，保证至少带 [标签] 前缀。
     """
     name = (company or "").strip() or (subject or "").strip()[:40]
-    label = "cancel" if action == "cancel" else (event_type or "other")
+    labels = {
+        "interview": "面试",
+        "exam": "笔试",
+        "assessment": "测评",
+        "other": "其他",
+    }
+    label = "取消" if action == "cancel" else labels.get(event_type, "其他")
     return f"[{label}] {name}".strip()[:200]
 
 
@@ -459,7 +465,7 @@ def heuristic_parse(mail: MailItem) -> Optional[CandidateEvent]:
             event_type=event_type,
             action="cancel",
             company=company,
-            description=f"来源邮件: {mail.subject}\n发件人: {mail.from_}\n\n{body[:1500]}",
+            description="",
             confidence=0.8 if company else 0.55,
             source_snippet=body[:300],
             references=list(mail.references),
@@ -482,21 +488,12 @@ def heuristic_parse(mail: MailItem) -> Optional[CandidateEvent]:
     title = build_title(event_type, company, action, mail.subject)
     meeting_url = extract_meeting_url(body)
     location = extract_location(body) or meeting_url
+    if not location:
+        return None
     stage = classify_stage(blob)
     confidence = 0.75 if stage == "confirmed" or action == "reschedule" else 0.55
     if company:
         confidence += 0.1
-
-    desc_parts = [
-        f"来源邮件: {mail.subject}",
-        f"发件人: {mail.from_}",
-        f"判定阶段: {stage}",
-        f"动作: {action}",
-    ]
-    if meeting_url:
-        desc_parts.append(f"链接: {meeting_url}")
-    desc_parts.append("")
-    desc_parts.append(body[:1500])
 
     return CandidateEvent(
         message_id=mail.message_id,
@@ -508,7 +505,7 @@ def heuristic_parse(mail: MailItem) -> Optional[CandidateEvent]:
         end_at=end.replace(tzinfo=None).isoformat(timespec="seconds"),
         location=location[:200],
         company=company,
-        description="\n".join(desc_parts)[:3500],
+        description="",
         meeting_url=meeting_url,
         confidence=min(confidence, 0.95),
         source_snippet=body[:300],
@@ -533,7 +530,7 @@ def normalize_event(event: CandidateEvent) -> CandidateEvent:
         end_at=str(event.end_at or ""),
         location=str(event.location or "")[:200],
         company=company,
-        description=str(event.description or "")[:3500],
+        description="",
         meeting_url=str(event.meeting_url or ""),
         confidence=float(event.confidence or 0.5),
         source_snippet=str(event.source_snippet or "")[:300],
@@ -557,10 +554,14 @@ def _event_from_llm_data(mail: MailItem, data: dict[str, Any]) -> LlmParseResult
     action = data.get("action") or "create"
     if action not in ("create", "reschedule", "cancel"):
         action = "create"
-    if action != "cancel" and (not data.get("start_at") or not data.get("end_at")):
+    if action != "cancel" and (
+        not data.get("start_at")
+        or not data.get("end_at")
+        or not data.get("location")
+    ):
         return LlmParseResult(
             decision="incomplete",
-            error="missing start_at/end_at for non-cancel action",
+            error="missing start_at/end_at/location for non-cancel action",
         )
 
     event_type = data.get("event_type") or "other"
@@ -579,7 +580,7 @@ def _event_from_llm_data(mail: MailItem, data: dict[str, Any]) -> LlmParseResult
         end_at=str(data.get("end_at") or ""),
         location=str(data.get("location") or "")[:200],
         company=str(company)[:40],
-        description=f"来源邮件: {mail.subject}\n发件人: {mail.from_}\n\n{mail.body[:1500]}",
+        description="",
         meeting_url=str(data.get("meeting_url") or ""),
         confidence=float(data.get("confidence") or 0.8),
         source_snippet=mail.body[:300],
@@ -619,7 +620,8 @@ def llm_parse(
                 "- company 必填：填招聘方公司/机构简称（如 美团、字节跳动、快手）；"
                 "实在无法判断时填空串。\n"
                 "- 取消面试/无需参加：action=cancel，relevant=true，可不填时间。\n"
-                "- 改期/时间变更为：action=reschedule，必须填新的 start_at/end_at。\n"
+                "- 新建和改期必须填写 start_at、end_at、location；线上日程的 location 填会议链接。\n"
+                "- 改期/时间变更为：action=reschedule，必须填新的时间和地点。\n"
                 "- 若是让候选人「选择/预约/挑选」面试时间：stage=schedule_invite，relevant=false。\n"
                 "- 只有时间已确认的正式通知才 action=create 且 relevant=true。\n"
                 "- 选时间的截止日不是面试开始时间。\n\n"

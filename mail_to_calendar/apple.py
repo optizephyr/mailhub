@@ -3,7 +3,7 @@ from __future__ import annotations
 import subprocess
 from datetime import datetime
 
-from .calendar_match import extract_marker_message_id, marker_line
+from .calendar_match import extract_marker_message_id
 from .models import AppleEventRef, CandidateEvent
 
 # 读回日程时用的分隔符：正文里几乎不可能出现
@@ -14,11 +14,6 @@ _READ_TIMEOUT_SECONDS = 90
 
 def _as_escape(s: str) -> str:
     return s.replace("\\", "\\\\").replace('"', '\\"')
-
-
-def _description_with_marker(event: CandidateEvent) -> str:
-    """描述正文 + 末尾来源邮件 mid 标记，供日后从日历反查归属。"""
-    return f"{event.description[:1200]}\n\n{marker_line(event.message_id)}"
 
 
 def _date_block(var: str, dt: datetime) -> str:
@@ -39,6 +34,8 @@ def create_apple_event(
     reminder_minutes: int,
 ) -> str:
     """Create an event; return Calendar event uid."""
+    if not event.start_at or not event.end_at or not event.location:
+        raise ValueError("新建日程必须包含开始时间、结束时间和地点")
     start = datetime.fromisoformat(event.start_at)
     end = datetime.fromisoformat(event.end_at)
     alarm = -abs(reminder_minutes)
@@ -46,7 +43,6 @@ def create_apple_event(
     script = f'''
 set calName to "{_as_escape(calendar_name)}"
 set evTitle to "{_as_escape(event.title)}"
-set evDesc to "{_as_escape(_description_with_marker(event))}"
 set evLoc to "{_as_escape(event.location)}"
 
 tell application "Calendar"
@@ -58,7 +54,7 @@ tell application "Calendar"
 {_date_block("startDate", start)}
 {_date_block("endDate", end)}
   tell theCal
-    set newEvent to make new event with properties {{summary:evTitle, start date:startDate, end date:endDate, description:evDesc, location:evLoc}}
+    set newEvent to make new event with properties {{summary:evTitle, start date:startDate, end date:endDate, description:"", location:evLoc}}
     try
       make new display alarm at end of display alarms of newEvent with properties {{trigger interval:{alarm}}}
     end try
@@ -86,13 +82,14 @@ def update_apple_event(
     event: CandidateEvent,
     calendar_name: str,
 ) -> None:
+    if not event.start_at or not event.end_at or not event.location:
+        raise ValueError("更新日程必须包含开始时间、结束时间和地点")
     start = datetime.fromisoformat(event.start_at)
     end = datetime.fromisoformat(event.end_at)
     script = f'''
 set targetUid to "{_as_escape(uid)}"
 set calName to "{_as_escape(calendar_name)}"
 set evTitle to "{_as_escape(event.title)}"
-set evDesc to "{_as_escape(_description_with_marker(event))}"
 set evLoc to "{_as_escape(event.location)}"
 
 tell application "Calendar"
@@ -112,7 +109,7 @@ tell application "Calendar"
         set start date of ev to startDate
         set end date of ev to endDate
       end if
-      set description of ev to evDesc
+      set description of ev to ""
       set location of ev to evLoc
       set found to true
       exit repeat
