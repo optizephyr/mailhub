@@ -48,7 +48,7 @@ set evLoc to "{_as_escape(event.location)}"
 tell application "Calendar"
   set calList to every calendar whose name is calName
   if (count of calList) is 0 then
-    error "找不到名为「" & calName & "」的日历，请先运行: python3 -m qiuzhao_mail2calendar list-apple"
+    error "找不到名为「" & calName & "」的日历，请先运行: python3 -m core list-apple"
   end if
   set theCal to item 1 of calList
 {_date_block("startDate", start)}
@@ -188,7 +188,7 @@ set rs to "{_RECORD_SEP}"
 tell application "Calendar"
   set calList to every calendar whose name is calName
   if (count of calList) is 0 then
-    error "找不到名为「" & calName & "」的日历，请先运行: python3 -m qiuzhao_mail2calendar list-apple"
+    error "找不到名为「" & calName & "」的日历，请先运行: python3 -m core list-apple"
   end if
   set theCal to item 1 of calList
   tell theCal

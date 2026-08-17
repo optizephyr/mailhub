@@ -8,9 +8,9 @@ from email import policy
 from pathlib import Path
 from typing import Any
 
-from qiuzhao_mail2calendar.mail_qq import MailItem
+from core.mail_qq import MailItem
 
-EMAIL_EXAMPLE_DIR = Path(__file__).resolve().parents[1] / "data" / "email_example"
+EMAIL_EXAMPLE_DIR = Path(__file__).resolve().parent / "fixtures" / "email_corpus"
 LABELS_PATH = EMAIL_EXAMPLE_DIR / "labels.json"
 
 

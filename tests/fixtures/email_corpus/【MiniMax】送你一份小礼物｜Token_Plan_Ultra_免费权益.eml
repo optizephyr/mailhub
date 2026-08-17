@@ -1,0 +1,160 @@
+Received: from lf-2-17.ptr.blmpb.com (lf-2-17.ptr.blmpb.com [101.36.218.17])
+	by newxmmxszgpua8-0.qq.com (NewMX) with SMTP id 460194F4
+	for <candidate@qq.com>; Thu, 13 Aug 2026 22:17:32 +0800
+X-QQ-mid: xmmxpua8-0t1786630652t259hqxli
+X-QQ-XMAILINFO: N8pJp5f9DoF1CmB/AWbV4bAsJNti1vonyuXmzly1fszFST+4QbrSGvftq/fSHG
+	 xsMxRf5QL6xcZngl9DA+vy4vWqZhbKtfLpSZVk9N7jjfjTV2z3DkQcLOxDq1MGUPRTBzejHSuuAt
+	 YK/bJR9yMO2aH34k/kzQJErM0Rz7CHa23pUWHtzZy1uvi5lVKySmdG9DlTa6WrROybSf9GStgUJ1
+	 e/y3udZ0W/okDTKaF5kudLpCP1ljcoNONWrMEayCJOgZU2KvLgEMBIIXkNKfyXEDAdSfkPyd1nlz
+	 b1qjdG/2RVDKvLghIajtSzeQZQ/4TVngDnnoJC9tLRbiBoyOg7wQHg1AoIZJNgrI7wW23cJqeJHJ
+	 pPcd1FOsncIrz5hVUQQlxs4jFcmYrYGRwU1ovz5oLPhkrJpePxcdpTM1T58JmIZChvrsNbS72tcA
+	 fF8BFnd7Qq5PhivoRAOtHn81aYx+O14b+XrX2Kf+NHwKYVeEHyt//PUHSRDkpDr0Sjh9vt42qxHT
+	 KH8f3aOdVXEqt8TjlQELxF8hVbPjR/Mix2acu8wft/L0z0/mbVz00DrEPEeKcreZQXmCH6kV32TC
+	 FAlAdWKL3M3f5HSs9HX8eILrvk6pLEZG7OnbE+QVaYBRrIq8hYkl8rjQuSruujA3GaKABdBfz4F2
+	 3x3dC+nOk1JeqqjJCBsMFS+SBInwYl37VRQBedSR5z5TVaAcLojPoixNCr/UGELow829UAGh+Zwz
+	 HQhJEWDb9V/T5ougAs5lirD970RwfrAf7MFYl+u34mqsSskcyEv7CAwo4PyL0vC1yrHCgPhwThtF
+	 qJaCU52bcFWFIy+wu5X9+eQvzxINu0ciie8Q5vSnHJOhuxZ/vScDF6yvJ7zh7UjP0yeEul1cGJIp
+	 a7OuMJRdlsDvU+yzSYLkMAneq0sfJU/+wfz4649IMxBO2YG+4tQoky1ko9YTw5CAhNCxei71E6oB
+	 vV1iPZ+hHrYWqgb7uz3W5+RIBQvCSumH4oOGZkucH8FJ3xkCXdyhKDU7iWqpU5N1uI+tuzJLOaSN
+	 YUAhAnM5dBzyZ2qV03PyBPgyLGjAiDyoTQxQmpLL9W02J2gNFcjbCByi6DY3iY4WoSmlGEsYY0mE
+	 dYngtjrXEinCGeK82PbHMmz1Tbo532b/NNN6aydJ7Kkk0l/cchdGIdPN6jOSMNloGP7rRXkWIJdP
+	 p0ucNuIxZO6Va6S9PzFI+qXBlhYGFz++WzuT3mp7606+I+fka3R4uu6QLSHBi4bDyf88buZOX1ug
+	 BoQzIS+7zQSFhF58fh4KyD2wOcw1WXXtqT800/dqDBZ+CmMrOxjiGRlosFEuiaE6yR7//5r/kgTI
+	 4Z7H4Qq0Alu9CTUu65Me6yBhWeXx8rZhbkAic3NeMXn9s=
+X-QQ-XMRINFO: Mp0Kj//9VHAxzExpfF+O8yhSrljjwrznVg==
+Authentication-Results: mx.qq.com; spf=none smtp.mailfrom=<campus@minimaxi.com
+	 >; dkim=pass(Signatures without header.from domain, signatures with other do
+	 mains passed) header.d=minimaxi-com.20200927.dkim.feishu.cn; dmarc=none(perm
+	 error) header.from=minimaxi.com
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
+ s=s1; d=minimaxi-com.20200927.dkim.feishu.cn; t=1786630648;
+  h=from:subject:mime-version:from:date:message-id:subject:to:cc:
+ reply-to:content-type:mime-version:in-reply-to:message-id;
+ bh=W/t6Yb80teevktW0//u7FDpQt8YxBba3ss37+GKjQrE=;
+ b=P5kCBKR5Ra7aIcozXCCM07XykhxINBVK/u3JLvEL4StsD3zDczALEmWNJC4bHEUEmycTMp
+ RVCew5CBYCHsZL8/a7ERxiF2jafS1aOl5BR23ftwvk8R4SU9kHoQP+7keyBBHph+7e3LSt
+ 6n5m4eohK2tKlp2WSY7Pe6CppjpiTYCKkz4ycRmqKipRPYpEH1JA82bdP0or2xe42RkT87
+ G1xJW5jtsqhUbq5zRLY3Qdrp6nAGQNTudC6qjV95daiETk7CariAjPK3edR5m+KH4xe718
+ CwxKJOnq01JNtdE0A8bLiWrBtAYUEflT/4BqZzwAu4f1rwBZ7QgoH3wInTqgOA==
+Date: Thu, 13 Aug 2026 22:17:25 +0800
+Reply-To: campus@minimaxi.com
+To: <candidate@qq.com>
+Subject: 
+ =?utf-8?b?44CQTWluaU1heOOAkemAgeS9oOS4gOS7veWwj+ekvOeJqe+9nFRva2VuIFBsYW4g?=
+ =?utf-8?b?VWx0cmEg5YWN6LS55p2D55uK?=
+Content-Type: multipart/alternative;
+ boundary=54159dc783558d4260b8d0adcf30ef2e37ca7ca790f88b3e35e2f29fd166
+From: =?utf-8?q?MiniMax_=E6=A0=A1=E5=9B=AD=E6=8B=9B=E8=81=98?=
+ <campus@minimaxi.com>
+Message-Id: <332ae6d6-a9ca-4147-bcfc-b0787b6ca242_GEN_BY_LMS@minimaxi.com>
+Mime-Version: 1.0
+Received: from LJQ2V6713H.local ([210.22.90.214]) by smtp.feishu.cn with
+ ESMTPS; Thu, 13 Aug 2026 22:17:25 +0800
+X-Lms-Return-Path: <lba+26a7dd1f6+0b5ae2+qq.com+campus@minimaxi.com>
+X-Original-From: =?utf-8?b?TWluaU1heCDmoKHlm63mi5vogZg=?=
+ <campus@minimaxi.com>
+
+--54159dc783558d4260b8d0adcf30ef2e37ca7ca790f88b3e35e2f29fd166
+Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset=UTF-8
+
+5ZCM5a2m5L2g5aW977yMCgrmhJ/osKLkvaDmraTliY3lr7kgTWluaU1heCDnmoTlhbPms6jjgIJN
+aW5pTWF4IOeahOS9v+WRveaYryAiSW50ZWxsaWdlbmNlIHdpdGggRXZlcnlvbmUiIOKAlOKAlCDm
+iJHku6zlp4vnu4jnm7jkv6HvvIzmnIDliY3msr/nmoQgQUkg56CU56m25bqU6K+l5bGe5LqO5q+P
+5LiA5Liq5pyJ5oOz5rOV55qE5Lq644CCCgrkuLrkuobmlK/mjIHmm7TlpJrlnKjmoKHlkIzlrabo
+v5vooYwgQUkg56CU56m244CB6JC95Zyw6Ieq5bex55qE5oOz5rOV77yM5oiR5Lus5bCG5Li65LiA
+6YOo5YiG5pu+5YWz5rOo6L+HIE1pbmlNYXgg55qE5ZCM5a2m6YCB5LiKIOOAkOS4gOS4quaciCBN
+aW5pTWF4IFRva2VuIFBsYW4gVWx0cmEg5YWN6LS55p2D55uK44CR44CCClBT77ya5pys5qyh5Li6
+6K+V6L+Q6KGM77yM5ZCO57ut5oiR5Lus5bCG57uT5ZCI5Y+N6aaI77yM6YCQ5q2l6KaG55uW5pu0
+5aSa5ZCM5a2m44CCCgoxLiDkvb/nlKjlnLrmma/vvJror77nqIvpobnnm67jgIHmr5Xorr7jgIHo
+rrrmloflrp7pqozjgIHkuKrkurrnoJTnqbbjgIFIYWNrYXRob27igKbigKYg6ZqP5L2g5Y+R5oyl
+CjIuIOmihuWPluaWueW8j++8mmh0dHBzOi8vdnJmaTFzazhhMC5mZWlzaHUuY24vc2hhcmUvYmFz
+ZS9mb3JtL3NocmNuTWtRZjM0Zjhsc0dDbUFGR3U1akZ1ZyDvvIjloavlhpnlkI4gMjQg5bCP5pe2
+5YaF5Y+R5pS+5p2D55uK44CC5LiA5Liq5pyI5Yiw5pyf5ZCO6Ieq5Yqo57uT5p2f77yM5LiN5Lya
+5Lqn55Sf5Lu75L2V57ut6K6i6LS555So77yJCjMuIOS9v+eUqOaJi+WGjO+8mmh0dHBzOi8vbXku
+ZmVpc2h1LmNuL3dpa2kvQk1KNHdwRFlsaTNBZGJrb3FRM2M0QU5ObmFjCgrlpoLmnpzkvaDlnKjk
+vb/nlKjov4fnqIvkuK3pgYfliLDkuobpl67popjvvIzmiJbogIXlgZrlh7rkuobmnInmhI/mgJ3n
+moQgZGVtby/noJTnqbbvvIzmrKLov47lm57lpI3pgq7ku7blkozmiJHku6zkuqTmtYF+CgpNaW5p
+TWF4IOWboumYnw==
+
+--54159dc783558d4260b8d0adcf30ef2e37ca7ca790f88b3e35e2f29fd166
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html; charset=UTF-8
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset=3D"utf-8">
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microso=
+ft YaHei", Arial, sans-serif;
+    font-size: 15px;
+    color: #262626;
+    line-height: 1.75;
+    max-width: 640px;
+    margin: 20px auto;
+    padding: 24px;
+  }
+  p { margin: 22px 0; }
+  ol { margin: 22px 0; padding-left: 28px; }
+  ol li { margin: 14px 0; }
+  a { color: #0A66C2; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<p><strong>=E5=90=8C=E5=AD=A6=E4=BD=A0=E5=A5=BD=EF=BC=8C</strong></p>
+
+<p>=E6=84=9F=E8=B0=A2=E4=BD=A0=E6=AD=A4=E5=89=8D=E5=AF=B9 MiniMax =E7=9A=84=
+=E5=85=B3=E6=B3=A8=E3=80=82MiniMax =E7=9A=84=E4=BD=BF=E5=91=BD=E6=98=AF <st=
+rong>"Intelligence with Everyone"</strong> =E2=80=94=E2=80=94 =E6=88=91=E4=
+=BB=AC=E5=A7=8B=E7=BB=88=E7=9B=B8=E4=BF=A1=EF=BC=8C=E6=9C=80=E5=89=8D=E6=B2=
+=BF=E7=9A=84 AI =E7=A0=94=E7=A9=B6=E5=BA=94=E8=AF=A5=E5=B1=9E=E4=BA=8E=E6=
+=AF=8F=E4=B8=80=E4=B8=AA=E6=9C=89=E6=83=B3=E6=B3=95=E7=9A=84=E4=BA=BA=E3=80=
+=82</p>
+
+<p style=3D"margin: 22px 0 4px 0;">=E4=B8=BA=E4=BA=86=E6=94=AF=E6=8C=81=E6=
+=9B=B4=E5=A4=9A=E5=9C=A8=E6=A0=A1=E5=90=8C=E5=AD=A6=E8=BF=9B=E8=A1=8C AI =
+=E7=A0=94=E7=A9=B6=E3=80=81=E8=90=BD=E5=9C=B0=E8=87=AA=E5=B7=B1=E7=9A=84=E6=
+=83=B3=E6=B3=95=EF=BC=8C=E6=88=91=E4=BB=AC=E5=B0=86=E4=B8=BA=E4=B8=80=E9=83=
+=A8=E5=88=86=E6=9B=BE=E5=85=B3=E6=B3=A8=E8=BF=87 MiniMax =E7=9A=84=E5=90=8C=
+=E5=AD=A6=E9=80=81=E4=B8=8A <strong>=E3=80=90=E4=B8=80=E4=B8=AA=E6=9C=88 Mi=
+niMax Token Plan Ultra =E5=85=8D=E8=B4=B9=E6=9D=83=E7=9B=8A=E3=80=91</stron=
+g>=E3=80=82</p>
+
+<p style=3D"margin: 4px 0 22px 0;">PS=EF=BC=9A=E6=9C=AC=E6=AC=A1=E4=B8=BA=
+=E8=AF=95=E8=BF=90=E8=A1=8C=EF=BC=8C=E5=90=8E=E7=BB=AD=E6=88=91=E4=BB=AC=E5=
+=B0=86=E7=BB=93=E5=90=88=E5=8F=8D=E9=A6=88=EF=BC=8C=E9=80=90=E6=AD=A5=E8=A6=
+=86=E7=9B=96=E6=9B=B4=E5=A4=9A=E5=90=8C=E5=AD=A6=E3=80=82</p>
+
+<ol>
+  <li><strong>=E4=BD=BF=E7=94=A8=E5=9C=BA=E6=99=AF</strong>=EF=BC=9A=E8=AF=
+=BE=E7=A8=8B=E9=A1=B9=E7=9B=AE=E3=80=81=E6=AF=95=E8=AE=BE=E3=80=81=E8=AE=BA=
+=E6=96=87=E5=AE=9E=E9=AA=8C=E3=80=81=E4=B8=AA=E4=BA=BA=E7=A0=94=E7=A9=B6=E3=
+=80=81Hackathon=E2=80=A6=E2=80=A6 =E9=9A=8F=E4=BD=A0=E5=8F=91=E6=8C=A5</li>
+  <li><strong>=E9=A2=86=E5=8F=96=E6=96=B9=E5=BC=8F</strong>=EF=BC=9A<a href=
+=3D"https://vrfi1sk8a0.feishu.cn/share/base/form/shrcnMkQf34f8lsGCmAFGu5jFu=
+g">=E7=82=B9=E5=87=BB=E6=AD=A4=E5=A4=84=E5=A1=AB=E5=86=99=E9=A2=86=E5=8F=96=
+=E4=BF=A1=E6=81=AF</a>=EF=BC=88=E5=A1=AB=E5=86=99=E5=90=8E 24 =E5=B0=8F=E6=
+=97=B6=E5=86=85=E5=8F=91=E6=94=BE=E6=9D=83=E7=9B=8A=E3=80=82=E4=B8=80=E4=B8=
+=AA=E6=9C=88=E5=88=B0=E6=9C=9F=E5=90=8E=E8=87=AA=E5=8A=A8=E7=BB=93=E6=9D=9F=
+=EF=BC=8C=E4=B8=8D=E4=BC=9A=E4=BA=A7=E7=94=9F=E4=BB=BB=E4=BD=95=E7=BB=AD=E8=
+=AE=A2=E8=B4=B9=E7=94=A8=EF=BC=89</li>
+  <li><strong>=E4=BD=BF=E7=94=A8=E6=89=8B=E5=86=8C</strong>=EF=BC=9A<a href=
+=3D"https://my.feishu.cn/wiki/BMJ4wpDYli3AdbkoqQ3c4ANNnac">MiniMax Token Pl=
+an =E4=BD=BF=E7=94=A8=E6=89=8B=E5=86=8C</a></li>
+</ol>
+
+<p>=E5=A6=82=E6=9E=9C=E4=BD=A0=E5=9C=A8=E4=BD=BF=E7=94=A8=E8=BF=87=E7=A8=8B=
+=E4=B8=AD=E9=81=87=E5=88=B0=E4=BA=86=E9=97=AE=E9=A2=98=EF=BC=8C=E6=88=96=E8=
+=80=85=E5=81=9A=E5=87=BA=E4=BA=86=E6=9C=89=E6=84=8F=E6=80=9D=E7=9A=84 demo/=
+=E7=A0=94=E7=A9=B6=EF=BC=8C=E6=AC=A2=E8=BF=8E=E5=9B=9E=E5=A4=8D=E9=82=AE=E4=
+=BB=B6=E5=92=8C=E6=88=91=E4=BB=AC=E4=BA=A4=E6=B5=81~</p>
+
+<p><strong>MiniMax =E5=9B=A2=E9=98=9F</strong></p>
+
+</body>
+</html>
+--54159dc783558d4260b8d0adcf30ef2e37ca7ca790f88b3e35e2f29fd166--

@@ -1,4 +1,4 @@
-"""Corpus evaluation for the rule engine against data/email_example/labels.json."""
+"""Corpus evaluation for the rule engine against tests/fixtures/email_corpus/labels.json."""
 
 from __future__ import annotations
 
@@ -6,14 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from qiuzhao_mail2calendar.parser import (
+from core.parser import (
     classify_stage,
     detect_action,
     detect_event_type,
     guess_company,
     heuristic_parse,
 )
-from qiuzhao_mail2calendar.rules import coarse_filter
+from core.rules import coarse_filter
 from tests.eml_loader import EMAIL_EXAMPLE_DIR, iter_labeled_cases, load_labels
 
 

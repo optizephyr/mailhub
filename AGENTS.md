@@ -19,12 +19,12 @@ cp .env.example .env        # 已有 .env 勿覆盖
 ## Commands
 
 ```bash
-python -m qiuzhao_mail2calendar list-apple
-python -m qiuzhao_mail2calendar scan-apple --days 60
-python -m qiuzhao_mail2calendar sync --dry-run
-python -m qiuzhao_mail2calendar sync --dry-run --json
-python -m qiuzhao_mail2calendar sync
-python -m qiuzhao_mail2calendar sync --full
+python -m core list-apple
+python -m core scan-apple --days 60
+python -m core sync --dry-run
+python -m core sync --dry-run --json
+python -m core sync
+python -m core sync --full
 python -m pytest tests/ -q
 ```
 
@@ -53,7 +53,7 @@ python -m pytest tests/ -q
 | `models.py` | `CandidateEvent` 等数据结构 |
 | `config.py` | `.env` → `Settings` |
 
-状态与日志在 `data/`（gitignore）。评测语料：`data/email_example/` + `labels.json`，由 `tests/test_rules_corpus.py` 消费。
+运行态在 `data/`（gitignore：sqlite、日志）。评测语料在 `tests/fixtures/email_corpus/`（已脱敏 `.eml` + `labels.json`），由 `tests/test_rules_corpus.py` 消费。
 
 ## Domain invariants
 
@@ -72,12 +72,12 @@ python -m pytest tests/ -q
 - 新增配置：同步改 `config.Settings`、`.env.example`、必要时 README
 - 解析/匹配逻辑优先纯函数，便于单测；副作用集中在 `cli` / `apple` / `store`
 - 中文用户可见文案（CLI 输出、`outcome.summary`）保持简洁准确
-- 改规则或启发式时：在 `data/email_example/` 补/改 `.eml`，并更新 `labels.json`
+- 改规则或启发式时：在 `tests/fixtures/email_corpus/` 补/改 `.eml`，并更新 `labels.json`
 
 ## Guardrails
 
 - **勿提交 / 勿打印** `.env`、授权码、API key、真实邮件正文中的隐私
-- **勿提交** `data/`（sqlite、日志、真实 `.eml`）
+- **勿提交** `data/`（sqlite、日志）；语料用脱敏样例放在 `tests/fixtures/email_corpus/`
 - 正式 `sync` 会改本机日历并推进游标；调试默认 `--dry-run`
 - AppleScript / 日历权限失败时，引导查系统设置「自动化 / 日历」，勿伪造成功写入
 - 不要把此工具改成非 macOS 通用日历后端，除非用户明确要求

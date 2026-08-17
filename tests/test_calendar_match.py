@@ -1,15 +1,15 @@
 from pathlib import Path
 
-from qiuzhao_mail2calendar import cli
-from qiuzhao_mail2calendar.calendar_match import (
+from core import cli
+from core.calendar_match import (
     extract_marker_message_id,
     marker_line,
     match_calendar_event,
     split_title,
 )
-from qiuzhao_mail2calendar.config import Settings
-from qiuzhao_mail2calendar.models import AppleEventRef, CandidateEvent
-from qiuzhao_mail2calendar.store import EventStore
+from core.config import Settings
+from core.models import AppleEventRef, CandidateEvent
+from core.store import EventStore
 
 
 def _settings(tmp_path: Path, **kwargs) -> Settings:

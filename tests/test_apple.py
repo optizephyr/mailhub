@@ -2,8 +2,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from qiuzhao_mail2calendar import apple
-from qiuzhao_mail2calendar.models import CandidateEvent
+from core import apple
+from core.models import CandidateEvent
 
 
 def _event(**kwargs) -> CandidateEvent:

@@ -1,0 +1,441 @@
+Received: from ptr4.mail.mokahr.com (ptr4.mail.mokahr.com [106.75.21.161])
+	by newxmmxszc54-1.qq.com (NewMX) with SMTP id B4B3924C
+	for <candidate@qq.com>; Thu, 13 Aug 2026 18:45:11 +0800
+X-QQ-mid: xmmxzc54-1t1786617934tgl4ardpj
+Sender: 1c901b22-9704-11f1-8444-525400e00ae3@mail.mokahr.com
+X-QQ-CSender: 1c901b22-9704-11f1-8444-525400e00ae3@mail.mokahr.com
+X-QQ-XMAILINFO: Mh2b5MqRul6E6WJMlpv72N3Y+sc9F7AO0Fuzm362gLZ3mA6fxkVQG6CYKhA0vo
+	 LllO+ljf3ttJS4oefusB2nsVbGRX0q9+76sPvSSwPIVJywx/17IDgooXL2dwjU+rlluXaumO7aMN
+	 tRr84KU/yUWrasQRbYzgr/3MVqEK3vEjzcTniZYyR8pyell6JEszU9KE5Sv7yXaXZdxnmwk/poGA
+	 7MAIFTYG3vQve0Ddh9cNCE2j7YScG/lU59UrfrANvvACKlTtBPv4BIYP0gjAKcBMGMVaY+VGy70R
+	 iU9U8Smmz01pMIEE/b/mb0Qb9JNYx3+PFEyXt70qdkgW7IAuYxi2jXgJgsNTWXaDe4ekg4SHzG8r
+	 tKeXU1AABXud0uZJ0MxGjW2wa2BYzS9PXGCCUQvJWyjfh/a9HYiBKNWryS+SqKnZYXtFhi/iaU9C
+	 1Q/p/Zm6GbixJJAAS+LcTBzhCEiH7ZlXy087TnhglNsvdLfgZADQFpFTOVNHkJ2nlvgd/ujtcnVD
+	 RbAImoYKGOeKyrRZ6lVpSWpVk9x9BogA7LAHxYff3CatK+iePQWSVVQDUlKhiOjnsF31JLKPs6SS
+	 b0yLzv+GgufuCdNBDtzv7GJrxNfYz2Ga7gQnQqOH5n5LWwsrtbs3TYBqgw5UCESiZKmsH/W3lsYz
+	 fkXyxP6cvhDBtvnan4uyNVcQu163rwTWBYh79NL53kGSmnji7l38E/NkxeuArfs5y9nNYCYwn1SD
+	 MjDyUsGdDAQQNO8GXQObtavd648IVKB+V1eu31QXxJh6NPsY6DUlCra/uLkEQ06hD6mbPFq0YnId
+	 4WSF8U3nY+orE7OShgzSx2JZGecWbogbnUMM81NxpHs4W6zipoIjeaVLy4lSovU5JX5IidsCPhnq
+	 CbU+jAMu+3OARuCLlYf33McK7mYplPolX0yDXUszf2+cuAkeiQhQiuxuWC5piWqaUPwnsX8S6MuI
+	 GxhNZa1iGYmcx4P4QgRy9S4a+MMKUzE56rA3KCWFyuU7R7g9badO7iNlaZrV9grnxSIpbfUBfDFu
+	 oOWHiNxTdebvblltYkVunQMAC6PvP7gQ6op8dZJwBtyUgYpAaztwhDzsRvbVNDNKgx2ONUyrHmBl
+	 py+WdayGMlNFFgp5JUeZcAlQ92VZ6QdmJp45ogCjHlBgp1jUkCmr/CdUxeI87YXZ40Bax9uFG8+r
+	 XggyJbKhAdyMbG8NsfO37S3H6f2bztht+bMRqQU06M3ltLSBjY1Q2+oqW+rGSd0SQbpqTUdm8ta5
+	 VGhO2fxxxZozzSSv1Ozq3fupRXCplnaI2u8TZ/S5Z3UQc97AGpzM90to9v1TNoWz5jizq/bc5Abh
+	 KN6DcHAUP6+DDcz5wptkYM3oiYK5JndS9y/aXERZCmsJSm2s6thvgVvQlQV9mahmdYSihSRSmwOY
+	 WoAbiW7/BJFh6yxzwrkF6Gl9MnXDs4bHxWpbGsr447kcRUnI1SJkcQyioQAJ0P42XAYkkgJn43Ah
+	 GKZyNdiRkIlH+LvF+gtKHFNAGFrfHBpR7DcdgOc9TGnsHgxlm/xLw=
+X-QQ-XMRINFO: NS+P29fieYNwloGjVmvunx9wgzaLhOPHzQ==
+Authentication-Results: mx.qq.com; spf=pass(106.75.21.161) smtp.mailfrom=<1c90
+	 1b22-9704-11f1-8444-525400e00ae3@mail.mokahr.com>; dkim=pass(signature was v
+	 erified) header.d=mail.mokahr.com; dmarc=pass(p=REJECT sp=REJECT pct=100) he
+	 ader.from=mail.mokahr.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=mail.mokahr.com;
+ i=@mail.mokahr.com; q=dns/txt; s=mail; t=1786617934; h=date : from :
+ to : message-id : subject : mime-version : content-type : reply-to :
+ list-unsubscribe : from : list-unsubscribe-post : feedback-id;
+ bh=BZuHA0LsnZfJWbm/yxCcGLHWBg9HKLvrwvWkhFd6RpE=;
+ b=lqbW6HDg0ImBdLSJsgCBxvFVfjMWyfaZCD75p/Ge5LC/PSmMb5HVvPGiZYNYKI/BlT9Wt
+ 4FkVC/6vBva76MTE+/MT3ddUaEn4MdkPlMBQiPGbOt4h8AhdJMGTLr+/CbAdNoQeXMxJOS1
+ Lusnmg6rCZm2fPBO4blKdE3zCvtulCo=
+Received: (go-smtp inbound); Thu, 13 Aug 2026 18:45:33 +0800
+Received: from  (Unknown [127.0.0.1]) by SendCloud Inbound Server with ESMTPA
+ id Flg0d0BQ.0 envelope-from <didiglobal-no-reply@mail.mokahr.com>;
+ Thu, 13 Aug 2026 18:45:33 +0800
+Date: Thu, 13 Aug 2026 18:45:33 +0800 (CST)
+From: =?UTF-8?B?5ru05ru05oub6IGY?= <didiglobal-no-reply@mail.mokahr.com>
+To: candidate <candidate@qq.com>
+Message-ID: 
+ <1786617933874_54283_104203_29221.sc-10-9-101-84-inbound0@mail.mokahr.com>
+Subject: 
+ =?utf-8?b?44CQ5ru05ru044CR6K+a5oya6YKA6K+35L2g5Y+C5YqgMjAyN+Wxiueniw==?=
+ =?utf-8?b?5a2j5qCh5oub77yB?=
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="----=_Part_2408409_34472860.1786617933874"
+sesame_open: 3de0be30478255bab0a4c78a5a664774
+REPLY-TO: =?UTF-8?B?5ru05ru05oub6IGY?= <didiglobal-no-reply@mail.mokahr.com>
+X-SENDCLOUD-UUID: 
+ 1786617933874_54283_104203_29221.sc-10-9-101-84-inbound0$candidate@qq.com
+X-SENDCLOUD-LOG: 
+ 1786617933874_54283_104203_29221.sc-10-9-101-84-inbound0$candidate@qq.com#candidate@qq.com#104203#54283#0#false#false#-1#-1#
+X-SENDCLOUD-LOG-NEW: 
+ MTc4NjYxNzkzMzg3NF81NDI4M18xMDQyMDNfMjkyMjEuc2MtMTAtOS0xMDEtODQtaW5ib3VuZDAkMjY0MTAwMzQxOEBxcS5jb20jMjY0MTAwMzQxOEBxcS5jb20jMTA0MjAzIzU0MjgzIzAjZmFsc2UjZmFsc2UjLTEjLTEj
+List-Unsubscribe: 
+ <mailto:0_104203_1786617933874_54283_104203_29221.sc-10-9-101-84-inbound0@mail.mokahr.com>
+
+
+------=_Part_2408409_34472860.1786617933874
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<!DOCTYPE html><html lang=3D"zh-CN" dir=3D"ltr" xmlns=3D"http://www.w3.org/=
+1999/xhtml" xmlns:v=3D"urn:schemas-microsoft-com:vml" xmlns:o=3D"urn:schema=
+s-microsoft-com:office:office"><head><meta http-equiv=3D"Content-Type" cont=
+ent=3D"text/html; charset=3Dutf-8"><meta http-equiv=3D"X-UA-Compatible" con=
+tent=3D"IE=3Dedge"><meta name=3D"viewport" content=3D"width=3Ddevice-width"=
+><!--[if gte mso 9]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPe=
+rInch></o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]--></head=
+><body bgcolor=3D"#FFFFFF" width=3D"100%" style=3D"-webkit-font-smoothing: =
+antialiased; width:100% !important; background:#FFFFFF;-webkit-text-size-ad=
+just:none; margin:0; padding:0; min-width:100%; direction: ltr;"><table bgc=
+olor=3D"#FFFFFF" id=3D"__bodyTable__" width=3D"100%" style=3D"-webkit-font-=
+smoothing: antialiased; width:100% !important; background:#FFFFFF;-webkit-t=
+ext-size-adjust:none; margin:0; padding:0; min-width:100%"><tbody><tr><td a=
+lign=3D"center"><table class=3D"moka-email-v0.16.48" width=3D"100%" cellpad=
+ding=3D"0" border=3D"0" style=3D"border-collapse:collapse;mso-table-lspace:=
+0;mso-table-rspace:0;line-height:22px;margin-left:auto;margin-right:auto;pa=
+dding:0;width:100%;max-height:100vh;font-size:14px;background:#EDEDED;color=
+:#000000"><thead><tr><th valign=3D"top" style=3D"border-collapse:collapse">=
+<table width=3D"100%" cellpadding=3D"0" cellspacing=3D"0" border=3D"0" styl=
+e=3D"border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0"><tbody=
+><tr><td valign=3D"bottom" style=3D"padding:16px 16px 32px;border-collapse:=
+collapse"></td></tr></tbody></table></th></tr></thead><tbody><tr><td valign=
+=3D"top" align=3D"center" style=3D"border-collapse:collapse;text-align:cent=
+er"><table cellpadding=3D"0" cellspacing=3D"0" border=3D"0" style=3D"displa=
+y:inline-block;text-align:left;border-collapse:collapse;border-radius:2px;m=
+so-table-lspace:0;mso-table-rspace:0"><tbody><tr><td><table cellpadding=3D"=
+0" cellspacing=3D"0" border=3D"0" style=3D"display:inline-block;text-align:=
+left;border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0"><tbody=
+><tr><td width=3D"60" style=3D"width:60px;background:white">&nbsp;</td><td =
+width=3D"480" valign=3D"top" style=3D"width:480px;border-collapse:collapse"=
+><table width=3D"100%" cellpadding=3D"0" cellspacing=3D"0" border=3D"0" sty=
+le=3D"line-height:22px"><thead></thead><tbody><tr><td style=3D"min-width:30=
+0px;padding-top:48px;padding-bottom:80px;border-radius:0;color:black;backgr=
+ound:white"><table style=3D"width:100%" cellpadding=3D"0" cellspacing=3D"0"=
+><tbody><tr><td style=3D"font-size:14px;line-height:22px;word-break:break-w=
+ord;padding-top:8px;padding-right:0;padding-bottom:8px;padding-left:0;white=
+-space:inherit"><table style=3D"width:100%" cellpadding=3D"0" cellspacing=
+=3D"0"><tbody><tr><td style=3D"font-size:14px;line-height:22px;word-break:b=
+reak-word;padding-top:8px;padding-right:0;padding-bottom:8px;padding-left:0=
+;white-space:inherit"><div class=3D" text-editor__container read-only"><div=
+ class=3D" text-editor__editor"><div><div class=3D"DraftEditor-root"><div c=
+lass=3D"DraftEditor-editorContainer"><div aria-describedby=3D"placeholder-7=
+0bk9" class=3D"public-DraftEditor-content" contenteditable=3D"false" spellc=
+heck=3D"false" style=3D"outline:none;user-select:text;-webkit-user-select:t=
+ext;;word-wrap:break-word"><div data-contents=3D"true"><div style=3D"font-s=
+ize:14px;line-height:22px;word-break:break-word;;font-family:-apple-system,=
+ BlinkMacSystemFont, PingFang SC, Microsoft YaHei, Lantinghei SC, Helvetica=
+ Neue, Arial, Open Sans, Hiragino Sans GB, sans-serif"><span class=3D"" dat=
+a-block=3D"true" data-editor=3D"70bk9" data-offset-key=3D"flmak-0-0"><div d=
+ata-offset-key=3D"flmak-0-0" class=3D"public-DraftStyleDefault-block public=
+-DraftStyleDefault-ltr"><span data-offset-key=3D"flmak-0-0"><span data-text=
+=3D"true">=E7=8E=8B=E5=B0=8F=E6=98=8E=E5=90=8C=E5=AD=A6=EF=BC=8C=E4=BD=A0=
+=E5=A5=BD=EF=BC=81</span></span></div></span><span class=3D"" data-block=3D=
+"true" data-editor=3D"70bk9" data-offset-key=3D"f6jcu-0-0"><div data-offset=
+-key=3D"f6jcu-0-0" class=3D"public-DraftStyleDefault-block public-DraftStyl=
+eDefault-ltr"><span data-offset-key=3D"f6jcu-0-0"><br data-text=3D"true"></=
+span></div></span><span class=3D"" data-block=3D"true" data-editor=3D"70bk9=
+" data-offset-key=3D"cd4mu-0-0"><div data-offset-key=3D"cd4mu-0-0" class=3D=
+"public-DraftStyleDefault-block public-DraftStyleDefault-ltr"><span data-of=
+fset-key=3D"cd4mu-0-0"><span data-text=3D"true">=E6=88=91=E4=BB=AC=E5=9C=A8=
+=E6=BB=B4=E6=BB=B4=E6=A0=A1=E6=8B=9B=E4=BA=BA=E6=89=8D=E5=BA=93=E4=B8=AD=E6=
+=B3=A8=E6=84=8F=E5=88=B0=E4=BD=A0=E6=9B=BE=E6=8A=95=E9=80=92=E8=BF=87=E6=BB=
+=B4=E6=BB=B4=E6=A0=A1=E6=8B=9B=E8=81=8C=E4=BD=8D=EF=BC=8C=E6=84=9F=E8=B0=A2=
+=E4=BD=A0=E5=AF=B9=E6=BB=B4=E6=BB=B4=E6=A0=A1=E5=9B=AD=E6=8B=9B=E8=81=98=E7=
+=9A=84=E5=85=B3=E6=B3=A8=EF=BC=81</span></span><span data-offset-key=3D"cd4=
+mu-0-1" style=3D"font-weight:bold"><span data-text=3D"true">=E6=BB=B4=E6=BB=
+=B42027=E5=B1=8A=E7=A7=8B=E5=AD=A3=E6=A0=A1=E6=8B=9B=E5=B7=B2=E6=AD=A3=E5=
+=BC=8F=E5=90=AF=E5=8A=A8</span></span><span data-offset-key=3D"cd4mu-0-2"><=
+span data-text=3D"true">=EF=BC=8C=E4=B8=BA=E4=BA=86=E4=B8=8D=E9=94=99=E8=BF=
+=87=E6=AF=8F=E4=B8=80=E4=BD=8D=E4=BC=98=E7=A7=80=E7=9A=84=E2=80=9C=E5=B0=8F=
+=E6=A1=94=E5=AD=90=E2=80=9D=EF=BC=8C</span></span><span data-offset-key=3D"=
+cd4mu-0-3" style=3D"font-weight:bold"><span data-text=3D"true">=E7=8E=B0=E9=
+=82=80=E8=AF=B7=E4=BD=A0=E5=8F=82=E5=8A=A027=E5=B1=8A=E7=A7=8B=E5=AD=A3=E6=
+=A0=A1=E6=8B=9B=E7=BD=91=E7=94=B3</span></span><span data-offset-key=3D"cd4=
+mu-0-4"><span data-text=3D"true">=E3=80=82</span></span></div></span><span =
+class=3D"" data-block=3D"true" data-editor=3D"70bk9" data-offset-key=3D"426=
+bp-0-0"><div data-offset-key=3D"426bp-0-0" class=3D"public-DraftStyleDefaul=
+t-block public-DraftStyleDefault-ltr"><span data-offset-key=3D"426bp-0-0"><=
+br data-text=3D"true"></span></div></span><span class=3D"" data-block=3D"tr=
+ue" data-editor=3D"70bk9" data-offset-key=3D"jppk-0-0"><div data-offset-key=
+=3D"jppk-0-0" class=3D"public-DraftStyleDefault-block public-DraftStyleDefa=
+ult-ltr"><span data-offset-key=3D"jppk-0-0" style=3D"font-weight:bold;color=
+:#ED1F4B"><span data-text=3D"true">=E8=AF=B7=E6=B3=A8=E6=84=8F=EF=BC=9A</sp=
+an></span><span data-offset-key=3D"jppk-0-1" style=3D"font-weight:bold"><sp=
+an data-text=3D"true"> </span></span></div></span><span class=3D"" data-blo=
+ck=3D"true" data-editor=3D"70bk9" data-offset-key=3D"659kd-0-0"><div data-o=
+ffset-key=3D"659kd-0-0" class=3D"public-DraftStyleDefault-block public-Draf=
+tStyleDefault-ltr"><span data-offset-key=3D"659kd-0-0"><span data-text=3D"t=
+rue">1=E3=80=81=E5=9C=A827=E5=B1=8A=E7=A7=8B=E6=8B=9B=E4=B8=AD=EF=BC=8C=E6=
+=AF=8F=E4=BD=8D=E5=90=8C=E5=AD=A6=E5=85=A8=E6=B8=A0=E9=81=93=EF=BC=88=E5=86=
+=85=E6=8E=A8=E3=80=81=E5=AE=98=E7=BD=91=E3=80=81=E6=A0=A1=E5=9B=AD=E5=A4=A7=
+=E4=BD=BF=E3=80=81=E6=8B=9B=E8=81=98=E7=BD=91=E7=AB=99=E7=AD=89=EF=BC=89=E5=
+=85=B1=E6=9C=89</span></span><span data-offset-key=3D"659kd-0-1" style=3D"f=
+ont-weight:bold;color:#ED1F4B"><span data-text=3D"true">3=E6=AC=A1=E4=B8=BB=
+=E5=8A=A8=E6=8A=95=E9=80=92=E6=9C=BA=E4=BC=9A</span></span><span data-offse=
+t-key=3D"659kd-0-2"><span data-text=3D"true">=EF=BC=9B</span></span></div><=
+/span><span class=3D"" data-block=3D"true" data-editor=3D"70bk9" data-offse=
+t-key=3D"ejbta-0-0"><div data-offset-key=3D"ejbta-0-0" class=3D"public-Draf=
+tStyleDefault-block public-DraftStyleDefault-ltr"><span data-offset-key=3D"=
+ejbta-0-0"><span data-text=3D"true">2=E3=80=81=E6=AF=8F=E4=BD=8D=E5=90=8C=
+=E5=AD=A6=E6=AF=8F=E6=AC=A1=E5=8F=AA=E8=83=BD=E6=8A=95=E9=80=921=E4=B8=AA=
+=E8=81=8C=E4=BD=8D=EF=BC=8C=E5=BD=93=E5=89=8D=E6=8A=95=E9=80=92=E6=B5=81=E7=
+=A8=8B=E7=BB=93=E6=9D=9F=E5=90=8E=EF=BC=8C=E6=89=8D=E8=83=BD=E5=86=8D=E6=AC=
+=A1=E6=8A=95=E9=80=92=E6=96=B0=E8=81=8C=E4=BD=8D=EF=BC=9B</span></span></di=
+v></span><span class=3D"" data-block=3D"true" data-editor=3D"70bk9" data-of=
+fset-key=3D"1tuie-0-0"><div data-offset-key=3D"1tuie-0-0" class=3D"public-D=
+raftStyleDefault-block public-DraftStyleDefault-ltr"><span data-offset-key=
+=3D"1tuie-0-0"><span data-text=3D"true">3=E3=80=81=E9=99=84=E5=8A=A0=E6=9C=
+=BA=E4=BC=9A=EF=BC=9A=E5=A6=82=E5=B2=97=E4=BD=8D=E6=B5=81=E7=A8=8B=E7=BB=93=
+=E6=9D=9F=EF=BC=8C=E4=BD=A0=E7=9A=84=E7=AE=80=E5=8E=86=E4=B9=9F=E5=B0=86=E5=
+=BC=80=E6=94=BE=E7=BB=99=E6=89=80=E6=9C=89=E9=83=A8=E9=97=A8=EF=BC=8CHR=E5=
+=B0=86=E5=90=8C=E6=AD=A5=E4=B8=BA=E4=BD=A0=E6=8E=A8=E8=8D=90=E5=90=88=E9=80=
+=82=E8=81=8C=E4=BD=8D=EF=BC=8C=E4=B8=94=E8=AF=A5=E6=AC=A1=E6=8E=A8=E8=8D=90=
+=E4=B8=8D=E5=8D=A0=E7=94=A8=E4=BD=A0=E7=9A=84=E4=B8=BB=E5=8A=A8=E6=8A=95=E9=
+=80=92=E6=9C=BA=E4=BC=9A=EF=BC=88=E5=A6=82=E4=B8=8D=E6=83=B3=E6=8E=A8=E8=BF=
+=9B=E8=AF=A5=E8=81=8C=E4=BD=8D=E5=8F=AF=E5=8F=91=E9=80=81=E9=82=AE=E4=BB=B6=
+=E8=87=B3=E6=A0=A1=E6=8B=9B=E9=82=AE=E7=AE=B1=E8=AF=B4=E6=98=8E=EF=BC=89=EF=
+=BC=9B</span></span></div></span><span class=3D"" data-block=3D"true" data-=
+editor=3D"70bk9" data-offset-key=3D"3ku8-0-0"><div data-offset-key=3D"3ku8-=
+0-0" class=3D"public-DraftStyleDefault-block public-DraftStyleDefault-ltr">=
+<span data-offset-key=3D"3ku8-0-0"><span data-text=3D"true">4=E3=80=81=E6=
+=A0=A1=E6=8B=9B=E6=B5=81=E7=A8=8B=E8=BF=9B=E5=BA=A6=E5=8F=8A=E4=B8=BA=E5=90=
+=8C=E5=AD=A6=E6=8E=A8=E8=8D=90=E7=9A=84=E6=96=B0=E5=B2=97=E4=BD=8D=E4=BF=A1=
+=E6=81=AF=E5=8F=AF=E9=80=9A=E8=BF=87=E2=80=9C=E6=BB=B4=E6=BB=B4=E6=8B=9B=E8=
+=81=98=E2=80=9D=E5=85=AC=E4=BC=97=E5=8F=B7=EF=BC=8C=E7=82=B9=E5=87=BB=E2=80=
+=9C=E6=A0=A1=E5=9B=AD=E6=8B=9B=E8=81=98=E2=80=9D-=E2=80=9C=E8=BF=9B=E5=B1=
+=95=E6=9F=A5=E8=AF=A2=E2=80=9D=E9=A1=B5=E9=9D=A2=E6=9F=A5=E8=AF=A2=EF=BC=9B=
+</span></span></div></span><span class=3D"" data-block=3D"true" data-editor=
+=3D"70bk9" data-offset-key=3D"3m5n6-0-0"><div data-offset-key=3D"3m5n6-0-0"=
+ class=3D"public-DraftStyleDefault-block public-DraftStyleDefault-ltr"><spa=
+n data-offset-key=3D"3m5n6-0-0"><span data-text=3D"true">5=E3=80=81=E5=BB=
+=BA=E8=AE=AE=E6=BB=B4=E6=BB=B4=E5=9C=A8=E8=81=8C=E5=AE=9E=E4=B9=A0=E7=94=9F=
+=E5=85=88=E4=B8=8E=E9=83=A8=E9=97=A8=E7=A1=AE=E8=AE=A4=E8=BD=AC=E6=AD=A3=E8=
+=A7=84=E5=88=92=EF=BC=8C=E4=BC=98=E5=85=88=E8=B5=B0=E5=AE=9E=E4=B9=A0=E8=BD=
+=AC=E6=AD=A3=E9=80=9A=E9=81=93=EF=BC=8C=E9=81=BF=E5=85=8D=E9=87=8D=E5=A4=8D=
+=E6=8A=95=E9=80=92=E3=80=82</span></span></div></span></div><ul style=3D"di=
+splay:block;list-style-type:disc;margin:1em 0;padding-left:40px;font-size:1=
+4px;line-height:22px;word-break:break-word;;font-family:-apple-system, Blin=
+kMacSystemFont, PingFang SC, Microsoft YaHei, Lantinghei SC, Helvetica Neue=
+, Arial, Open Sans, Hiragino Sans GB, sans-serif"><li style=3D"list-style:d=
+isc" class=3D"public-DraftStyleDefault-unorderedListItem public-DraftStyleD=
+efault-reset public-DraftStyleDefault-depth0 public-DraftStyleDefault-listL=
+TR" data-block=3D"true" data-editor=3D"70bk9" data-offset-key=3D"1na6r-0-0"=
+><div data-offset-key=3D"1na6r-0-0" class=3D"public-DraftStyleDefault-block=
+ public-DraftStyleDefault-ltr"><span data-offset-key=3D"1na6r-0-0" style=3D=
+"font-weight:bold;color:#ED1F4B"><span data-text=3D"true">=E7=A7=8B=E6=8B=
+=9B=E6=9B=B4=E5=A4=9AQ&amp;A=EF=BC=8C=E5=8F=AF=E6=9F=A5=E7=9C=8B=E5=85=AC=
+=E4=BC=97=E5=8F=B7=E2=80=9C=E6=BB=B4=E6=BB=B4=E6=8B=9B=E8=81=98=E2=80=9D=E6=
+=8E=A8=E6=96=87=E3=80=90=E6=BB=B4=E6=BB=B42027=E5=B1=8A=E7=A7=8B=E6=8B=9BQ&=
+amp;A=E6=96=B0=E9=B2=9C=E5=87=BA=E7=82=89=EF=BC=81=E3=80=91=EF=BC=8C=E6=89=
+=AB=E6=8F=8F=E4=B8=8B=E6=96=B9=E4=BA=8C=E7=BB=B4=E7=A0=81=E5=85=B3=E6=B3=A8=
+=E2=80=9C=E6=BB=B4=E6=BB=B4=E6=8B=9B=E8=81=98=E2=80=9D=E5=85=AC=E4=BC=97=E5=
+=8F=B7=EF=BC=8C=E4=B9=9F=E5=8F=AF=E6=9F=A5=E8=AF=A2=E6=9B=B4=E5=A4=9A=E6=8B=
+=9B=E8=81=98=E5=B2=97=E4=BD=8D=EF=BC=8C=E5=B9=B6=E7=9B=B4=E6=8E=A5=E6=8A=95=
+=E9=80=92=E7=AE=80=E5=8E=86=E3=80=82</span></span></div></li><li style=3D"l=
+ist-style:disc" class=3D"public-DraftStyleDefault-unorderedListItem public-=
+DraftStyleDefault-depth0 public-DraftStyleDefault-listLTR" data-block=3D"tr=
+ue" data-editor=3D"70bk9" data-offset-key=3D"ejsga-0-0"><div data-offset-ke=
+y=3D"ejsga-0-0" class=3D"public-DraftStyleDefault-block public-DraftStyleDe=
+fault-ltr"><span data-offset-key=3D"ejsga-0-0" style=3D"font-weight:bold;co=
+lor:#ED1F4B"><span data-text=3D"true">=E5=A6=82=E6=83=B3=E5=92=A8=E8=AF=A2=
+=E6=9B=B4=E5=A4=9A=E9=97=AE=E9=A2=98=EF=BC=9F=E6=8E=A8=E8=8D=90=E5=89=8D=E5=
+=BE=80=E6=BB=B4=E6=BB=B4=E6=A0=A1=E6=8B=9B=E5=AE=98=E7=BD=91=EF=BC=8C=E7=82=
+=B9=E5=87=BB=E5=8F=B3=E4=B8=8B=E8=A7=92"=E5=B0=8F=E6=A1=94=E6=99=BA"=E6=9C=
+=BA=E5=99=A8=E4=BA=BA=EF=BC=8C=E5=BF=AB=E9=80=9F=E5=92=A8=E8=AF=A2=E6=A0=A1=
+=E6=8B=9B=E7=9B=B8=E5=85=B3=E9=97=AE=E9=A2=98=EF=BC=9B</span></span><span d=
+ata-offset-key=3D"ejsga-0-1"><span data-text=3D"true">=E4=B9=9F=E5=8F=AF=E5=
+=B0=86=E6=83=B3=E5=92=A8=E8=AF=A2=E7=9A=84=E9=97=AE=E9=A2=98=E9=82=AE=E4=BB=
+=B6=E5=8F=91=E9=80=81=E8=87=B3=E6=BB=B4=E6=BB=B4=E6=A0=A1=E6=8B=9B=E5=AE=98=
+=E9=82=AE=EF=BC=9Acampus@didiglobal.com=EF=BC=8CHR=E5=B0=86=E4=B8=BA=E5=A4=
+=A7=E5=AE=B6=E8=A7=A3=E7=AD=94=E3=80=82=E5=9B=A0=E6=A0=A1=E6=8B=9B=E5=AD=A3=
+=E5=92=A8=E8=AF=A2=E9=87=8F=E8=BE=83=E5=A4=A7=EF=BC=8C=E8=AF=B7=E8=80=90=E5=
+=BF=83=E7=AD=89=E5=BE=85=E5=9B=9E=E5=A4=8D=E3=80=82</span></span></div></li=
+></ul><div style=3D"font-size:14px;line-height:22px;word-break:break-word;;=
+font-family:-apple-system, BlinkMacSystemFont, PingFang SC, Microsoft YaHei=
+, Lantinghei SC, Helvetica Neue, Arial, Open Sans, Hiragino Sans GB, sans-s=
+erif"><span class=3D"" data-block=3D"true" data-editor=3D"70bk9" data-offse=
+t-key=3D"fm4b2-0-0"><div data-offset-key=3D"fm4b2-0-0" class=3D"public-Draf=
+tStyleDefault-block public-DraftStyleDefault-ltr"><span data-offset-key=3D"=
+fm4b2-0-0"><br data-text=3D"true"></span></div></span></div><figure class=
+=3D"" data-block=3D"true" data-editor=3D"70bk9" data-offset-key=3D"gdtg-0-0=
+" contenteditable=3D"false" style=3D";margin:0"><div class=3D"" style=3D"po=
+sition:relative;display:inline-block;line-height:1"><div><img src=3D"https:=
+//public-cdn.mokahr.com/didiglobal/358113608bfd4d2484305932bd6eae01.jpg?Exp=
+ires=3D3919400837&amp;OSSAccessKeyId=3DLTAI5tBgSyttQYpne6XoQCpt&amp;Signatu=
+re=3DaWWhfXBrQsksp4MmYH2SPPNn1BA%3D&amp;timestamp=3D1771917190092" style=3D=
+"vertical-align:top;min-width:10;min-height:10;width:auto;height:137px;curs=
+or:default" height=3D"137"></div><span class=3D""></span><span class=3D""><=
+/span><span class=3D""></span><span class=3D""></span></div></figure><div s=
+tyle=3D"font-size:14px;line-height:22px;word-break:break-word;;font-family:=
+-apple-system, BlinkMacSystemFont, PingFang SC, Microsoft YaHei, Lantinghei=
+ SC, Helvetica Neue, Arial, Open Sans, Hiragino Sans GB, sans-serif"><span =
+class=3D"" data-block=3D"true" data-editor=3D"70bk9" data-offset-key=3D"7bv=
+i3-0-0"><div data-offset-key=3D"7bvi3-0-0" class=3D"public-DraftStyleDefaul=
+t-block public-DraftStyleDefault-ltr"><span data-offset-key=3D"7bvi3-0-0"><=
+br data-text=3D"true"></span></div></span><span class=3D"" data-block=3D"tr=
+ue" data-editor=3D"70bk9" data-offset-key=3D"d18e2-0-0"><div data-offset-ke=
+y=3D"d18e2-0-0" class=3D"public-DraftStyleDefault-block public-DraftStyleDe=
+fault-ltr"><span data-offset-key=3D"d18e2-0-0" style=3D"font-weight:bold"><=
+span data-text=3D"true">=E3=80=90=E5=85=B7=E4=BD=93=E6=8B=9B=E8=81=98=E4=BF=
+=A1=E6=81=AF=E3=80=91 </span></span></div></span><span class=3D"" data-bloc=
+k=3D"true" data-editor=3D"70bk9" data-offset-key=3D"4jdmn-0-0"><div data-of=
+fset-key=3D"4jdmn-0-0" class=3D"public-DraftStyleDefault-block public-Draft=
+StyleDefault-ltr"><span data-offset-key=3D"4jdmn-0-0" style=3D"font-weight:=
+bold"><span data-text=3D"true">1=E3=80=81=E6=8B=9B=E8=81=98=E5=AF=B9=E8=B1=
+=A1</span></span></div></span><span class=3D"" data-block=3D"true" data-edi=
+tor=3D"70bk9" data-offset-key=3D"1kdvd-0-0"><div data-offset-key=3D"1kdvd-0=
+-0" class=3D"public-DraftStyleDefault-block public-DraftStyleDefault-ltr"><=
+span data-offset-key=3D"1kdvd-0-0"><span data-text=3D"true">2027=E5=B1=8A=
+=E5=BA=94=E5=B1=8A=E6=AF=95=E4=B8=9A=E7=94=9F=EF=BC=9A=E6=AF=95=E4=B8=9A=E6=
+=97=B6=E9=97=B4=E4=B8=BA2026=E5=B9=B49=E6=9C=88-2027=E5=B9=B48=E6=9C=88</sp=
+an></span></div></span><span class=3D"" data-block=3D"true" data-editor=3D"=
+70bk9" data-offset-key=3D"9bcii-0-0"><div data-offset-key=3D"9bcii-0-0" cla=
+ss=3D"public-DraftStyleDefault-block public-DraftStyleDefault-ltr"><span da=
+ta-offset-key=3D"9bcii-0-0"><span data-text=3D"true">=E4=B8=AD=E5=9B=BD=E5=
+=86=85=E5=9C=B0(=E5=A4=A7=E9=99=86)=E4=BB=A5=E6=AF=95=E4=B8=9A=E8=AF=81=E4=
+=B8=BA=E5=87=86=EF=BC=8C=E9=9D=9E=E4=B8=AD=E5=9B=BD=E5=86=85=E5=9C=B0(=E5=
+=A4=A7=E9=99=86)=E4=BB=A5=E5=AD=A6=E4=BD=8D=E8=AF=81=E4=B8=BA=E5=87=86=EF=
+=BC=8C=E4=B8=94=E6=9C=80=E9=AB=98=E5=AD=A6=E5=8E=86=E6=AF=95=E4=B8=9A=E5=90=
+=8E=E6=97=A0=E5=85=A8=E8=81=8C=E5=B7=A5=E4=BD=9C=E7=BB=8F=E5=8E=86 </span><=
+/span></div></span><span class=3D"" data-block=3D"true" data-editor=3D"70bk=
+9" data-offset-key=3D"3p0gs-0-0"><div data-offset-key=3D"3p0gs-0-0" class=
+=3D"public-DraftStyleDefault-block public-DraftStyleDefault-ltr"><span data=
+-offset-key=3D"3p0gs-0-0" style=3D"font-weight:bold"><span data-text=3D"tru=
+e">2=E3=80=81=E5=BC=80=E6=94=BE=E5=B2=97=E4=BD=8D</span></span></div></span=
+><span class=3D"" data-block=3D"true" data-editor=3D"70bk9" data-offset-key=
+=3D"77p7n-0-0"><div data-offset-key=3D"77p7n-0-0" class=3D"public-DraftStyl=
+eDefault-block public-DraftStyleDefault-ltr"><span data-offset-key=3D"77p7n=
+-0-0"><span data-text=3D"true">=E5=B7=A5=E7=A8=8B=EF=BC=88=E5=90=8E=E7=AB=
+=AF/=E5=89=8D=E7=AB=AF/=E5=AE=A2=E6=88=B7=E7=AB=AF/=E8=B4=A8=E9=87=8F/=E8=
+=BF=90=E7=BB=B4=EF=BC=89=E3=80=81=E7=AE=97=E6=B3=95=E3=80=81=E6=9C=BA=E5=99=
+=A8=E4=BA=BA=E3=80=81=E6=95=B0=E6=8D=AE=E3=80=81=E5=AE=89=E5=85=A8=E6=8A=80=
+=E6=9C=AF=E3=80=81=E4=BA=A7=E5=93=81=E3=80=81=E5=95=86=E4=B8=9A=E5=88=86=E6=
+=9E=90=E3=80=81=E9=87=91=E8=9E=8D=E4=B8=9A=E5=8A=A1=E3=80=81=E8=BF=90=E8=90=
+=A5 </span></span></div></span><span class=3D"" data-block=3D"true" data-ed=
+itor=3D"70bk9" data-offset-key=3D"7a63o-0-0"><div data-offset-key=3D"7a63o-=
+0-0" class=3D"public-DraftStyleDefault-block public-DraftStyleDefault-ltr">=
+<span data-offset-key=3D"7a63o-0-0" style=3D"font-weight:bold"><span data-t=
+ext=3D"true">3=E3=80=81=E5=B7=A5=E4=BD=9C=E5=9C=B0=E7=82=B9</span></span></=
+div></span><span class=3D"" data-block=3D"true" data-editor=3D"70bk9" data-=
+offset-key=3D"6upmo-0-0"><div data-offset-key=3D"6upmo-0-0" class=3D"public=
+-DraftStyleDefault-block public-DraftStyleDefault-ltr"><span data-offset-ke=
+y=3D"6upmo-0-0"><span data-text=3D"true">=E5=8C=97=E4=BA=AC=E3=80=81=E4=B8=
+=8A=E6=B5=B7=E3=80=81=E5=B9=BF=E5=B7=9E=E3=80=81=E6=9D=AD=E5=B7=9E=E7=AD=89=
+</span></span></div></span><span class=3D"" data-block=3D"true" data-editor=
+=3D"70bk9" data-offset-key=3D"v8fa-0-0"><div data-offset-key=3D"v8fa-0-0" c=
+lass=3D"public-DraftStyleDefault-block public-DraftStyleDefault-ltr"><span =
+data-offset-key=3D"v8fa-0-0"><span data-text=3D"true">=E6=9B=B4=E5=A4=9A=E5=
+=B7=A5=E4=BD=9C=E5=9C=B0=E7=82=B9=EF=BC=8C=E5=8F=AF=E5=89=8D=E5=BE=80=E6=BB=
+=B4=E6=BB=B4=E6=A0=A1=E6=8B=9B=E5=AE=98=E7=BD=91=E6=9F=A5=E7=9C=8B</span></=
+span></div></span><span class=3D"" data-block=3D"true" data-editor=3D"70bk9=
+" data-offset-key=3D"8om3e-0-0"><div data-offset-key=3D"8om3e-0-0" class=3D=
+"public-DraftStyleDefault-block public-DraftStyleDefault-ltr"><span data-of=
+fset-key=3D"8om3e-0-0" style=3D"font-weight:bold"><span data-text=3D"true">=
+4=E3=80=81=E6=8B=9B=E8=81=98=E6=B5=81=E7=A8=8B</span></span></div></span><s=
+pan class=3D"" data-block=3D"true" data-editor=3D"70bk9" data-offset-key=3D=
+"3o2l6-0-0"><div data-offset-key=3D"3o2l6-0-0" class=3D"public-DraftStyleDe=
+fault-block public-DraftStyleDefault-ltr"><span data-offset-key=3D"3o2l6-0-=
+0"><span data-text=3D"true">=E7=AE=80=E5=8E=86=E6=8A=95=E9=80=92=EF=BC=888=
+=E6=9C=8813=E6=97=A5=E8=B5=B7=EF=BC=8C</span></span><span data-offset-key=
+=3D"3o2l6-0-1" style=3D"font-weight:bold"><span data-text=3D"true">=E5=B2=
+=97=E4=BD=8D=E6=8B=9B=E6=BB=A1=E5=8D=B3=E4=B8=8B=E7=BA=BF=EF=BC=8C=E5=BB=BA=
+=E8=AE=AE=E5=B0=BD=E6=97=A9=E6=8A=95=E9=80=92</span></span><span data-offse=
+t-key=3D"3o2l6-0-2"><span data-text=3D"true">=EF=BC=89-=E5=9C=A8=E7=BA=BF=
+=E7=AC=94=E8=AF=95=EF=BC=888=E6=9C=88=E4=B8=8B=E6=97=AC=E8=B5=B7=EF=BC=8C=
+=E9=83=A8=E5=88=86=E5=B2=97=E4=BD=8D=E9=9C=80=E8=A6=81=EF=BC=89-=E9=9D=A2=
+=E8=AF=95=EF=BC=888=E6=9C=88=E4=B8=8B=E6=97=AC=E8=B5=B7=EF=BC=89-=E5=BD=95=
+=E7=94=A8=E6=84=8F=E5=90=91=E4=B9=A6=E5=8F=91=E6=94=BE=EF=BC=889=E6=9C=88=
+=E8=B5=B7=EF=BC=89- Offer=E5=8F=91=E6=94=BE=EF=BC=8810=E6=9C=88=E6=9C=AB=E8=
+=B5=B7=EF=BC=89 </span></span></div></span><span class=3D"" data-block=3D"t=
+rue" data-editor=3D"70bk9" data-offset-key=3D"e85kg-0-0"><div data-offset-k=
+ey=3D"e85kg-0-0" class=3D"public-DraftStyleDefault-block public-DraftStyleD=
+efault-ltr"><span data-offset-key=3D"e85kg-0-0" style=3D"font-weight:bold">=
+<span data-text=3D"true">5=E3=80=81=E7=BD=91=E7=94=B3=E5=9C=B0=E5=9D=80</sp=
+an></span></div></span><span class=3D"" data-block=3D"true" data-editor=3D"=
+70bk9" data-offset-key=3D"18uip-0-0"><div data-offset-key=3D"18uip-0-0" cla=
+ss=3D"public-DraftStyleDefault-block public-DraftStyleDefault-ltr"><a href=
+=3D"http://campus.didiglobal.com/" target=3D"_blank" style=3D"color:#1E95CF=
+;text-decoration:underline"><span data-offset-key=3D"18uip-0-0" style=3D"te=
+xt-decoration:underline;font-weight:bold"><span data-text=3D"true">campus.d=
+idiglobal.com</span></span></a></div></span><span class=3D"" data-block=3D"=
+true" data-editor=3D"70bk9" data-offset-key=3D"6eaog-0-0"><div data-offset-=
+key=3D"6eaog-0-0" class=3D"public-DraftStyleDefault-block public-DraftStyle=
+Default-ltr"><span data-offset-key=3D"6eaog-0-0" style=3D"font-weight:bold"=
+><span data-text=3D"true">6=E3=80=81=E8=81=94=E7=B3=BB=E6=96=B9=E5=BC=8F</s=
+pan></span></div></span><span class=3D"" data-block=3D"true" data-editor=3D=
+"70bk9" data-offset-key=3D"2tton-0-0"><div data-offset-key=3D"2tton-0-0" cl=
+ass=3D"public-DraftStyleDefault-block public-DraftStyleDefault-ltr"><span d=
+ata-offset-key=3D"2tton-0-0"><span data-text=3D"true">=E5=A6=82=E6=9C=89=E6=
+=9B=B4=E5=A4=9A=E6=A0=A1=E6=8B=9B=E9=97=AE=E9=A2=98=EF=BC=8C=E8=AF=B7=E5=8F=
+=91=E9=80=81=E9=82=AE=E4=BB=B6=E8=87=B3=EF=BC=9Acampus@didiglobal.com=EF=BC=
+=8C=E6=88=91=E4=BB=AC=E5=B0=86=E5=9C=A83=E4=B8=AA=E5=B7=A5=E4=BD=9C=E6=97=
+=A5=E5=86=85=E5=9B=9E=E5=A4=8D=E3=80=82</span></span></div></span><span cla=
+ss=3D"" data-block=3D"true" data-editor=3D"70bk9" data-offset-key=3D"cpaaq-=
+0-0"><div data-offset-key=3D"cpaaq-0-0" class=3D"public-DraftStyleDefault-b=
+lock public-DraftStyleDefault-ltr"><span data-offset-key=3D"cpaaq-0-0"><br =
+data-text=3D"true"></span></div></span><span class=3D"" data-block=3D"true"=
+ data-editor=3D"70bk9" data-offset-key=3D"d1s91-0-0"><div data-offset-key=
+=3D"d1s91-0-0" class=3D"public-DraftStyleDefault-block public-DraftStyleDef=
+ault-ltr"><span data-offset-key=3D"d1s91-0-0"><span data-text=3D"true">=E6=
+=9C=9F=E5=BE=85=E4=B8=8E=E6=AF=8F=E4=B8=80=E4=BD=8D=E6=80=80=E6=8F=A3=E6=A2=
+=A6=E6=83=B3=E7=9A=84=E4=BD=A0=E6=90=BA=E6=89=8B=E5=B9=B6=E8=BF=9B=E3=80=82=
+=E6=BB=B4=EF=BC=8C=E5=90=91=E6=9C=AA=E6=9D=A5=E5=87=BA=E5=8F=91=EF=BC=81</s=
+pan></span></div></span><span class=3D"" data-block=3D"true" data-editor=3D=
+"70bk9" data-offset-key=3D"fa8vp-0-0"><div data-offset-key=3D"fa8vp-0-0" cl=
+ass=3D"public-DraftStyleDefault-block public-DraftStyleDefault-ltr"><span d=
+ata-offset-key=3D"fa8vp-0-0"><br data-text=3D"true"></span></div></span><sp=
+an class=3D"" data-block=3D"true" data-editor=3D"70bk9" data-offset-key=3D"=
+1qdq5-0-0"><div data-offset-key=3D"1qdq5-0-0" class=3D"public-DraftStyleDef=
+ault-block public-DraftStyleDefault-ltr"><span data-offset-key=3D"1qdq5-0-0=
+"><br data-text=3D"true"></span></div></span><span class=3D"" data-block=3D=
+"true" data-editor=3D"70bk9" data-offset-key=3D"28tj2-0-0"><div data-offset=
+-key=3D"28tj2-0-0" class=3D"public-DraftStyleDefault-block public-DraftStyl=
+eDefault-ltr"><span data-offset-key=3D"28tj2-0-0"><span data-text=3D"true">=
+=E6=BB=B4=E6=BB=B4=E6=A0=A1=E5=9B=AD=E6=8B=9B=E8=81=98=E7=BB=84</span></spa=
+n></div></span></div></div></div></div></div></div></div></div><img hidden=
+=3D"" width=3D"1" height=3D"1" style=3D"width:1px;height:1px" src=3D"https:=
+//app.mokahr.com/api/talent-activation/email?activationToken=3D65f497a1d362=
+2a12946e7258c63ccf9a28466a48fa7198debb6e53e36811541d" width=3D"1" height=3D=
+"1"></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody><=
+/table></td><td width=3D"60" style=3D"width:60px;background:white">&nbsp;</=
+td></tr></tbody></table></td></tr><tr><td valign=3D"top" align=3D"center" s=
+tyle=3D"padding-top:20px"><table cellpadding=3D"0" cellspacing=3D"0" border=
+=3D"0" style=3D"display:inline-block;width:100%;text-align:center;border-co=
+llapse:collapse;mso-table-lspace:0;mso-table-rspace:0;border-top:1px solid =
+#bbb;color:#141C21;padding-bottom:112px"><tbody><tr><td width=3D"100%" vali=
+gn=3D"top" style=3D"width:100%;text-align:left;border-collapse:collapse;pad=
+ding:16px 16px 48px"><div style=3D"max-width:600px;width:100%;margin:0 auto=
+"><table style=3D"width:100%" cellpadding=3D"0" cellspacing=3D"0"><tbody><t=
+r><td style=3D"font-size:14px;line-height:22px;word-break:break-word;paddin=
+g-top:8px;padding-right:0;padding-bottom:8px;padding-left:0;white-space:inh=
+erit"><table style=3D"width:100%" cellpadding=3D"0" cellspacing=3D"0"><tbod=
+y><tr><td style=3D"font-size:14px;line-height:22px;word-break:break-word;pa=
+dding-top:8px;padding-right:0;padding-bottom:8px;padding-left:0;">=E6=AD=A4=
+=E9=82=AE=E4=BB=B6=E7=94=B1=E4=BC=81=E4=B8=9A=E6=93=8D=E4=BD=9C=E3=80=81Mok=
+a=E7=B3=BB=E7=BB=9F=E4=BB=A3=E5=8F=91=EF=BC=8C=E8=AF=B7=E5=8B=BF=E7=9B=B4=
+=E6=8E=A5=E5=9B=9E=E5=A4=8D=E3=80=82</td></tr></tbody></table><table style=
+=3D"width:100%" cellpadding=3D"0" cellspacing=3D"0"><tbody><tr><td style=3D=
+"font-size:14px;line-height:22px;word-break:break-word;padding-top:8px;padd=
+ing-right:0;padding-bottom:8px;padding-left:0;">=E5=A6=82=E6=9C=89=E4=BB=BB=
+=E4=BD=95=E7=96=91=E9=97=AE=EF=BC=8C=E6=AC=A2=E8=BF=8E=E4=B8=8E=E6=8B=9B=E8=
+=81=98=E8=B4=9F=E8=B4=A3=E4=BA=BA=E8=81=94=E7=B3=BB=EF=BC=8C=E9=9A=8F=E6=97=
+=B6=E4=B8=BA=E6=82=A8=E6=95=88=E5=8A=B3=E3=80=82</td></tr></tbody></table><=
+/td></tr></tbody></table></div></td></tr></tbody></table></td></tr></tbody>=
+</table></td></tr></tbody></table></td></tr></tbody></table><center><table =
+cellpadding=3D"0" cellspacing=3D"0" border=3D"0" width=3D"100%"><tbody><tr>=
+<td align=3D"center" style=3D"overflow:hidden;font-size:0;padding:0;margin:=
+0;line-height:0;"><img width=3D"1" height=3D"1" style=3D"width:1px;height:1=
+px" alt=3D"" src=3D"https://sctrack.sendcloud.net/track/open2/eNpljs0KwjAQh=
+N8leExCdpPm5-Z7iJRk04JYU2rak_juxip4kB32MDMM3wmUQaU5Y5yB89aCC1p7Z_rOoNf9J-4x=
+IIKsJECJ0B4Ib8SlpHkrWR3QGlBKG_DHZZE03xhX7dgYpzq8h5WVrpNtASywn9-kIURHlCxh0pA=
+yRmgMEQAJRoffVqX1Hukq61AyTfOWZRlWxh9PvlPunX-I8wszxzhb.gif"/></td></tr></tbo=
+dy></table></center><center><table width=3D"100%" align=3D"center" style=3D=
+"max-width:900px;margin:0 auto;width:100%;"><tbody><tr align=3D"center"></t=
+r><tr align=3D"center"><td style=3D"border-top:1px #e5e5e5 solid;padding-to=
+p:15px;padding-bottom:15px;" width=3D"560"><table border=3D"0" cellspacing=
+=3D"0" cellpadding=3D"0" align=3D"center"><tbody><tr><td style=3D"backgroun=
+d-color:#ddd;border:1px #ddd solid;border-radius:4px;padding:3px 15px;text-=
+align:center;"><a style=3D"color:#a6a6a6;background:#ddd;font-size:12px;tex=
+t-decoration:none;" href=3D"https://sctrack.sendcloud.net/track/unsubscribe=
+2.do?p=3DeNptjsEOwiAQRP9l4xHI7kKB3vwPYxoEmhgrTaU9Gf9drIkns8keZnbe7InQMGoBII=
+Cct5Zcr7V3ZugMez187YF7ZlI1SkLZt0XSG3ktl3krCQ9sDSFqQ_64LCrOdxDYBsYw1fwBo1WuU=
+41AluCnS9pr_6SBNLFlNDl563Rgm8iZnimlMQbiDvZkjesjxJuquaQ4zVtSJa8gni-xP99uzm9a=
+ETg2" target=3D"_blank" rel=3D"noopener">=E7=82=B9=E5=87=BB=E8=BF=99=E9=87=
+=8C=E5=8F=96=E6=B6=88=E8=AE=A2=E9=98=85<br/>click to unsubscribe</a></td></=
+tr></tbody></table></td></tr></tbody></table></center></body></html>
+------=_Part_2408409_34472860.1786617933874--
+
+
+

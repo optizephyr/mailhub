@@ -1,0 +1,451 @@
+Received: from ucmail46.sendcloud.io (ucmail46.sendcloud.io [117.50.10.68])
+	by newxmmxszb42-0.qq.com (NewMX) with SMTP id 178B56C6
+	for <candidate@qq.com>; Fri, 15 May 2026 11:05:56 +0800
+X-QQ-mid: xmmxzb42-0t1778814374t2qulqqi4
+Sender: 07dfe594-500b-11f1-8961-525400e00ae3@test.acmcoder.com
+X-QQ-CSender: 07dfe594-500b-11f1-8961-525400e00ae3@test.acmcoder.com
+X-QQ-XMAILINFO: OYRKnzXrJ9rbKmbdLu4FYjq3/yDN9NdLNWYPZt7CftM/acTk7v13Y+RhqI9Go5
+	 Y1R2VkKQ5sn5CL+KUpRYL/Zw8tyuBJS4Pdll92aJAD2AZudEPBIiAodQkrUD4iooTt9IHzX9j8+J
+	 KprlPwUnW4bKnCtzGz2f7T51wd26SP7T1FjGjYHp2aAIdCVU4R19HPTgzNnz9nbjb58+cQdAYOYI
+	 B4GgMHgdON5GGz66UeOkKZ7D6PVcUDrPIM+HZE5ZM4ThzMv3598kPxMGL6KxItSu+xQwgprc63oP
+	 UEmpy/w5LkSGWCRfGaEs6J+EhZgJWGDeOxZKTOK2+LJBC0X2hBFRcVus3jo06LuczaFCYHMkq1sI
+	 CEV+Tjq452kxhUpLat3O0KU9CYT/7zmtkcTHNZqFR1X4cXiq6n9rxO8XCC1UX7AX+0+VVGIqCZe3
+	 5U6ZTnMhSmp/U7RQ6rw3rTCeYnmH5lIoeaSwV/WWoe9SGh/QVq33UcFXN2ydSJlAJLkFBOq60RUu
+	 7r/SpPgf1CmuAmuuUnhBtQbIHKkOkOa5OAgcZgdmPwmyo2Z2AiQ6cgv+hakqq8jHYj97Kh5zXPan
+	 R9LteraqT5aYEaEDixgxdZxMMwD52OR+wMB5VLM+wz0MM26I9783ThZlXX39snGXI386BoJJEmMD
+	 DKKNkevu56T25dhClDmVovaETJI9ctjFlxpKdVJiyA5VLsWVJMvvpfHuHeGpDNuuHAcfOpb2JyQ1
+	 wv1xtMiFo9tAm33cxmgVUwNCyrGZo2YYWBYR3aSevz1NHQc55uYj7ydy6DMHTjTRvoH+xzU1oyHa
+	 WiZjxVVqb2OMyBF3LpQFJj5eC/SMaGuklxpmrcq5VErbHf/GBLh95XPkIPDVD6YRAIBiyat36+AX
+	 WacakgxViNzEOV95+CoyktWM8ZScFO5zMMKOPKxtBHDe4OFa1ngX+pPujHuFYG8UDo6TSPnKG+Fe
+	 PcJ4cutsAwmRh/MpzwEEWxSPFHW69SWmx8fSn6EdfnUgUz/May+zDvvkjXJI7gonY41FyLg7FsEW
+	 oYMARkCLR7PXXM3IZcslmLB/rkP9o0K2KzMk+BLOws1jLA4sh+G6bO0ICRaaULQfx2wRDXGVjhw1
+	 ousKewxjMAJIpvW5CP4SXfbp3X9pQOsSaEZjoAyLh9AZj1fnx+L0X1ZYNGuQk22z9LoDGLghiXeM
+	 +P4Q/C+wDpc+McoqW/Uk2bqkb7RhoGRFt/f4gE+e9CG7VW1y++Sp0pZcATc2FcLCJJEMUZNGJgup
+	 2J88VvS+fPXU2GeL+/zid/btKnNLhK69lMTypRM22Eni5OR2fxCwMqcjBdcS4Q2Yr343PJk1mqZT
+	 B6EfCd+sWE50YAy6VgN9dKmprfzWL/0yI9Jle7Py2IqxfoHcYOkCYJigBwR4qaaOIRt3/zwJNGsV
+	 N5cIoFdghiHmQkosq0vSAWU6q52QAtIqin20p0tFGOLG9Nt1+0YquE40mnOyiGp2UEnaQ4QsaAgY
+	 IwOeBchTtATAMRNfjDguj9QhTVsCnw2mOvfg0rNni1EIhJMRizRKzsP66EZ4wy1BwvLY7n0/DT3B
+	 G+E1+PbPk=
+X-QQ-XMRINFO: OD9hHCdaPRBwKx4jDKTjByCZI7HQue1fzA==
+Authentication-Results: mx.qq.com; spf=pass(117.50.10.68) smtp.mailfrom=<07dfe
+	 594-500b-11f1-8961-525400e00ae3@test.acmcoder.com>; dkim=pass(signature was
+	 verified) header.d=test.acmcoder.com; dmarc=none(permerror) header.from=test
+	 .acmcoder.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=test.acmcoder.com;
+ i=@test.acmcoder.com; q=dns/txt; s=mail; t=1778814373; h=content-type
+ : from : to : subject : message-id : content-transfer-encoding : date
+ : mime-version : reply-to : list-unsubscribe : from :
+ list-unsubscribe-post : feedback-id;
+ bh=8O2wuqOCwfmGb/5EfSU1ORaH9ySomA04xjB+pj7+/rU=;
+ b=fNDhBOPo7UbF462dLtPZ6wru7oUu4iJEOFOODQMaxhlZ7Xw03kytyS/sXPRFKOzY2BynY
+ w7piJxTB9hJNFf4Z9s/ebWPIdB8awCuGsUpvS6mErF3PERuW7qodjp8k15ym+79qKFs4Zqi
+ ibGH2gE68FSFE/Y2pmIv+T7ganL7cuA=
+Received: from [127.0.0.1] (Unknown [127.0.0.1])         by SendCloud Inbound
+ Server with ESMTPSA id 165557C1-E14C-4725-AFA0-951365FD8AB8.1
+         envelope-from <exam@acmcoder.com> (authenticated bits=0)
+ (version=TLSv1.2 cipher=ECDHE-RSA-AES128-GCM-SHA256);
+ Fri, 15 May 2026 11:06:10 +0800
+Content-Type: text/html; charset="UTF-8"
+From: =?UTF-8?Q?=E5=BE=97=E7=89=A9App?= <exam@test.acmcoder.com>
+To: candidate@qq.com
+Subject: 
+ =?utf-8?b?44CQ5b6X54mpQXBw44CRLSAyMDI35bGK5pqR5pyf5a6e5Lmg5Zyo57q/6ICD?=
+ =?utf-8?b?6K+V6YKA6K+35Ye977yB?=
+Message-ID: 
+ <1778814370996_36926_102803_5921.sc-10_9_12_206-inbound0@test.acmcoder.com>
+Content-Transfer-Encoding: quoted-printable
+Date: Fri, 15 May 2026 03:06:10 +0000
+MIME-Version: 1.0
+REPLY-TO: =?UTF-8?Q?=E5=BE=97=E7=89=A9App?= <exam@test.acmcoder.com>
+X-SENDCLOUD-UUID: 
+ 1778814370996_36926_102803_5921.sc-10_9_12_206-inbound0$candidate@qq.com
+X-SENDCLOUD-LOG: 
+ 1778814370996_36926_102803_5921.sc-10_9_12_206-inbound0$candidate@qq.com#candidate@qq.com#105914#36926#0#false#false#-1#-1#
+X-SENDCLOUD-LOG-NEW: 
+ MTc3ODgxNDM3MDk5Nl8zNjkyNl8xMDI4MDNfNTkyMS5zYy0xMF85XzEyXzIwNi1pbmJvdW5kMCQyNjQxMDAzNDE4QHFxLmNvbSMyNjQxMDAzNDE4QHFxLmNvbSMxMDU5MTQjMzY5MjYjMCNmYWxzZSNmYWxzZSMtMSMtMSM=
+List-Unsubscribe: 
+ <mailto:0_105914_1778814370996_36926_102803_5921.sc-10_9_12_206-inbound0@test.acmcoder.com>
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.=
+w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns=3D"http://www.w3.=
+org/1999/xhtml">
+<head>
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dgb2312" />
+<title></title>
+<style>
+body,pre,div {font-family: "Microsoft YaHei", Arial; padding:0px 0px; margi=
+n:0px 0px;}
+.NoticeTool {background-color:orange;color:white;font-weight:bold;font-fami=
+ly:"Microsoft YaHei", "Arial Black", Verdana, =E9=BB=91=E4=BD=93, Arial;fon=
+t-size:12.5pt;text-decoration:none;}
+.NoticeTool a, .NoticeTool a:link, .NoticeTool a:hover, .NoticeTool a:visit=
+ed, .NoticeTool a:active {display:block;width:100%;height:100%;text-decorat=
+ion:none;}
+</style>
+</head>
+<body>
+<div style=3D"background:#f1f1f1; width:100%;min-width: 910px; padding: 20p=
+x 0;FONT-FAMILY: =E5=BE=AE=E8=BD=AF=E9=9B=85=E9=BB=91, PingFang SC, Arial, =
+system, -apple-system, sans-serif;"><div style=3D"background:#ffffff;  widt=
+h:860px;margin: auto; font-size: 14px;color: #505050;padding-top: 30px;"><d=
+iv style=3D"margin:0px auto;overflow: hidden; width:792px;border-left: 4px =
+solid #28bdb9;border-right: 4px solid #28bdb9;border-top: 4px solid #28bdb9=
+;border-radius: 2px;padding-top: 35px;"><div style=3D"display: flex;align-i=
+tems: center;justify-content: center;"><img width=3D"130px" src=3D"https://=
+cdn.acmcoder.com/interview/fileshare/1694571797672.png"/><span style=3D"fon=
+t-size: 24px;color: #838386;padding: 0 16px;">=E9=82=80=E8=AF=B7=E5=87=BD</=
+span><img width=3D"130px" src=3D"https://cdn.acmcoder.com/interview/filesha=
+re/1694572580032.png"/></div><div style=3D"font-size: 18px;text-align: cent=
+er;color: #28bdb9;padding-top: 20px;max-width: 668px;margin: auto;"><strong=
+ class=3D"ng-binding"><!-- ngIf: compInfo.compName --><span class=3D"ng-bin=
+ding ng-scope">=E3=80=90=E5=BE=97=E7=89=A9App=E3=80=91</span><!-- end ngIf:=
+ compInfo.compName -->2027=E5=B1=8A=E6=9A=91=E6=9C=9F=E5=AE=9E=E4=B9=A0-=E5=
+=9C=A8=E7=BA=BF=E8=80=83=E8=AF=95</strong></div>&nbsp;&nbsp;<div style=3D"p=
+adding: 0 55px; line-height: 24px; "><div><p>=E5=B0=8A=E6=95=AC=E7=9A=84 <s=
+trong style=3D"color: #4c4c51;">=E7=8E=8B=E5=B0=8F=E6=98=8E</strong></p><p>=
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E6=82=A8=E5=A5=BD=EF=BC=81</p><p class=3D"ng=
+-binding" style=3D"margin-top: 0px; margin-bottom: 0px; padding: 0px; font-=
+family: &quot;microsoft yahei&quot;; text-wrap: wrap; background-color: rgb=
+(255, 255, 255);"><span style=3D"color: rgb(80, 80, 80); font-family: =E5=
+=BE=AE=E8=BD=AF=E9=9B=85=E9=BB=91, &quot;PingFang SC&quot;, Arial, system, =
+-apple-system, sans-serif; text-wrap: wrap; background-color: rgb(255, 255,=
+ 255);">&nbsp; &nbsp; &nbsp;</span>=E6=81=AD=E5=96=9C=E4=BD=A0=E9=80=9A=E8=
+=BF=87=E4=BA=86=E6=88=91=E4=BB=AC=E7=9A=84=E7=AE=80=E5=8E=86=E7=AD=9B=E9=80=
+=89=E7=8E=AF=E8=8A=82=EF=BC=8C=E7=8E=B0=E8=BF=9B=E5=85=A5=E6=88=91=E4=BB=AC=
+=E7=9A=84=E7=AC=94=E8=AF=95=E9=98=B6=E6=AE=B5=EF=BC=8C=E6=9C=9F=E5=BE=85=E5=
+=90=8C=E5=AD=A6=E9=80=9A=E8=BF=87=E7=AC=94=E8=AF=95=E5=8F=82=E4=B8=8E=E4=B8=
+=8B=E4=B8=80=E9=98=B6=E6=AE=B5=E9=9D=A2=E8=AF=95=E3=80=82</p><p class=3D"ng=
+-binding" style=3D"margin-top: 0px; margin-bottom: 0px; padding: 0px; font-=
+family: &quot;microsoft yahei&quot;; text-wrap: wrap; background-color: rgb=
+(255, 255, 255);"><span style=3D"color: rgb(80, 80, 80); font-family: =E5=
+=BE=AE=E8=BD=AF=E9=9B=85=E9=BB=91, &quot;PingFang SC&quot;, Arial, system, =
+-apple-system, sans-serif; text-wrap: wrap; background-color: rgb(255, 255,=
+ 255);">&nbsp; &nbsp; &nbsp;</span>=E6=AD=A4=E6=AC=A1=E6=A0=A1=E5=9B=AD=E6=
+=8B=9B=E8=81=98=E9=9D=A2=E5=90=912027=E5=B1=8A=E6=AF=95=E4=B8=9A=E7=94=9F=
+=EF=BC=88=E5=9C=A82026=E5=B9=B49=E6=9C=88-2027=E5=B9=B48=E6=9C=88=E6=9C=9F=
+=E9=97=B4=E6=AF=95=E4=B8=9A=EF=BC=89=EF=BC=8C<span style=3D"color: rgb(80, =
+80, 80); font-family: &quot;microsoft yahei&quot;; text-wrap-mode: wrap; ba=
+ckground-color: rgb(255, 255, 255);">=E4=B8=AD=E5=9B=BD=E5=A4=A7=E9=99=86=
+=EF=BC=88=E5=86=85=E5=9C=B0=EF=BC=89=E4=BB=A5=E6=AF=95=E4=B8=9A=E8=AF=81=E4=
+=B8=BA=E5=87=86=EF=BC=8C=E4=B8=AD=E5=9B=BD=E6=B8=AF=E6=BE=B3=E5=8F=B0=E5=8F=
+=8A=E5=85=B6=E4=BB=96=E5=9B=BD=E5=AE=B6/=E5=9C=B0=E5=8C=BA=E4=BB=A5=E5=AD=
+=A6=E4=BD=8D=E8=AF=81=E4=B8=BA=E5=87=86=E3=80=82</span>=E5=BE=80=E5=B1=8A=
+=E6=AF=95=E4=B8=9A=E7=94=9F=E6=88=96=E6=9C=89=E5=85=A8=E8=81=8C=E5=B7=A5=E4=
+=BD=9C=E7=BB=8F=E5=8E=86=E7=9A=84=E5=90=8C=E5=AD=A6=E6=AC=A2=E8=BF=8E=E5=9C=
+=A8=E7=A4=BE=E6=8B=9B=E5=AE=98=E7=BD=91=E6=8A=95=E9=80=92=E3=80=82=E5=A6=82=
+=E6=82=A8=E7=A1=AE=E8=AE=A4=E7=AC=A6=E5=90=882027=E5=B1=8A=E6=AF=95=E4=B8=
+=9A=E7=94=9F=E8=BA=AB=E4=BB=BD=EF=BC=8C=E8=AF=B7=E5=BC=80=E5=A7=8B=E7=AD=94=
+=E9=A2=98=E3=80=82</p><p class=3D"ng-binding"><span style=3D"color: rgb(80,=
+ 80, 80); font-family: =E5=BE=AE=E8=BD=AF=E9=9B=85=E9=BB=91, &quot;PingFang=
+ SC&quot;, Arial, system, -apple-system, sans-serif; text-wrap: wrap; backg=
+round-color: rgb(255, 255, 255);">&nbsp; &nbsp; &nbsp;</span>=E8=AF=A6=E7=
+=BB=86=E4=BF=A1=E6=81=AF=E5=A6=82=E4=B8=8B=EF=BC=9A<br/></p></div><!--=E8=
+=B4=A6=E5=8F=B7=E4=BF=A1=E6=81=AF-->&nbsp;<div style=3D"font-size: 16px;col=
+or: #363636;padding-bottom: 10px;"><strong>=E8=B4=A6=E5=8F=B7=E4=BF=A1=E6=
+=81=AF</strong></div><div><p class=3D"ng-binding">&nbsp;&nbsp;&nbsp;&nbsp;&=
+nbsp;=E8=AF=B7=E7=99=BB=E5=BD=95=E5=BE=97=E7=89=A9App=E5=9C=A8=E7=BA=BF=E8=
+=80=83=E8=AF=95=E5=AE=98=E6=96=B9=E6=8C=87=E5=AE=9A=E5=B9=B3=E5=8F=B0=EF=BC=
+=9A&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &n=
+bsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp;</=
+p><p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E7=99=BB=E5=BD=95=E8=B7=AF=E5=BE=84=EF=
+=BC=9A<span><a href=3D"https://72747.acmcoder.com/cand/login?7qsy2z4a" targ=
+et=3D"_blank" style=3D"color:#28bdb9;text-decoration: underline"><span>http=
+s://72747.acmcoder.com/cand/login?7qsy2z4a</span></a></span>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbs=
+p; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;</p><p>&nb=
+sp;&nbsp;&nbsp;&nbsp;&nbsp;=E7=99=BB=E5=BD=95=E8=B4=A6=E5=8F=B7=EF=BC=9A<sp=
+an style=3D"color:#28bdb9; ">72747</span></p><p>&nbsp;&nbsp;&nbsp;&nbsp;&nb=
+sp;=E7=99=BB=E5=BD=95=E5=AF=86=E7=A0=81=EF=BC=9A<span style=3D"color:#28bdb=
+9; ">k3vy82</span></p></div><!--=E8=B4=A6=E5=8F=B7=E4=BF=A1=E6=81=AF end-->=
+<!--=E8=80=83=E8=AF=95=E4=BF=A1=E6=81=AF--><p><strong style=3D"font-family:=
+ &quot;Microsoft YaHei&quot;; text-wrap: wrap; background-color: rgb(255, 2=
+55, 255);"><span style=3D"color: rgb(255, 0, 0); letter-spacing: 0px; font-=
+size: 13px; background-image: initial; background-position: initial; backgr=
+ound-size: initial; background-repeat: initial; background-attachment: init=
+ial; background-origin: initial; background-clip: initial;"><span style=3D"=
+font-family: =E5=BE=AE=E8=BD=AF=E9=9B=85=E9=BB=91;"><span style=3D"color: r=
+gb(80, 80, 80); font-family: =E5=BE=AE=E8=BD=AF=E9=9B=85=E9=BB=91, &quot;Pi=
+ngFang SC&quot;, Arial, system, -apple-system, sans-serif; text-wrap: wrap;=
+ background-color: rgb(255, 255, 255);">&nbsp; &nbsp; &nbsp;</span>=E7=89=
+=B9=E5=88=AB=E6=8F=90=E7=A4=BA=EF=BC=9A=E6=B5=8B=E8=AF=95=E9=98=B6=E6=AE=B5=
+=E4=B8=8E=E6=AD=A3=E5=BC=8F=E8=80=83=E8=AF=95=E4=BD=BF=E7=94=A8=E7=9B=B8=E5=
+=90=8C=E7=9A=84=E9=93=BE=E6=8E=A5=E3=80=81=E8=B4=A6=E5=8F=B7=E3=80=81=E5=AF=
+=86=E7=A0=81=EF=BC=8C=E8=AF=B7=E8=80=83=E7=94=9F=E4=B8=80=E5=AE=9A=E5=A6=A5=
+=E5=96=84=E4=BF=9D=E5=AD=98=E7=9B=B8=E5=85=B3=E4=BF=A1=E6=81=AF</span></spa=
+n></strong>&nbsp;</p><p><br/></p><div style=3D"font-size: 16px;color: #3636=
+36;padding-bottom: 10px;"><strong>=E8=80=83=E8=AF=95=E4=BF=A1=E6=81=AF</str=
+ong></div><div><p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E8=AF=95=E5=8D=B7=E5=90=8D=
+=E7=A7=B0=EF=BC=9A<span>Golang=E5=BC=80=E5=8F=91</span></p><p>&nbsp;&nbsp;&=
+nbsp;&nbsp;&nbsp;=E8=80=83=E8=AF=95=E6=97=B6=E9=95=BF=EF=BC=9A<span>120=E5=
+=88=86=E9=92=9F</span></p><p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E5=BC=80=E5=A7=
+=8B=E6=97=B6=E9=97=B4=EF=BC=88=E5=8C=97=E4=BA=AC=E6=97=B6=E9=97=B4=EF=BC=89=
+=EF=BC=9A<span>2026-05-16 10:00 =E6=98=9F=E6=9C=9F=E5=85=AD</span></p><p>&n=
+bsp;&nbsp;&nbsp;&nbsp;&nbsp;=E7=BB=93=E6=9D=9F=E6=97=B6=E9=97=B4=EF=BC=88=
+=E5=8C=97=E4=BA=AC=E6=97=B6=E9=97=B4=EF=BC=89=EF=BC=9A<span>2026-05-16 13:0=
+0 =E6=98=9F=E6=9C=9F=E5=85=AD</span></p><p><span><span style=3D"color: rgb(=
+80, 80, 80); font-family: =E5=BE=AE=E8=BD=AF=E9=9B=85=E9=BB=91, &quot;PingF=
+ang SC&quot;, Arial, system, -apple-system, sans-serif; text-wrap-mode: wra=
+p; background-color: rgb(255, 255, 255);">&nbsp; &nbsp; &nbsp;</span></span=
+></p><p><span><span style=3D"color: rgb(80, 80, 80); font-family: =E5=BE=AE=
+=E8=BD=AF=E9=9B=85=E9=BB=91, &quot;PingFang SC&quot;, Arial, system, -apple=
+-system, sans-serif; text-wrap-mode: wrap; background-color: rgb(255, 255, =
+255);"><span style=3D"color: rgb(80, 80, 80); font-family: =E5=BE=AE=E8=BD=
+=AF=E9=9B=85=E9=BB=91, &quot;PingFang SC&quot;, Arial, system, -apple-syste=
+m, sans-serif; text-wrap-mode: wrap; background-color: rgb(255, 255, 255);"=
+>&nbsp; &nbsp; &nbsp;</span><span style=3D"color: rgb(80, 80, 80); font-fam=
+ily: =E5=BE=AE=E8=BD=AF=E9=9B=85=E9=BB=91, &quot;PingFang SC&quot;, Arial, =
+system, -apple-system, sans-serif; text-wrap-mode: wrap; background-color: =
+rgb(255, 255, 255);">=E8=AF=B7=E5=8A=A1=E5=BF=85=E7=82=B9=E5=87=BB=E2=80=9C=
+=E7=A1=AE=E8=AE=A4=E5=8F=82=E5=8A=A0=E2=80=9D=E6=88=96=E2=80=9C=E6=94=BE=E5=
+=BC=83=E5=8F=82=E5=8A=A0=E2=80=9D=E6=8C=89=E9=92=AE=E8=BF=9B=E8=A1=8C=E5=8F=
+=8D=E9=A6=88=E3=80=82=E8=8B=A5=E6=97=A0=E6=B3=95=E6=8C=89=E6=97=B6=E5=8F=82=
+=E5=8A=A0=EF=BC=8C=E8=AF=B7=E7=82=B9=E5=87=BB=E2=80=9C=E6=94=BE=E5=BC=83=E5=
+=8F=82=E5=8A=A0=E2=80=9D=E6=8C=89=E9=92=AE=E5=B9=B6=E9=80=89=E6=8B=A9=E2=80=
+=9C=E6=97=B6=E9=97=B4=E4=B8=8D=E5=90=88=E9=80=82=E2=80=9D=E3=80=82=E6=9C=AA=
+=E8=BF=9B=E8=A1=8C=E5=8F=8D=E9=A6=88=E5=92=8C=E5=A1=AB=E5=86=99=EF=BC=8C=E5=
+=8F=AF=E8=83=BD=E4=BC=9A=E8=A2=AB=E9=BB=98=E8=AE=A4=E4=B8=BA=E6=94=BE=E5=BC=
+=83=E7=AC=94=E8=AF=95=EF=BC=8C=E8=AF=B7=E6=8C=89=E8=A6=81=E6=B1=82=E5=8F=8A=
+=E6=97=B6=E6=93=8D=E4=BD=9C=E3=80=82</span></span></span></p></div>&nbsp;<d=
+iv style=3D"text-align: center;"><span><a href=3D"https://53937.acmcoder.co=
+m/cand/api/mailSure?M=3D9cdem0u4FBAgWuotQ67BHl9FntVchD9CBiyHDkHQXD1x7atXEf6=
+flzUWrSCEPfBVM2GW3qzxYZXQfdRVohQ2Wg=3D=3D" style=3D"FONT-SIZE: 13px; TEXT-D=
+ECORATION: none;color: #28bdb9;padding:6px 34px 8px 34px;background:  #ffff=
+ff;border: 1px solid #7fddd9;border-radius: 4px; margin: 0 10px;" target=3D=
+"_blank">=E6=94=BE=E5=BC=83=E5=8F=82=E5=8A=A0</a></span><span><a href=3D"ht=
+tps://53937.acmcoder.com/cand/api/mailSure?M=3D9cdem0u4FBAgWuotQ67BHl9FntVc=
+hD9CBiyHDkHQXD1x7atXEf6flzUWrSCEPfBV8OUWgk+Q+gVTtplwJ6oIPA=3D=3D" style=3D"=
+FONT-SIZE: 13px; TEXT-DECORATION: none;color: #fff;padding:6px 34px 8px 34p=
+x;background:  #28bdb9;border-radius: 4px; margin: 0 10px;" target=3D"_blan=
+k">=E7=A1=AE=E8=AE=A4=E5=8F=82=E5=8A=A0</a></span></div>&nbsp;<div style=3D=
+"font-size: 16px;color: #363636;padding-bottom: 10px;"><div style=3D"font-f=
+amily: =E5=BE=AE=E8=BD=AF=E9=9B=85=E9=BB=91, &quot;PingFang SC&quot;, Arial=
+, system, -apple-system, sans-serif; text-wrap-mode: wrap; background-color=
+: rgb(255, 255, 255); font-size: 16px; color: rgb(54, 54, 54); padding-bott=
+om: 10px;"><strong>=E8=80=83=E8=AF=95=E6=8F=90=E7=A4=BA</strong></div><div =
+style=3D"color: rgb(80, 80, 80); font-family: =E5=BE=AE=E8=BD=AF=E9=9B=85=
+=E9=BB=91, &quot;PingFang SC&quot;, Arial, system, -apple-system, sans-seri=
+f; text-wrap-mode: wrap; background-color: rgb(255, 255, 255);"><p><span st=
+yle=3D"font-size: 14px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1. =E8=80=83=E8=AF=
+=95=E5=85=A8=E7=A8=8B=E6=91=84=E5=83=8F=E5=A4=B4=E4=BC=9A=E8=BF=9B=E8=A1=8C=
+=E6=8A=93=E6=8B=8D=E7=9B=91=E6=8E=A7=EF=BC=9B</span></p><p><span style=3D"f=
+ont-size: 14px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong style=3D"text-decora=
+tion: none;">2. <strong style=3D"color: rgb(80, 80, 80); font-family: =E5=
+=BE=AE=E8=BD=AF=E9=9B=85=E9=BB=91, &quot;PingFang SC&quot;, Arial, system, =
+-apple-system, sans-serif; text-wrap-mode: wrap; background-color: rgb(255,=
+ 255, 255);">=E5=9C=A8</strong></strong><strong style=3D"color: rgb(80, 80,=
+ 80); font-family: =E5=BE=AE=E8=BD=AF=E9=9B=85=E9=BB=91, &quot;PingFang SC&=
+quot;, Arial, system, -apple-system, sans-serif; text-wrap-mode: wrap; back=
+ground-color: rgb(255, 255, 255);">=E7=BA=BF=E7=BC=96=E7=A8=8B=E9=A2=98=EF=
+=BC=8C=E5=BB=BA=E8=AE=AE=E4=BD=A0=E4=BD=BF=E7=94=A8=E6=9C=AC=E5=9C=B0=E7=BC=
+=96=E8=AF=91=E5=99=A8=E7=BC=96=E5=86=99=E4=BB=A3=E7=A0=81=EF=BC=8C=E4=B8=8D=
+=E7=AE=97=E8=80=83=E8=AF=95=E8=BF=9D=E8=A7=84<strong style=3D"color: rgb(80=
+, 80, 80); font-family: &quot;Microsoft YaHei&quot;, Arial; text-wrap-mode:=
+ wrap; background-color: rgb(255, 255, 255);">=EF=BC=8C=E4=BD=86=E4=B8=A5=
+=E7=A6=81=E4=BD=BF=E7=94=A8=E4=BB=BB=E4=BD=95AI=E7=9B=B8=E5=85=B3=E5=B7=A5=
+=E5=85=B7=E8=BE=85=E5=8A=A9=E4=BD=9C=E7=AD=94</strong>=EF=BC=9B</strong><sp=
+an style=3D"color: rgb(80, 80, 80); font-family: =E5=BE=AE=E8=BD=AF=E9=9B=
+=85=E9=BB=91, &quot;PingFang SC&quot;, Arial, system, -apple-system, sans-s=
+erif; text-wrap-mode: wrap; background-color: rgb(255, 255, 255);">&nbsp;</=
+span></span></p><p><span style=3D"font-size: 14px;">&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;3. <span style=3D"color: rgb(80, 80, 80); font-family: =E5=BE=AE=E8=
+=BD=AF=E9=9B=85=E9=BB=91, &quot;PingFang SC&quot;, Arial, system, -apple-sy=
+stem, sans-serif; text-wrap-mode: wrap; background-color: rgb(255, 255, 255=
+);">=E8=80=83=E8=AF=95=E7=BB=93=E6=9D=9F=E6=97=B6=EF=BC=8C=E5=A6=82=E6=9E=
+=9C=E6=B2=A1=E6=9C=89=E4=B8=BB=E5=8A=A8=E4=BA=A4=E5=8D=B7=EF=BC=8C=E7=B3=BB=
+=E7=BB=9F=E4=BC=9A=E8=87=AA=E5=8A=A8=E4=BA=A4=E5=8D=B7=EF=BC=9B</span></spa=
+n></p><p class=3D"ng-binding"><span style=3D"font-size: 14px;">&nbsp;&nbsp;=
+&nbsp;&nbsp;&nbsp;4.=E5=BE=97=E7=89=A9App=E6=8B=A5=E6=9C=89=E5=85=A8=E9=83=
+=A8=E8=AF=95=E9=A2=98=E5=86=85=E5=AE=B9=E7=89=88=E6=9D=83=EF=BC=8C=E8=AF=B7=
+=E9=81=B5=E5=BE=AA=E5=9F=BA=E6=9C=AC=E7=9A=84=E5=95=86=E4=B8=9A=E5=8E=9F=E5=
+=88=99=E5=92=8C=E5=B0=8A=E9=87=8D=E5=BD=BC=E6=AD=A4=E7=9A=84=E4=BF=A1=E4=BB=
+=BB=EF=BC=8C=E4=B8=8D=E8=A6=81=E5=AF=B9=E5=86=85=E5=AE=B9=E5=81=9A=E4=BB=BB=
+=E4=BD=95=E5=A4=8D=E5=88=B6=E3=80=81=E4=BC=A0=E6=92=AD=EF=BC=9B</span></p><=
+p class=3D"ng-binding"><span style=3D"font-size: 14px;">&nbsp; &nbsp; &nbsp=
+;5.&nbsp;=E6=AD=A3=E5=BC=8F=E8=80=83=E8=AF=95=E5=89=8D=EF=BC=8C=E9=9C=80=E8=
+=A6=81=E5=85=B3=E9=97=AD=E6=B5=8F=E8=A7=88=E5=99=A8=E6=94=B6=E8=97=8F=E6=A0=
+=8F=EF=BC=9B</span></p><p><span style=3D"font-size: 14px;">&nbsp; &nbsp; &n=
+bsp;6. =E5=9C=A8=E7=BA=BF=E8=80=83=E8=AF=95=E5=B8=B8=E8=A7=81=E9=97=AE=E9=
+=A2=98=E5=9B=9E=E7=AD=94=E8=AF=B7=E6=9F=A5=E7=9C=8B=EF=BC=9A</span><a href=
+=3D"http://oj.acmcoder.com/QA" target=3D"_blank" style=3D"color: rgb(40, 18=
+9, 185); font-size: 14px; text-decoration: underline;"><span style=3D"font-=
+size: 14px;">http://oj.acmcoder.com/QA</span></a><span style=3D"font-size: =
+14px;">=EF=BC=9B</span></p></div><p><strong><br/></strong></p><p><strong>=
+=E8=80=83=E5=89=8D=E5=87=86=E5=A4=87</strong></p></div><div class=3D"letter=
+-div" style=3D"display: flex;">&nbsp;&nbsp;&nbsp;<div><p style=3D"text-alig=
+n:center;margin-bottom: 10px;"><strong style=3D"color:#29bdb9;">=E3=80=90Ch=
+rome=E6=B5=8F=E8=A7=88=E5=99=A8=E3=80=81=E6=91=84=E5=83=8F=E5=A4=B4=E3=80=
+=81=E7=94=B5=E8=84=91=E3=80=91</strong></p><p style=3D"text-align:center">=
+=E5=BF=85=E5=A4=87=E8=80=83=E8=AF=95=E5=B7=A5=E5=85=B7</p></div>&nbsp;&nbsp=
+;&nbsp;<div><p style=3D"text-align:center;margin-bottom: 10px;"><strong sty=
+le=3D"color: #29bdb9; ">=E3=80=90=E6=8B=8D=E6=91=84=E4=B8=AA=E4=BA=BA=E9=9D=
+=93=E7=85=A7=E3=80=91</strong></p><p style=3D"text-align:center">=E8=B0=83=
+=E8=AF=95=E6=91=84=E5=83=8F=E5=A4=B4</p></div>&nbsp;&nbsp;&nbsp;<div><p sty=
+le=3D"text-align:center;margin-bottom: 10px;"><strong style=3D"color: #29bd=
+b9; ">=E3=80=90=E7=86=9F=E6=82=89=E8=80=83=E8=AF=95=E7=B3=BB=E7=BB=9F=E6=93=
+=8D=E4=BD=9C=E3=80=91</strong></p><p style=3D"text-align:center">=E8=80=83=
+=E5=89=8D=E7=BB=83=E4=B9=A0</p></div>&nbsp;&nbsp;&nbsp;<div><p style=3D"tex=
+t-align:center;margin-bottom: 10px;"><strong style=3D"color: #29bdb9; ">=E3=
+=80=90=E4=BA=86=E8=A7=A3=E5=B8=B8=E8=A7=81=E9=97=AE=E9=A2=98=E5=9B=9E=E7=AD=
+=94=E3=80=91</strong></p><p style=3D"text-align:center">=E9=98=85=E8=AF=BBQ=
+&amp;A</p></div></div>&nbsp;<div style=3D"font-size: 16px;color: #363636;pa=
+dding-bottom: 10px;"><strong>=E8=80=83=E4=B8=AD=E7=BA=AA=E5=BE=8B</strong><=
+/div><div><p style=3D"color: rgb(80, 80, 80); font-family: =E5=BE=AE=E8=BD=
+=AF=E9=9B=85=E9=BB=91, &quot;PingFang SC&quot;, Arial, system, -apple-syste=
+m, sans-serif; text-wrap: wrap; background-color: rgb(255, 255, 255);">&nbs=
+p; &nbsp; &nbsp;1. <span style=3D"font-family: &quot;Microsoft YaHei&quot;;=
+ text-wrap: wrap; background-color: rgb(255, 255, 255);">=E8=80=83=E8=AF=95=
+=E5=B0=86=E8=BF=9B=E8=A1=8C=E5=85=A8=E7=A8=8B=E7=9B=91=E6=8E=A7=EF=BC=8C=E8=
+=AF=B7=E5=8A=A1=E5=BF=85=E4=BD=BF=E7=94=A8=E5=B8=A6=E6=9C=89=E6=91=84=E5=83=
+=8F=E5=A4=B4=E3=80=81=E9=BA=A6=E5=85=8B=E9=A3=8E=E5=92=8C=E6=89=AC=E5=A3=B0=
+=E5=99=A8=E7=9A=84=E7=AC=94=E8=AE=B0=E6=9C=AC=E6=88=96=E5=8F=B0=E5=BC=8F=E7=
+=94=B5=E8=84=91=E4=BD=9C=E7=AD=94=EF=BC=8C=E7=A6=81=E6=AD=A2=E4=BD=BF=E7=94=
+=A8=E6=89=8B=E6=9C=BA=E6=88=96=E5=B9=B3=E6=9D=BF=E8=AE=BE=E5=A4=87=EF=BC=88=
+=E5=A6=82iPad=E3=80=81surface=E7=AD=89=EF=BC=89=E4=BD=9C=E7=AD=94=EF=BC=9B<=
+/span></p><p style=3D"color: rgb(80, 80, 80); font-family: =E5=BE=AE=E8=BD=
+=AF=E9=9B=85=E9=BB=91, &quot;PingFang SC&quot;, Arial, system, -apple-syste=
+m, sans-serif; text-wrap: wrap; background-color: rgb(255, 255, 255);">&nbs=
+p;&nbsp;&nbsp;&nbsp;&nbsp;2. =E7=99=BB=E5=BD=95=E7=B3=BB=E7=BB=9F=E9=9C=80=
+=E4=BD=BF=E7=94=A8Chrome=E6=B5=8F=E8=A7=88=E5=99=A8=EF=BC=8C=E7=89=88=E6=9C=
+=AC=E8=A6=81=E6=B1=8280=E5=8F=8A=E4=BB=A5=E4=B8=8A=EF=BC=88360=E6=9E=81=E9=
+=80=9F=E6=B5=8F=E8=A7=88=E5=99=A8=E5=8F=AF=E4=BD=9C=E4=B8=BA=E5=A4=87=E9=80=
+=89=EF=BC=8C=E5=A6=82=E9=81=87=E7=AA=81=E5=8F=91=E6=83=85=E5=86=B5=E5=8F=AF=
+=E5=B0=9D=E8=AF=95=E6=9B=B4=E6=8D=A2=EF=BC=89=EF=BC=8C=E7=AC=94=E8=AF=95=E5=
+=B0=86=E5=BC=80=E5=90=AF=E7=AD=94=E9=A2=98=E5=BD=95=E5=B1=8F=E5=8A=9F=E8=83=
+=BD=EF=BC=8C=E8=BF=9B=E5=85=A5=E7=AC=94=E8=AF=95=E7=B3=BB=E7=BB=9F=E5=90=8E=
+=EF=BC=8C=E6=B5=8F=E8=A7=88=E5=99=A8=E4=BC=9A=E8=AF=B7=E6=B1=82=E5=85=B1=E4=
+=BA=AB=E5=B1=8F=E5=B9=95=EF=BC=8C=E9=A6=96=E5=85=88=E7=82=B9=E5=87=BB=E2=80=
+=9C=E6=82=A8=E7=9A=84=E6=95=B4=E4=B8=AA=E5=B1=8F=E5=B9=95=E2=80=9D=E5=8C=BA=
+=E5=9F=9F=EF=BC=8C=E5=86=8D=E7=82=B9=E5=87=BB=E2=80=9C=E5=88=86=E4=BA=AB=E2=
+=80=9D=E5=8D=B3=E5=8F=AF=E5=BC=80=E5=A7=8B=E5=BD=95=E5=88=B6=EF=BC=8C=E5=A6=
+=82=E6=9E=9C=E6=98=AFMac=E7=94=B5=E8=84=91=E9=9C=80=E8=A6=81=E6=8F=90=E5=89=
+=8D=E6=8E=88=E6=9D=83=EF=BC=8C=E5=9C=A8=E5=AE=89=E5=85=A8=E6=80=A7=E4=B8=8E=
+=E9=9A=90=E7=A7=81-=E5=B1=8F=E5=B9=95=E5=BD=95=E5=88=B6=E4=B8=AD=E8=AE=BE=
+=E7=BD=AE=E3=80=82=E7=AC=94=E8=AF=95=E6=9C=9F=E9=97=B4=E4=B8=8D=E8=83=BD=E5=
+=81=9C=E6=AD=A2=E5=85=B1=E4=BA=AB=EF=BC=9B<br/><img width=3D"612px" src=3D"=
+https://examacmcoder.oss-accelerate.aliyuncs.com/release/exam/2.1.28/images=
+/6531675838086_.pic.jpg"/></p><p>&nbsp; &nbsp; &nbsp;3. =E7=A6=81=E6=AD=A2=
+=E4=BD=BF=E7=94=A8QQ=E3=80=81=E5=BE=AE=E4=BF=A1=E7=AD=89IM=E8=BD=AF=E4=BB=
+=B6=E8=BF=9B=E8=A1=8C=E4=BA=A4=E6=B5=81=EF=BC=9B<br/></p><p>&nbsp; &nbsp; &=
+nbsp;4. =E8=AF=B7=E4=B8=8D=E8=A6=81=E8=B7=B3=E5=87=BA=E8=80=83=E8=AF=95=E9=
+=A1=B5=E9=9D=A2=EF=BC=88=E9=99=A4=E5=9C=A8=E7=BA=BF=E7=BC=96=E7=A8=8B=E9=A2=
+=98=EF=BC=89=EF=BC=8C=E5=90=A6=E5=88=99=E4=BC=9A=E5=BD=B1=E5=93=8D=E6=82=A8=
+=E7=9A=84=E6=88=90=E7=BB=A9=EF=BC=9B</p><p>&nbsp; &nbsp; &nbsp;5. =E8=AF=B7=
+=E4=B8=8D=E8=A6=81=E4=BD=BF=E7=94=A8=E6=89=8B=E6=9C=BA=E4=BA=A4=E6=B5=81=E6=
+=88=96=E6=9F=A5=E8=AF=A2=E4=BF=A1=E6=81=AF=EF=BC=8C=E4=B8=8D=E8=A6=81=E4=BD=
+=A9=E6=88=B4=E8=80=B3=E6=9C=BA=E3=80=82</p></div><!--=E8=80=83=E8=AF=95=E6=
+=8F=90=E7=A4=BA end-->&nbsp;<div style=3D"font-size: 16px;color: #363636;pa=
+dding-bottom: 10px;"><strong>=E7=BC=96=E7=A8=8B=E9=A2=98=E9=A1=BB=E7=9F=A5<=
+/strong></div><div><p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>=E6=9C=AC=E5=9C=
+=B0=E7=BC=96=E8=AF=91=E5=99=A8=E8=83=BD=E9=80=9A=E8=BF=87=EF=BC=8C=E4=B8=BA=
+=E4=BD=95=E8=80=83=E8=AF=95=E7=B3=BB=E7=BB=9F=E9=80=9A=E4=B8=8D=E8=BF=87=EF=
+=BC=9F=E8=AF=B7=E5=8A=A1=E5=BF=85=E4=BB=94=E7=BB=86=E9=98=85=E8=AF=BB=E4=BB=
+=A5=E4=B8=8B=E8=AF=B4=E6=98=8E=EF=BC=8C=E5=B9=B6=E6=8F=90=E5=89=8D=E7=BB=83=
+=E4=B9=A0=EF=BC=81</strong></p><p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E7=BC=96=
+=E8=AF=91=E5=99=A8=E7=8E=AF=E5=A2=83=E8=AF=B4=E6=98=8E=EF=BC=9A<a class=3D"=
+letter-link2" href=3D"http://OJ.acmcoder.com/ExamNotice.html" style=3D" COL=
+OR: #28bdb9;text-decoration: underline" target=3D"_blank">http://OJ.acmcode=
+r.com/ExamNotice.html</a>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbs=
+p; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;</p><p>&nb=
+sp;&nbsp;&nbsp;&nbsp;&nbsp;=E5=9C=A8=E7=BA=BF=E7=BC=96=E7=A8=8B=E9=A2=98=E5=
+=88=B7=E9=A2=98=E8=AE=AD=E7=BB=83=EF=BC=9A<a class=3D"letter-link2" href=3D=
+"http://www.acmcoder.com" style=3D" COLOR: #28bdb9;text-decoration: underli=
+ne" target=3D"_blank">http://www.acmcoder.com</a>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbs=
+p; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;</p><p>&nb=
+sp;&nbsp;&nbsp;&nbsp;&nbsp;=E5=BB=BA=E8=AE=AE=E8=80=83=E5=89=8D=E5=88=B73-5=
+=E9=81=93=E9=A2=98=EF=BC=8C=E8=BF=99=E6=A0=B7=E5=8F=AF=E4=BB=A5=E7=86=9F=E6=
+=82=89=E7=BC=96=E8=AF=91=E5=99=A8=E7=8E=AF=E5=A2=83=E3=80=81=E8=BE=93=E5=85=
+=A5=E8=BE=93=E5=87=BA=E4=BB=A3=E7=A0=81=E7=BC=96=E5=86=99=E3=80=82</p><p></=
+p>&nbsp;<div style=3D"font-size: 16px;color: #363636;padding-bottom: 10px;"=
+><strong>=E5=85=B3=E4=BA=8E=E4=BD=9C=E5=BC=8A</strong></div><p></p><p>&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;1. =E9=89=B4=E4=BA=8E=E8=AF=9A=E4=BF=A1=E9=AB=98=
+=E4=BA=8E=E6=8A=80=E8=83=BD=E7=9A=84=E7=90=86=E5=BF=B5=EF=BC=8C=E8=AF=B7=E8=
+=87=AA=E8=A7=89=E9=81=B5=E5=AE=88=E8=80=83=E8=AF=95=E7=BA=AA=E5=BE=8B=EF=BC=
+=8C=E4=B8=8D=E5=8F=AF=E6=89=BE=E4=BA=BA=E6=9B=BF=E8=80=83=EF=BC=9B</p><p>&n=
+bsp;&nbsp;&nbsp;&nbsp;&nbsp;2. =E6=88=91=E4=BB=AC=E4=BC=9A=E9=87=87=E7=94=
+=A8=E6=8A=80=E6=9C=AF=E5=92=8C=E4=BA=BA=E5=B7=A5=E6=8A=BD=E6=9F=A5=E7=AD=89=
+=E6=96=B9=E5=BC=8F=E9=81=BF=E5=85=8D=E8=80=83=E8=AF=95=E7=9A=84=E4=BD=9C=E5=
+=BC=8A=E8=A1=8C=E4=B8=BA=E3=80=82=E5=90=8C=E6=97=B6=EF=BC=8C=E5=9C=A8=E8=BF=
+=9B=E5=85=A5=E4=B8=8B=E4=B8=80=E8=BD=AE=E9=9D=A2=E8=AF=95=E6=97=B6=EF=BC=8C=
+=E4=B9=9F=E4=BC=9A=E9=9A=8F=E6=9C=BA=E6=8A=BD=E5=8F=96=E7=9B=B8=E5=BD=93=E6=
+=AF=94=E4=BE=8B=E7=9A=84=E5=90=8C=E5=AD=A6=E8=BF=9B=E8=A1=8C=E8=AF=95=E9=A2=
+=98=E9=97=AE=E7=AD=94=EF=BC=9B</p><p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3. =E5=
+=AF=B9=E4=BA=8E=E5=9C=A8=E7=BA=BF=E7=BC=96=E7=A8=8B=E9=A2=98=EF=BC=9A=E7=B3=
+=BB=E7=BB=9F=E4=BC=9A=E8=87=AA=E5=8A=A8=E6=AF=94=E5=AF=B9=E4=BB=A3=E7=A0=81=
+=E7=9A=84=E7=9B=B8=E4=BC=BC=E5=BA=A6=EF=BC=8C=E7=84=B6=E5=90=8E=E6=8B=9B=E8=
+=81=98=E5=AE=98=E4=BA=BA=E5=B7=A5=E5=AE=A1=E6=9F=A5=E8=BE=83=E9=AB=98=E5=AB=
+=8C=E7=96=91=E4=BB=A3=E7=A0=81=EF=BC=8C=E5=A6=82=E7=A1=AE=E8=AE=A4=E6=9C=89=
+=E4=BD=9C=E5=BC=8A=E8=A1=8C=E4=B8=BA=EF=BC=8C=E4=BD=9C=E5=BC=8A=E5=8F=8C=E6=
+=96=B9=E5=9D=87=E4=BC=9A=E8=AE=B0=E5=85=A5=E5=85=AC=E5=8F=B8=E7=9A=84=E8=AF=
+=9A=E4=BF=A1=E6=A1=A3=E6=A1=88=E5=BA=93=EF=BC=9B</p><p>&nbsp;&nbsp;&nbsp;&n=
+bsp;&nbsp;4. =E6=89=80=E6=9C=89=E4=BD=9C=E5=BC=8A=E8=A1=8C=E4=B8=BA=E4=B8=
+=80=E7=BB=8F=E6=9F=A5=E5=AE=9E=EF=BC=8C=E4=B8=8D=E4=BB=85=E4=BC=9A=E5=AF=BC=
+=E8=87=B4=E7=94=B3=E8=AF=B7=E4=BA=BA=E6=97=A0=E6=B3=95=E8=BF=9B=E5=85=A5=E5=
+=88=B0=E4=B8=8B=E4=B8=80=E6=AD=A5=E7=AD=9B=E9=80=89=E6=B5=81=E7=A8=8B=E4=B8=
+=AD=EF=BC=8C=E8=BF=98=E5=B0=86=E6=B0=B8=E4=B9=85=E8=A2=AB=E8=AE=B0=E5=BD=95=
+=E5=9C=A8=E5=85=AC=E5=8F=B8=E4=BA=BA=E6=89=8D=E5=BA=93=E7=9A=84=E8=AF=9A=E4=
+=BF=A1=E6=A1=A3=E6=A1=88=E4=B8=AD=E3=80=82</p></div>&nbsp;<p class=3D"ng-bi=
+nding">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E8=B0=A2=E8=B0=A2=E6=82=A8=E7=9A=84=
+=E9=85=8D=E5=90=88=EF=BC=81=E9=A2=84=E7=A5=9D=E5=9C=A8=E7=BA=BF=E8=80=83=E8=
+=AF=95=E6=88=90=E5=8A=9F=EF=BC=81</p><div style=3D"text-align: right;"><p c=
+lass=3D"ng-binding">=E5=BE=97=E7=89=A9App-=E6=A0=A1=E6=8B=9B=E7=BB=84</p><p=
+ class=3D"ng-binding">2026=E5=B9=B45=E6=9C=88</p></div><br/><p>=E7=89=B9=E5=
+=88=AB=E8=AF=B4=E6=98=8E=EF=BC=9A</p><p>=E5=9C=A8=E7=BA=BF=E8=80=83=E8=AF=
+=95=E8=BF=87=E7=A8=8B=E4=B8=AD=E5=A6=82=E6=9E=9C=E9=81=87=E5=88=B0=E7=B3=BB=
+=E7=BB=9F=E6=93=8D=E4=BD=9C=E6=95=85=E9=9A=9C=E7=AD=89=E9=97=AE=E9=A2=98=EF=
+=BC=8C=E8=AF=B7=E5=8F=91=E9=82=AE=E4=BB=B6=E8=87=B3Exam@acmcoder.com=E5=91=
+=8A=E7=9F=A5=E6=88=91=E4=BB=AC=EF=BC=8C=E6=88=91=E4=BB=AC=E4=BC=9A=E5=8F=8A=
+=E6=97=B6=E4=B8=BA=E6=82=A8=E8=A7=A3=E5=86=B3=E3=80=82</p><p></p><p></p><p>=
+</p><p>=E5=BE=97=E7=89=A9App=E6=A0=A1=E6=8B=9B=E7=AC=94=E8=AF=95=E8=AF=95=
+=E5=8D=B7=E7=9A=84=E6=9C=89=E6=95=88=E6=9C=9F=E4=B8=BA3=E4=B8=AA=E5=B0=8F=
+=E6=97=B6=EF=BC=8C=E5=80=99=E9=80=89=E4=BA=BA=E5=8F=AF=E4=BB=A5=E4=BB=8E=E4=
+=B8=AD=E4=BB=BB=E9=80=892=E4=B8=AA=E5=B0=8F=E6=97=B6=E4=BD=9C=E7=AD=94=E3=
+=80=82=E6=B3=A8=E6=84=8F=EF=BC=9A=E4=B8=80=E6=97=A6=E5=BC=80=E5=A7=8B=E4=BD=
+=9C=E7=AD=94=E6=9C=9F=E9=97=B4=E4=B8=8D=E5=8F=AF=E6=9A=82=E5=81=9C=EF=BC=8C=
+=E9=80=80=E5=87=BA=E7=B3=BB=E7=BB=9F=E4=BB=8D=E4=BC=9A=E8=AE=A1=E6=97=B6=EF=
+=BC=8C=E4=B8=BA=E4=BF=9D=E8=AF=81=E4=BD=9C=E7=AD=94=E6=97=B6=E9=97=B4=E8=AF=
+=B7=E5=9C=A811:00=E5=89=8D=E7=99=BB=E5=BD=95=EF=BC=8C=E5=8A=A1=E5=BF=85=E5=
+=9C=A8=E7=B3=BB=E7=BB=9F=E5=85=B3=E9=97=AD=E5=89=8D=E5=AE=8C=E6=88=90=E4=BD=
+=9C=E7=AD=94=EF=BC=8C=E8=AF=B7=E5=90=88=E7=90=86=E5=AE=89=E6=8E=92=E6=97=B6=
+=E9=97=B4=E3=80=82=E8=80=83=E8=AF=95=E6=97=B6=E9=97=B4=E4=BB=A5=E5=90=8C=E5=
+=AD=A6=E4=BB=AC=E6=94=B6=E5=88=B0=E7=9A=84=E9=82=AE=E4=BB=B6=E9=80=9A=E7=9F=
+=A5=E4=B8=BA=E5=87=86=E3=80=82=E7=89=B9=E6=AE=8A=E6=83=85=E5=86=B5=E6=9C=AA=
+=E8=83=BD=E5=8F=82=E5=8A=A0=E7=AC=94=E8=AF=95=E5=8F=AF=E4=BB=A5=E5=8F=91=E9=
+=82=AE=E4=BB=B6=E7=94=B3=E8=AF=B7=E5=88=B0campus@dewu.com=E8=BF=9B=E8=A1=8C=
+=E8=AF=B4=E6=98=8E=EF=BC=8C=E5=90=A6=E5=88=99=E5=B0=86=E8=A7=86=E4=B8=BA=E8=
+=87=AA=E5=8A=A8=E6=94=BE=E5=BC=83=E7=AC=94=E8=AF=95=E3=80=82=E7=94=B3=E8=AF=
+=B7=E8=A1=A5=E8=80=83=E9=82=AE=E4=BB=B6=E6=A0=87=E9=A2=98=E4=B8=BA=EF=BC=9A=
+=E3=80=8A=E7=AC=94=E8=AF=95=E8=A1=A5=E8=80=83=E7=94=B3=E8=AF=B7-=E7=BD=91=
+=E7=94=B3=E5=A7=93=E5=90=8D-=E7=BD=91=E7=94=B3=E6=89=8B=E6=9C=BA=E5=8F=B7=
+=E3=80=8B=EF=BC=8C=E6=84=9F=E8=B0=A2=E5=90=8C=E5=AD=A6=E4=BB=AC=E7=9A=84=E9=
+=85=8D=E5=90=88=E3=80=82&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &n=
+bsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;<=
+/p></div></div></div><div style=3D"position: relative;margin: auto; margin-=
+top: -5px;width: 900px; background:#f1f1f1;"><div style=3D"text-align: cent=
+er;"><img src=3D"https://cdn.acmcoder.com/interview/fileshare/1693536864859=
+.png" width=3D"900px" height=3D"250px"/></div></div><div style=3D"text-alig=
+n: center;color: #505050;line-height: 20px;font-size: 12px; padding-top: 10=
+px;">=E4=B8=BA=E4=BF=9D=E8=AF=81=E9=82=AE=E7=AE=B1=E6=AD=A3=E5=B8=B8=E6=8E=
+=A5=E6=94=B6=EF=BC=8C=E8=AF=B7=E5=B0=86 Exam@acmcoder.com =E6=B7=BB=E5=8A=
+=A0=E8=BF=9B=E4=BD=A0=E7=9A=84=E9=80=9A=E8=AE=AF=E5=BD=95=EF=BC=8C=E5=8A=A1=
+=E5=BF=85=E5=B0=86=E5=90=8D=E7=A7=B0=E4=BF=9D=E5=AD=98=E4=B8=BA=E3=80=90=E8=
+=B5=9B=E7=A0=81=E3=80=91</div></div><center><table width=3D"100%" align=3D"=
+center" style=3D"max-width:900px;margin:0 auto;width:100%;"><tbody><tr alig=
+n=3D"center"></tr><tr align=3D"center"><td style=3D"border-top:1px #e5e5e5 =
+solid;padding-top:15px;padding-bottom:15px;" width=3D"560"><table border=3D=
+"0" cellspacing=3D"0" cellpadding=3D"0" align=3D"center"><tbody><tr><td sty=
+le=3D"background-color:#ddd;border:1px #ddd solid;border-radius:4px;padding=
+:3px 15px;text-align:center;"><a style=3D"color:#a6a6a6;background:#ddd;fon=
+t-size:12px;text-decoration:none;" href=3D"https://sctrack.sendcloud.net/tr=
+ack/unsubscribe2.do?p=3DeNptjkEKwjAURO_ycZmGP0ma5O-8h0hokxREbaltV-Ld1S5cyew=
+G3ps5gVuBU0SKEEKMcDawiE_Wi_EJbCLb1IqBXnIDTpJgkmHfXMZ-2sbCB-MdmK1DPM6zztOdFH=
+9CQ3db6teLoFvWYO0j_eoG--gfmPrMbc1A7gpETOg5RhuC7YOD1KHQTi55fXT5qpc6lnybtqLHu=
+pJ6vtR-XTk-vwGe8zlA" target=3D"_blank" rel=3D"noopener">=E7=82=B9=E5=87=BB=
+=E8=BF=99=E9=87=8C=E5=8F=96=E6=B6=88=E8=AE=A2=E9=98=85<br/>click to unsubsc=
+ribe</a></td></tr></tbody></table></td></tr></tbody></table></center></body=
+></html>
+
+
+
+

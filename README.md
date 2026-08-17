@@ -34,22 +34,22 @@ cp .env.example .env
 
 ```bash
 # 列出本机 Apple 日历名
-python3 -m qiuzhao_mail2calendar list-apple
+python3 -m core list-apple
 
 # 列出目标日历里已有的日程（核对匹配用）
-python3 -m qiuzhao_mail2calendar scan-apple --days 60
+python3 -m core scan-apple --days 60
 
 # 先干跑：只读匹配，展示最终动作与日程，不写入
-python3 -m qiuzhao_mail2calendar sync --dry-run
+python3 -m core sync --dry-run
 
 # 正式同步（有游标后自动增量）
-python3 -m qiuzhao_mail2calendar sync
+python3 -m core sync
 
 # 忽略游标，按 LOOKBACK_DAYS 重扫
-python3 -m qiuzhao_mail2calendar sync --full
+python3 -m core sync --full
 
 # 干跑并输出 JSON（含 apply / match_via / event）
-python3 -m qiuzhao_mail2calendar sync --dry-run --json
+python3 -m core sync --dry-run --json
 ```
 
 建议用 launchd / cron 每 15～30 分钟跑一次 `sync`。
@@ -155,12 +155,12 @@ LLM_MODEL=deepseek-v4-flash
 核对日历里读到了什么：
 
 ```bash
-python3 -m qiuzhao_mail2calendar scan-apple --days 60
+python3 -m core scan-apple --days 60
 ```
 
 ## 规则引擎评测
 
-真实 `.eml` 样例与金标索引在 `data/email_example/`（`labels.json` 一份索引）。默认只测规则 / 启发式，不调用 LLM。
+评测用 `.eml` 样例与金标索引在 `tests/fixtures/email_corpus/`（`labels.json` 一份索引；样例已脱敏）。默认只测规则 / 启发式，不调用 LLM。
 
 ```bash
 source .venv/bin/activate
@@ -170,12 +170,12 @@ python -m pytest tests/test_rules_corpus.py -q
 python -m pytest tests/ -q
 ```
 
-新增样例：把 `.eml` 放进 `data/email_example/`，并在 `labels.json` 的 `cases` 里补一条期望。
+新增样例：把 `.eml` 放进 `tests/fixtures/email_corpus/`，并在 `labels.json` 的 `cases` 里补一条期望。
 
 ## 目录
 
 ```
-qiuzhao_mail2calendar/
+core/
   mail_qq.py      # QQ IMAP（增量 UID）
   rules.py        # 规则粗过滤
   parser.py       # 启发式 / LLM 精解析、改期 / 取消
@@ -186,14 +186,14 @@ qiuzhao_mail2calendar/
   models.py       # 数据结构
   lifecycle_log.py # 邮件生命周期 + LLM I/O 旁路
   cli.py          # 命令行
-data/
-  email_example/  # 评测用 .eml + labels.json
-  synced.sqlite   # 运行后生成：游标与活跃日程
-  logs/           # 运行后生成：mail_lifecycle / llm_io
+data/             # 运行态（gitignore）：synced.sqlite、logs/
 tests/
+  fixtures/email_corpus/  # 评测用 .eml + labels.json
   eml_loader.py
   test_parser.py
   test_calendar_match.py
   test_sync_lifecycle.py
   test_rules_corpus.py
+  test_apple.py
+  test_jsonl_trim.py
 ```

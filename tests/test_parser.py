@@ -3,10 +3,10 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from qiuzhao_mail2calendar.config import Settings, load_settings
-from qiuzhao_mail2calendar.mail_qq import MailItem
-from qiuzhao_mail2calendar.models import CandidateEvent
-from qiuzhao_mail2calendar.parser import (
+from core.config import Settings, load_settings
+from core.mail_qq import MailItem
+from core.models import CandidateEvent
+from core.parser import (
     build_title,
     classify_stage,
     detect_action,
@@ -16,8 +16,8 @@ from qiuzhao_mail2calendar.parser import (
     parse_llm_json,
     parse_mail,
 )
-from qiuzhao_mail2calendar.rules import coarse_filter
-from qiuzhao_mail2calendar.store import EventStore
+from core.rules import coarse_filter
+from core.store import EventStore
 
 
 def _settings(tmp_path: Path, **kwargs) -> Settings:
@@ -222,7 +222,7 @@ def test_parse_mail_coarse_reject_skips_llm(tmp_path: Path, monkeypatch):
         called["n"] += 1
         raise AssertionError("LLM should not be called")
 
-    monkeypatch.setattr("qiuzhao_mail2calendar.parser.llm_parse", boom)
+    monkeypatch.setattr("core.parser.llm_parse", boom)
     mail = _mail(subject="账单通知", text="本月话费 30 元。")
     assert parse_mail(mail, settings) is None
     assert called["n"] == 0
@@ -268,7 +268,7 @@ def test_parse_mail_model_reject_no_heuristic_fallback(tmp_path: Path, monkeypat
             }
 
     monkeypatch.setattr(
-        "qiuzhao_mail2calendar.parser.requests.post",
+        "core.parser.requests.post",
         lambda *a, **k: FakeResp(),
     )
     # 若走启发式，这封信也会被 skip；用 spy 确认启发式未被调用
@@ -279,7 +279,7 @@ def test_parse_mail_model_reject_no_heuristic_fallback(tmp_path: Path, monkeypat
         called["heuristic"] += 1
         return real_heuristic(m)
 
-    monkeypatch.setattr("qiuzhao_mail2calendar.parser.heuristic_parse", wrapped)
+    monkeypatch.setattr("core.parser.heuristic_parse", wrapped)
     assert parse_mail(mail, settings) is None
     assert called["heuristic"] == 0
 
@@ -356,7 +356,7 @@ def test_parse_mail_keeps_think_in_raw_but_not_as_separate_field(
             return {"choices": [{"message": {"content": content}}]}
 
     monkeypatch.setattr(
-        "qiuzhao_mail2calendar.parser.requests.post",
+        "core.parser.requests.post",
         lambda *a, **k: FakeResp(),
     )
 
@@ -405,7 +405,7 @@ def test_parse_mail_llm_error_falls_back_heuristic(tmp_path: Path, monkeypatch):
     def boom(*_a, **_k):
         raise RuntimeError("network down")
 
-    monkeypatch.setattr("qiuzhao_mail2calendar.parser.requests.post", boom)
+    monkeypatch.setattr("core.parser.requests.post", boom)
     event = parse_mail(mail, settings)
     assert event is not None
     assert event.start_at.startswith("2026-08-25T10:00")
@@ -528,7 +528,7 @@ def test_llm_empty_company_falls_back_to_guess(tmp_path: Path, monkeypatch):
             }
 
     monkeypatch.setattr(
-        "qiuzhao_mail2calendar.parser.requests.post",
+        "core.parser.requests.post",
         lambda *a, **k: FakeResp(),
     )
     event = parse_mail(mail, settings)

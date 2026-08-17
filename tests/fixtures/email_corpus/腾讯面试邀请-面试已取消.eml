@@ -1,0 +1,104 @@
+Received: from bg1.exmail.qq.com (bg1.exmail.qq.com [114.132.62.65])
+	by newxmmxsza28-0.qq.com (NewMX) with SMTP id 1C805C78
+	for <candidate@qq.com>; Mon, 06 Apr 2026 00:07:08 +0800
+X-QQ-mid: xmmxza28-0t1775405228txjhcwlsh
+X-QQ-XMAILINFO: M+McIMNbTNEl2iLsklKYVHqnzhuTWCWmTCmWCH6y0dlccO2nXeAyLqWMTAct46
+	 jXyLTuZ0+VhnEgHc1efwrtumqTrUTOLvOgHytXiSYIFVwarj23hqEbd+tSm2t5v+3lRyviezeD6K
+	 MgahnuWJia0wJ4kagTxJFD5uWMuIffaQIt9jr2OuhqE5p1ULP/o93r2Q33xcGyq7HhX5g2FYQux5
+	 Kxqw9gnCvknyf2v05SKG0SKKQQT+RYTnnBWZHM6Pe/AL2H20H8M58OsxyuOWmJgB3uYkqW086edq
+	 dQL5EJW/9ImNdPM1l8b6fB2OAGI1xjPC7esnPRw+T5+8H2GEucijIfesoqYNfmvReA2irremnKGw
+	 YRFzzjUJmmEB92pH9rcfXMb5zNanIwH1TBmogbSic1Qot50dRHGSgMWC/soH8Xq+507MCHSDSRfl
+	 +Q3WFplPDQFQKrv4WRMsDbfASf6DxH5dMn/JPBKc6CwRVgDFwaiMuwYFJKb0il3tvmGKttD3OMuJ
+	 Kcx3zIyRHp3tgidpuqurQE6n/BQOuAiKe+im4o2k+Qi4KB0+4xE1dbKbmKiA8vpJ0Vgtw9VDxXx3
+	 ftu+H+nIQHJudiuGMP03lTAnn11l6P55kPGg5bnklpI6a1RNRqmYywgdHu/CApKf8V9fN+c4N5Oz
+	 0A5WsNCubYrUOfW74+MJVEEdAWseNsPkky4NvovHwT+kPt5tAjIo6PyrAgHyRs0+E1S9wZLwrrHp
+	 TRbSqN869o8QPaVSb0vFBCMh4FHpzXCvmML9ToofRTY1blxxXrLLpaiseXt8wMjdBfZMW36Pa+ZV
+	 IxUxlDECLVwD8vbBiXm/8GKJuE10K94Sz7VG+BRoU9kySHreNNuyqc665eW86CbXctON7LnTTYxS
+	 mfqa9Wvp+ZKt11u7DPHLjJtbjmPq+pEfwrBU4OsKvKIFvuPuf9CvaoryIl3hdJAQYwcNRik05gqQ
+	 djcwwE8EyZ/JhBEk7tvCuUUgy5cNQjujWAzT53U+hpeX33r/dutnZPUAt0l29qeWRTQmxoII1hvz
+	 geT24vv+aKNlNMphbfxHS7dgerYC8h2jY0+WK8sOIiFYAwPwE39eaAa7F0LcM2ms5Hs2S25zda5R
+	 CghoJmT7zpdJOjBM+cRgKcMN4/LmOWO5/PecKqUaz6R1pgmO/nI1q0dJxRCEK1BerOCD2RaRFtr+
+	 +wyE9e5RJxrlRPlpgeIC/v9uStfC/9IAo0fkV6USP5GtX1fnfNIfgds/95fGZb3X46hQIDBZvFIG
+	 W6pdTWn6EpXKG5xuHSmDjbkwAc6RExq/6X4rxupSYYj4FC2QZMt9COIcuQAPv3v4uEwmV2KhaZpn
+	 ChtUdGOQFsLrxkZMZYFVQHFt74+V5Jvi0qr9nGTtSCRhRJz6Rmtp4WX6OHrcPn2jedkKinJTH+Xl
+	 U=
+X-QQ-XMRINFO: NS+P29fieYNw9ZiaYiAbFNf9oz9kKGPiiw==
+Authentication-Results: mx.qq.com; spf=pass(114.132.62.65) smtp.mailfrom=<camp
+	 us@tencent.com>; dkim=pass(signature was verified) header.d=tencent.com; dma
+	 rc=pass(p=QUARANTINE sp=QUARANTINE pct=100) header.from=tencent.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=tencent.com;
+	s=s201512; t=1775405228;
+	bh=Izsgfz10n3j49U1oHeyXqR/ugWUWqrk+TcSCl58rRjE=;
+	h=Date:Mime-Version:To:Subject:Message-Id:From;
+	b=LR+1LwveXo5ciepwSUxQOOMznlO9aNnVFfDCzFWLyY+UnuHFhTYZA6QPrdwpM/GZW
+	 kqe3vJa0ngoOBIW1ASHSC/3kU4K3atUBXICYBZJb71seKyZDfRF/R8ZTxODt54JzD6
+	 ztIW/DZYLqgFhQVAUzRHRCRf7+DBX4SQqiHq0g48=
+X-BQ-mid: esmtpgz16t1775405227t865b582f
+X-BQ-Originating-IP: hV7fLd7dEb1gJtUftRFPZ0G8OnX6SzVeGE4ZcnAQ8CA=
+Received: from localhost ( [10.88.163.7])
+	by bizesmtp.qq.com (ESMTP) with SMTP id 0
+	for <candidate@qq.com>; Mon, 06 Apr 2026 00:07:06 +0800 (CST)
+X-BQ-SSF: 0000000010000001000000000000000
+X-BQ-fromtof: true
+X-BIZMAIL-ID: 291632907378279058
+EX-QQ-RecipientCnt: 1
+Date: Mon, 06 Apr 2026 00:07:06 +0800
+Mime-Version: 1.0
+X-Priority: 0
+Content-Type: text/html; charset=UTF-8
+X-Sme-Appdomain: 
+X-Tof-Msgid: d798han0bka3vrboebdg
+Content-Transfer-Encoding: quoted-printable
+To: <candidate@qq.com>
+Subject: =?UTF-8?q?=E8=85=BE=E8=AE=AF=E9=9D=A2=E8=AF=95=E9=82=80=E8=AF=B7-?=
+ =?UTF-8?q?=E9=9D=A2=E8=AF=95=E5=B7=B2=E5=8F=96=E6=B6=88?=
+Message-Id: 
+ <1775405226681730381.1.118347928098536426@tof4-msg-sender-v7-74946c747c-wcdw7>
+From: "=?gb18030?B?Y2FtcHVzKMza0bbQo9XQKQ==?=" <campus@tencent.com>
+X-BQ-SENDSIZE: 520
+Feedback-ID: esmtpgz:tencent.com:qybglogicsvrgz:qybglogicsvrgz5b-1
+X-BQ-XMAILINFO: MOJijf76Vc+iW/h/izvTIPBwku/JOqwtX3jmXW/gJor4rdq3cAUBm/7V
+	lAuZJytIR1DtI/PA0Vv+dTjDluy60QevmA8pHbQioGYNBVKkVazzvbVyja+2FDgnSY3Gosl
+	rD/OHA+g3i1jDVghH/oUx4R6DDk5NNyu9lT2vUAACDEyxSPzZ+x0xyMS0EW1FITF2/QmbDx
+	NZSdF2ylLvG8BHsm2GtWXB+n+Z9bjLkIxG/L6pHCru4ZysMkZB7AoeArbXCmh7WIMFooZyn
+	PPgy3occV6SvtViHhfgfehVC+/Qhux72zMuIs7Rxh4kTIbNd81JSFIxICp+FzzvA8UXdsk4
+	44YrbnvD9MtEG2yuZkNywqOXP2W5ctEmygY1g1AX4brok/dUsyFR2c03aRuf/HWfG11tglQ
+	8y6F7MR8O/prF5kLqV9gzQzDsLjQWGwLq5yG4qsN2Yd5y5O5PMqLBvBT9ltJ+zhFUfGDrbV
+	nOJjEEMbzWtqJX8KwxYbMNBdz3VHYq0UaF1iq7K1jSJPI0iM5EDbWjczVFcKcDC2JgA9rfl
+	tZpR4lWUUicaT6zFrY4MWpSovGyYd9hjd1MUMLYR3kfV7Vg4vIB6FbyMmODKJafoarJnShj
+	OXQKxSjEyGYfAR+XKHDrwIzK8SNeVs2EZIEU3c0bIiMrYYgoIOgGW0ah/AZOdzRRaanznwK
+	JrsOHyvet0rsCwLTxy266fs1B7i+2WXY0QNzc6+SQ0zcJK0sdIT6viEhbOmyf2N06UisIxJ
+	C3mCwguOARuQrFmFJW5sFIOjOabjb5YVYABNmFmYrCHSnDrJXPTiuIMiBbdTgKAXNKpGjpR
+	e3KX9QzXPqt/UcOBKj5kvfE8jG87Y817xmDCP01f+ot1djwgqlDAmwz4JjqHc5BoscQY3lB
+	0J+x3abmveo0kbQHYyvruGNgrpgqs6z1JCJjUOfwFiLOXJze9Fyk6rwHw1L4+MIdOLLc4kx
+	QvZpoqoVwY44p+/kuVgtWW0PwOgPmTa+lJGYJjHOC0gxrEmO5rRAml2/nTRqAmYpBWQOLnf
+	Pnd31O67n+mdWIACXEJhGlzyfForMuukIv4alDbiNP47/fmvdaetR90PDpIU5ggzZmLwEh/
+	w==
+X-BQ-XMRINFO: NI4Ajvh11aEjtFj9XA3Xy+i0oTWCXgRQjQ==
+X-BQ-RECHKSPAM: 0
+
+<div><img src=3D"https://cdn.m.tencent.com/hr/hr_middletier/mail_template/z=
+haohuo_header.png" alt=3D"" width=3D"960" height=3D"140" /></div>
+<div style=3D"background-color: #fff; width: 930px; font-family: 'Microsoft=
+ Yahei'; font-size: 10pt; line-height: 2; padding-top: 20px; padding-left: =
+15px; padding-right: 15px;">
+<div>=E5=B0=8A=E6=95=AC=E7=9A=84=E5=80=99=E9=80=89=E4=BA=BA=EF=BC=8C<br />=
+=E9=9D=9E=E5=B8=B8=E6=8A=B1=E6=AD=89=EF=BC=8C=E7=BB=8F=E9=9D=A2=E8=AF=95=E5=
+=AE=98=E7=BB=BC=E5=90=88=E8=80=83=E8=99=91=EF=BC=8C=E5=8E=9F=E5=AE=9A=E4=BA=
+=8E<span>2026-04-07 (=E5=91=A8=E4=BA=8C) 17:00-18:00</span>=E7=9A=84<span>=
+=E5=90=8E=E5=8F=B0=E5=BC=80=E5=8F=91</span>=E9=9D=A2=E8=AF=95=E9=82=80=E7=
+=BA=A6=E5=B7=B2=E5=8F=96=E6=B6=88=EF=BC=8C=E5=90=8E=E7=BB=AD=E5=A6=82=E6=9C=
+=89=E6=96=B0=E5=AE=89=E6=8E=92=EF=BC=8C=E6=88=91=E4=BB=AC=E4=BC=9A=E4=B8=BB=
+=E5=8A=A8=E4=B8=8E=E6=82=A8=E8=81=94=E7=B3=BB=EF=BC=8C=E6=84=9F=E8=B0=A2=E6=
+=82=A8=E7=9A=84=E7=90=86=E8=A7=A3=E3=80=82</div>
+<br />
+<div><strong>=E3=80=90=E6=B8=A9=E9=A6=A8=E6=8F=90=E7=A4=BA=E3=80=91</strong=
+><br />=E5=A6=82=E6=9C=89=E7=96=91=E9=97=AE=EF=BC=8C=E6=82=A8=E5=8F=AF=E7=
+=99=BB=E9=99=86=E8=85=BE=E8=AE=AF=E6=8B=9B=E8=81=98=E5=AE=98=E6=96=B9=E5=B0=
+=8F=E7=A8=8B=E5=BA=8F=E3=80=90=E8=85=BE=E5=B0=8FT=E3=80=91=E8=BF=9B=E8=A1=
+=8C=E5=92=A8=E8=AF=A2=E3=80=82</div>
+<br /><br />
+<div>=E8=85=BE=E8=AE=AF=E6=A0=A1=E5=9B=AD=E6=8B=9B=E8=81=98</div>
+</div><div style=3D"width: 960px;"><img src=3D"https://cdn.m.tencent.com/hr=
+/hr_middletier/mail_template/zhaohuo_footer.png" alt=3D"" width=3D"960" hei=
+ght=3D"60" /></div>

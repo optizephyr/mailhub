@@ -1,0 +1,218 @@
+Received: from bjy-spam.kuaishou.com (bjy-spam.kuaishou.com [103.102.203.237])
+	by newxmmxszc49-0.qq.com (NewMX) with SMTP id 65A936EB
+	for <candidate@qq.com>; Mon, 17 Aug 2026 15:25:26 +0800
+X-QQ-mid: xmmxzc49-0t1786951526t1199bseg
+X-QQ-XMAILINFO: N8n8IYjVukbWQB8RFB7mPJbFwqr08c4vlXo10XBVd3/vNFFoz/tDUFT7ykEOAP
+	 TwzYjjmOBC8PVY+Jp4hvYVkCq4/251T7b61W2VmwfkMXRyUN1EZLZ7x6TtFFMPmIrz3gKgNG9F56
+	 cyMxW9T+lGXZMZidZLGtD7EtH7fjRHyY/zs64OagHYh62Vc5ecX31SDKimXzuDz6FTRSD9VfD18e
+	 Df5byFrANX/sPzhP+HwbgZSSIFgJke5vbfLR602HGuinqsOc2c8MlFF64+p0jopbZTnU2k+0bC/0
+	 ss5brcfQBo6ps7PjYCJmvq/WiBYc60uqHrz22MXSPK0s1gza2xQxmYwTnGaobkSLICy3Nh3ZLYA+
+	 EljYnlvbaxf8ouWis6I+e7ubuBF+tMnJetZZsVmYO7GZPunu7CXc3UFz28fi0B1OoyS2pz2F6AMO
+	 4A2YETeuA/sM668ys7M237ms2QQ3ynGAHofyifZvSwWL30237gC6vGR61/n2FBWArm8/fgr/ScGu
+	 tQLhrr168szFHELSouAN0MGKRHJ5IQlkUDJORgYLI5Q8xf70C4Ys6V5OiPlz3WtIfJw7nTN4/EYq
+	 1WBAQE8LxjMce9gHSzu0zl1nrSPkFgFkmb6rjyRyNs3v9FFp2ZqS2ZU/mVRu6wkxJp8xFqEaK4FN
+	 ePkocUrF5crGb/UdwySObAk+Al9HHdo0Rj1BuU8wbOfB/RfjOUBb3pzeCuM26dA/AlMh71pKt/zL
+	 Wq4fdUPzBit3SYWpxob+S8fCHp7Ar9dBXI/NMM3hC3UbcJTSw1XNQA9ZcuxRaa2hLqDEhXJ9Wk1p
+	 /emcI3JJHQCX4VdvJnlKXeGrAhCDJb8ve/7Zts7tSGkFwqH1s2s7aVlaOBpW3np2eCOzHWm2UWkp
+	 XQrCaZEa9vv/b1hOat03QdcNb1dm0TSamJCFX1z18Be0AflXIxw414Y3DUPbDYtaaZ0t+b7RMXzx
+	 QdglGTdMaNzKmYR/oY0M/RvrxHmuUV6fL10XCo40TGuvoR+asPEH/zwR7FpFSgRn+kAkBr6j6XEv
+	 RkU0ngkr9Y+Vq7qFRpmjLcaWKFHh9gGPdiMxxf6DxAadtfXxyJCRUS5iXhnS1Gyvs73Gp32TKgCj
+	 uvPyT+k4JgQ/G9hW61xV3WPV9I1sounRQKJV5+ek+TyoPyPezyxX6Pb0XNmy6CvNL7gn1AjKdUN9
+	 tsWRzP6O6A2mbDJVB3VaJgDQ4qbAVmcvAjbzRQrTURBvcdVblRmm5+Kvd68rzea0zVJoHy0z734L
+	 B5gkdDeQSfokxv0C0BuaG4JB24TeRsEC67PSBShIV0Vaou8R1acMxwQK3yJMQrPnxJ+tSe2ZN+Bt
+	 CK0POvPLyd6fJfu4OiHidjiplwOOgYx4H69WTneZ5WiwgWV8a+CQFq90xvqzWY/rsNm0RwTHl2zF
+	 3RwNbB7gZ9j0u/Ug8P3U8lzbfctGPQL8axF2JHgt38PgnA9eN3oxKI4KaaFSKU5OY=
+X-QQ-XMRINFO: MPJ6Tf5t3I/ylTmHUqvI8+Wpn+Gzalws3A==
+Authentication-Results: mx.qq.com; spf=pass(103.102.203.237) smtp.mailfrom=<zh
+	 aopin@kuaishou.com>; dkim=pass(signature was verified) header.d=kuaishou.com
+	 ; dmarc=pass(p=NONE sp=NONE pct=100) header.from=kuaishou.com
+Received: from m7-spam01.kuaishou.com (unknown [172.28.1.161])
+	by bjy-spam.kuaishou.com (Postfix) with ESMTP id 7680E2C000AC0
+	for <candidate@qq.com>; Mon, 17 Aug 2026 15:25:26 +0800 (CST)
+Received: from bjxm-pm-mail09.kuaishou.com (unknown [172.28.128.9])
+	by m7-spam01.kuaishou.com (Postfix) with ESMTPS id 4hNkrF1Sksz1XLrj0
+	for <candidate@qq.com>; Mon, 17 Aug 2026 15:25:17 +0800 (CST)
+DKIM-Signature: v=1; a=rsa-sha256; d=kuaishou.com; s=dkim; c=relaxed/relaxed;
+	t=1786951512; h=from:subject:to:date:message-id;
+	bh=6dGdb3OG0Md8BqN/x4uNGd6M4o0iOI6B9aioP5sqb24=;
+	b=oJIK/li6v1Cz6qd+ouMehrfskFaMtC8ogRg5rJng9MDBuljCXlAKRwP2Pz+S3xnEf3yqRoJ2nGa
+	WMpeX5ff98awZGzWoaVt5wOGUq/5t0KggmYfuVYvykPVVNCruJoKf38E/+wustGYMQ+3DQ6v1ooXD
+	QAXt+yEo49S+icD0V9E=
+Received: from public-bjx-c26-kce-node1263.idchb1az1.hb1.kwaidc.com
+ (172.28.1.32) by bjxm-pm-mail09.kuaishou.com (172.28.128.9) with Microsoft
+ SMTP Server (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id
+ 15.2.1118.20; Mon, 17 Aug 2026 15:25:12 +0800
+Date: Mon, 17 Aug 2026 15:25:12 +0800
+From: =?UTF-8?B?5b+r5omL5oub6IGY?= <zhaopin@kuaishou.com>
+To: <candidate@qq.com>
+Message-ID: 
+ <2080225821.13408.1786951512693@public-bjx-c26-kce-node1263.idchb1az1.hb1.kwaidc.com>
+Subject: =?UTF-8?B?44CQ5b+r5omL56eR5oqA44CR6YKA6K+35L2g5Y+C5Yqg6Z2i?=
+ =?UTF-8?B?6K+V77yM6K+36aKE57qm5L2g55qE6Z2i6K+V5pe26Ze0Cg==?=
+MIME-Version: 1.0
+Content-Type: multipart/mixed;
+	boundary="----=_Part_13406_1512776524.1786951512551"
+X-Originating-IP: [172.28.1.32]
+X-ClientProxiedBy: bjm7-pm-mail10.kuaishou.com (172.28.1.92) To
+ bjxm-pm-mail09.kuaishou.com (172.28.128.9)
+
+------=_Part_13406_1512776524.1786951512551
+Content-Type: multipart/related;
+	boundary="----=_Part_13407_904950470.1786951512551"
+
+------=_Part_13407_904950470.1786951512551
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<!DOCTYPE html>
+<html lang=3D"zh-CN">
+<head>
+    <meta charset=3D"UTF-8">
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #f7f7f7;
+            padding: 30px;
+        }
+        .container {
+            background: #fff;
+            max-width: 700px;
+            margin: auto;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .section {
+            margin-bottom: 20px;
+            line-height: 1.8;
+            text-align: left;
+        }
+        .highlight {
+            color: #f60;
+            font-weight: bold;
+        }
+        .important {
+            color: #d93025;
+            font-weight: bold;
+        }
+        .qr {
+            text-align: left;
+            margin-top: 30px;
+        }
+        .qr img {
+            width: 120px;
+            height: 120px;
+        }
+        .footer {
+            border-top: 1px solid #e0e0e0;
+            padding-top: 20px;
+            font-size: 12px;
+            color: #999;
+            margin-top: 30px;
+        }
+        .brand {
+            text-align: center;
+            color: #aaa;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+        a {
+            color: #0052d9;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class=3D"container">
+        <div class=3D"section">
+            <p><strong>=E7=8E=8B=E5=B0=8F=E6=98=8E=E4=BD=A0=E5=A5=BD=EF=BC=
+=8C</strong></p>
+            <p>
+                =E6=81=AD=E5=96=9C=E4=BD=A0=E9=80=9A=E8=BF=87=E5=BF=AB=E6=
+=89=8B=E6=A0=A1=E6=8B=9B=E7=9A=84=E5=89=8D=E5=BA=8F=E8=AF=84=E4=BC=B0=EF=BC=
+=8C=E7=8E=B0=E8=AF=9A=E6=8C=9A=E9=82=80=E8=AF=B7=E4=BD=A0=E5=8F=82=E4=B8=8E=
+=E9=9D=A2=E8=AF=95=EF=BC=81<br>
+                =E4=B8=BA=E4=BA=86=E6=9B=B4=E5=A5=BD=E5=9C=B0=E5=8C=B9=E9=
+=85=8D=E9=9D=A2=E8=AF=95=E5=AE=89=E6=8E=92=EF=BC=8C=E8=AF=B7=E5=85=88=E9=80=
+=89=E6=8B=A9=E6=96=B9=E4=BE=BF=E7=9A=84=E9=9D=A2=E8=AF=95=E6=97=B6=E9=97=B4=
+=E5=90=A7~
+            </p>
+        </div>
+        <div class=3D"section">
+            <p><strong>1. =E9=9D=A2=E8=AF=95=E8=81=8C=E4=BD=8D=EF=BC=9A</st=
+rong>AI=E5=BA=94=E7=94=A8=E5=BC=80=E5=8F=91=E5=B7=A5=E7=A8=8B=E5=B8=88=EF=
+=BC=88=E6=9D=AD=E5=B7=9E=EF=BC=89-=E5=95=86=E5=AE=B6=E5=92=8C=E8=BF=90=E8=
+=90=A5=E8=B5=8B=E8=83=BD=E4=B8=AD=E5=BF=83</p>
+            <p><strong>2. =E9=9D=A2=E8=AF=95=E5=BD=A2=E5=BC=8F=EF=BC=9A</st=
+rong>=E8=A7=86=E9=A2=91=E9=9D=A2=E8=AF=95-=E6=A0=A1=E6=8B=9B</p>
+            <p><strong>3. =E9=80=89=E6=8B=A9=E9=9D=A2=E8=AF=95=E6=97=B6=E9=
+=97=B4=EF=BC=9A</strong>
+                <a href=3D"https://ksurl.cn/oBLrDKJz" target=3D"_blank">htt=
+ps://ksurl.cn/oBLrDKJz</a> =EF=BC=88=E8=AF=B7=E5=9C=A824=E5=B0=8F=E6=97=B6=
+=E5=86=85=E9=80=89=E6=8B=A9=EF=BC=89
+            </p>
+            <p class=3D"important">=E5=8F=AF=E9=80=89=E9=9D=A2=E8=AF=95=E6=
+=97=B6=E9=97=B4=E6=AE=B5=E5=AE=9E=E6=97=B6=E6=9B=B4=E6=96=B0=EF=BC=8C=E5=BB=
+=BA=E8=AE=AE=E5=9C=A8=E6=94=B6=E5=88=B0=E9=80=9A=E7=9F=A5=E7=9A=8424=E5=B0=
+=8F=E6=97=B6=E5=86=85=E5=AE=8C=E6=88=90=E9=80=89=E6=8B=A9~</p>
+        </div>
+        <div class=3D"section">
+            <span class=3D"important">=E9=80=89=E6=8B=A9=E5=90=88=E9=80=82=
+=E7=9A=84=E9=9D=A2=E8=AF=95=E6=97=B6=E9=97=B4=E5=90=8E=EF=BC=8C=E4=BD=A0=E5=
+=B0=86=E6=94=B6=E5=88=B0=E4=B8=80=E5=B0=81=E6=AD=A3=E5=BC=8F=E7=9A=84=E9=9D=
+=A2=E8=AF=95=E9=82=80=E7=BA=A6=E9=82=AE=E4=BB=B6=EF=BC=88=E5=90=AB=E9=9D=A2=
+=E8=AF=95=E9=93=BE=E6=8E=A5=E7=AD=89=E8=AF=A6=E7=BB=86=E9=9D=A2=E8=AF=95=E4=
+=BF=A1=E6=81=AF=EF=BC=89</span>=EF=BC=8C=E8=AF=B7=E6=B3=A8=E6=84=8F=E6=9F=
+=A5=E6=94=B6=EF=BC=8C=E5=A6=82=E6=9C=AA=E6=94=B6=E5=88=B0=E9=82=AE=E4=BB=B6=
+=E6=88=96=E6=9C=89=E6=9B=B4=E5=A4=9A=E7=96=91=E9=97=AE=EF=BC=8C=E5=8F=AF=E5=
+=8F=8A=E6=97=B6=E8=81=94=E7=B3=BB=E6=8B=9B=E8=81=98 HR=EF=BC=9A<strong>=E5=
+=91=A8HR - 13800138000</strong><br>
+            =E9=A2=84=E7=A5=9D=E9=9D=A2=E8=AF=95=E9=A1=BA=E5=88=A9=EF=BC=8C=
+=E5=BF=AB=E6=89=8B=E6=9C=9F=E5=BE=85=E4=B8=8E=E4=BD=A0=E7=9B=B8=E8=A7=81=EF=
+=BC=81
+        </div>
+        <div class=3D"section">
+            <a href=3D"https://zhaopin.kuaishou.cn/recruit/e/#/official/ext=
+ernal/employer-branding?type=3Dcampus" target=3D"_blank">
+                =E3=80=90=E7=82=B9=E5=87=BB=E8=BF=99=E9=87=8C=E3=80=91=E5=
+=BF=AB=E9=80=9F=E3=80=81=E5=85=A8=E9=9D=A2=E4=BA=86=E8=A7=A3=E5=BF=AB=E6=89=
+=8B=E4=B8=8E=E6=9C=AA=E6=9D=A5=E5=B9=BF=E9=98=94=E5=8F=91=E5=B1=95=E7=A9=BA=
+=E9=97=B4
+            </a>
+        </div>
+        <div class=3D"qr">
+            <img src=3D"https://static.yximgs.com/udata/pkg/zhaopin-waibu/k=
+uaishouzhaopin-QR.png" alt=3D"=E6=89=AB=E7=A0=81=E5=85=B3=E6=B3=A8=E5=BF=AB=
+=E6=89=8B=E6=8B=9B=E8=81=98">
+            <p>=E6=89=AB=E7=A0=81=E5=85=B3=E6=B3=A8=E3=80=90=E5=BF=AB=E6=89=
+=8B=E6=8B=9B=E8=81=98=E3=80=91=E8=8E=B7=E5=8F=96=E4=B8=80=E6=89=8B=E6=83=85=
+=E6=8A=A5=EF=BC=8C=E8=A7=A3=E9=94=81=E7=9C=9F=E5=AE=9E=E7=9A=84=E5=BF=AB=E6=
+=89=8B=E8=81=8C=E5=9C=BA</p>
+            <p>=E6=A0=A1=E6=8B=9B=E5=AE=98=E7=BD=91=EF=BC=9A<a href=3D"http=
+s://campus.kuaishou.cn/" target=3D"_blank">https://campus.kuaishou.cn/</a><=
+/p>
+        </div>
+        <div class=3D"section" style=3D"text-align: right;">
+            <p>=E5=BF=AB=E6=89=8B=E4=BA=BA=E5=8A=9B=E8=B5=84=E6=BA=90=E9=83=
+=A8</p>
+        </div>
+        <div class=3D"footer">
+            =E6=9C=AC=E9=82=AE=E4=BB=B6=E4=B8=BA=E7=B3=BB=E7=BB=9F=E8=87=AA=
+=E5=8A=A8=E5=8F=91=E9=80=81=EF=BC=8C=E8=AF=B7=E5=8B=BF=E7=9B=B4=E6=8E=A5=E5=
+=9B=9E=E5=A4=8D=E3=80=82
+        </div>
+        <div class=3D"brand">
+            Copyright =C2=A9 =E5=BF=AB=E6=89=8B=E6=A0=A1=E5=9B=AD=E6=8B=9B=
+=E8=81=98. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>
+------=_Part_13407_904950470.1786951512551--
+
+------=_Part_13406_1512776524.1786951512551--

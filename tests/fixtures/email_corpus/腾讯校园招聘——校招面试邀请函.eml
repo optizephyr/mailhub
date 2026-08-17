@@ -1,0 +1,163 @@
+Received: from bg1.exmail.qq.com (bg1.exmail.qq.com [114.132.58.6])
+	by newxmmxszb43-1.qq.com (NewMX) with SMTP id D7AB4066
+	for <candidate@qq.com>; Fri, 17 Apr 2026 16:53:58 +0800
+X-QQ-mid: xmmxzb43-1t1776416038tyn0l723i
+X-QQ-XMAILINFO: MaYWj8FMvlOdb8uX5eX4Uy35UYSBo+3GCSg5FwcVwRWoQM/A72IpImIvjovgTO
+	 Qb23JuUlK8fSuNYU/toY7CJjU5RUo6uUyTyrk0MKMH5oHINvMz9kEPRsBHk+QawEdVKblduuh1Wx
+	 arp2IQJRwJ/cW7UoxXWdyCWf9Oknycy1q8I9r+Or3apoqPGSWCJeyXUPgMFQZ0vtjaojKgD3gFAp
+	 rdIdmNY7gwYt9eMpbYk9aNirjktpF9UaxFHtZ7jo3FUgr2LKiRyRXqyXNCsx9JaZVLlIhNb2BEPh
+	 NIFto9fCvgCxEUKb1MdL47E056492IaPMRiETzZYGJfyH2snyNoYSBJEv3HtEJ8MeGDwOE2Vx+HU
+	 m16sPHoWoaIcGUtbiUiH5U4dsLQZc1Wy/EN7Q3c3SLjL43ujngxaalQNpNxhx6Sy2NlKh3j1EuiN
+	 JutN2j3Nnrtf68baxxSRg/8B76q1EepkRlKrdOm+cpRYkMV6TaK9p1kXl4DeR+vbm2XxmUDofhql
+	 hu5+JAz7T2uI2R5KJRpRvGkphOSvNA0a31umNxE2SRIgshVGtx4zXLVz4+6CpQse50UidR5tSyYG
+	 38t1CVhaXUtizDvyIEPze/ZuGsoWa6PTSdZ6WExANQQjIw1Un8QOG7ZcAxUon9QwQlZMOcqe4vFf
+	 Y+5ad3aekLh8Q/4EgF+zje2YlbGeiB0ImHC1V6osK0HHCrNQCYVriQK8AqakyK1benCa6Rv8A9N7
+	 mypOzcGWZTJX+jKYdUH88iDwhiKEKvyWP4nTcsQwX0s8fxL+LNh+0PFhRgsmYMle95hpPDkFMDxR
+	 7n/bVMAy2znGNWn/uOqEQ9s5El5UXWsGgJOGq65318NNOhhWSOk7OKvICjPN6wcV9GqLXjwKIjyM
+	 7dHHgDQN9NYwCTINEVpkq6V4PkCOKiu07aWuIeIpAxmdZkQalTjNw2+NhltParNHFs953xWqwYJH
+	 wFRdrqRRuM+Fj412vCVT9bwzJsnr/gJUtKQpjUhQXv+N5L87K4tMr2fh1ryFnqdskBU5RnjAfxX5
+	 5+OVnD0L1xxrs3zmejbGivzo+w+kzHMULYUoBgeuJrYMXFU+IZxtvFnjrrbghh1O5KbTXCI/8ec8
+	 SpImnticXVgHUr/J8AbOY2HeIVDf0Lnlu7yle+RiOmJnMwNN3+ayZR5xU2MRV302+Gjollr0ZjKp
+	 qtiQc008hsJEyGyRAgQWe55ndJB4Mp8oXraE7e8WVG0sY/yb333F93KSZrXkr+9+8FWU2Owa0i+r
+	 mCW2eHHuqKqaMdB/SrzxmpH33t6h8DXCf/dGRR2tPdZ5plI187R2JnVtqkQ4ZzgvBlXtO5aOyK/y
+	 q+UNOBrdLGD+1gVBg33tf3EcrgsAj6mDDhko4O1DvrifY5/KB7ah9Kj8uZ/xvW5rmx83VQ1hXJYJ
+	 zHgsnyUnQxBwdnlaZYwfU73UIK+yxUC7TmPTm7JsPjrxl8RtXN9tWpcogQXWIOG4TmKaZwzKM7dG
+	 JjNQj7zSUwTBI9oTXZUSNI2flKBmcR2z/Y2scf+f14
+X-QQ-XMRINFO: OD9hHCdaPRBwHInmZ6/Co1/T5TxgIC6ySA==
+Authentication-Results: mx.qq.com; spf=pass(114.132.58.6) smtp.mailfrom=<campu
+	 s@tencent.com>; dkim=pass(signature was verified) header.d=tencent.com; dmar
+	 c=pass(p=QUARANTINE sp=QUARANTINE pct=100) header.from=tencent.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=tencent.com;
+	s=s201512; t=1776416038;
+	bh=Aa/Bso1PY0MPze5eOD4eVI3ujMog1AoUkylOu01dfsI=;
+	h=From:Mime-Version:Date:To:Subject:Message-Id;
+	b=PgwXP8wHirI0sG4nBG+qCS1AuS5Hf9o23cX0tH+pgukCgwvPZS0xlHEsE1QzookmA
+	 4lsOUv2YIBoDm/5zG6BcHS4KvQ576pPY8LKMWHZpQGNT5fuJ+B8x0rD0rxItgb5/lN
+	 h/dLSZoDTi6w5mtxfRTl9vmrvPRSky6bJAma4mio=
+X-BQ-mid: esmtpgz15t1776416038t011d810e
+X-BQ-Originating-IP: oWOQ+Ze4rwZj3y9T6vgYMQA6yem0pR8fUTeEFnE99cQ=
+Received: from localhost ( [10.88.163.7])
+	by bizesmtp.qq.com (ESMTP) with SMTP id 0
+	for <candidate@qq.com>; Fri, 17 Apr 2026 16:53:57 +0800 (CST)
+X-BQ-SSF: 0000000010000000000000000000000
+X-BQ-fromtof: true
+X-BIZMAIL-ID: 16904997809243650552
+EX-QQ-RecipientCnt: 1
+From: "=?gb18030?B?Y2FtcHVzKMza0bbQo9XQKQ==?=" <campus@tencent.com>
+Mime-Version: 1.0
+X-Tof-Msgid: d7gva9eirqbvu0hr6q2g
+Date: Fri, 17 Apr 2026 16:53:57 +0800
+X-Priority: 0
+X-Sme-Appdomain: 
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+To: <candidate@qq.com>
+Subject: 
+ =?UTF-8?q?=E8=85=BE=E8=AE=AF=E6=A0=A1=E5=9B=AD=E6=8B=9B=E8=81=98=E2=80=94?=
+ =?UTF-8?q?=E2=80=94=E6=A0=A1=E6=8B=9B=E9=9D=A2=E8=AF=95=E9=82=80=E8=AF=B7?=
+ =?UTF-8?q?=E5=87=BD?=
+Message-Id: 
+ <1776416037490531400.1.4918931190557450409@tof4-msg-sender-v7-74946c747c-wcdw7>
+X-BQ-SENDSIZE: 520
+Feedback-ID: esmtpgz:tencent.com:qybglogicsvrgz:qybglogicsvrgz5b-1
+X-BQ-XMAILINFO: MKQhpfktS3lgCbYKvyWnfSAxEwJz2YV/59yjAF9eb4YjreUI88nKQZWL
+	oH2Q2WHkwEOcabi1QDq9TUgKBZW2BkhDwuCxRYdiyeAXd7dO1nnvEFErNvD6tiCHcM+nwLN
+	dTCL+aNZxABLBvfkYsfAvY+p1jslyktgRjwWdlrlHkUbuwyzSWUOENZl5UDEg05WtbsbAAd
+	oMFTSxQPqXI4wk/jSMVAyfUTrYZZCLwDBguvoEqohyG7ob0CjQP7aDv6uW5jfOoO2q4w6o4
+	5+lQbJzJFOqeFLF8nQb9otJvrjqZHePNrMUwbu3mKWuSNtlkEeuK1JsyqxLSPIaqiV3Z+fu
+	6EabBoftPdd2AP13zApMQkUtIWOK3tLCpvB92ArSrbejwmwKJeGeQqWA/IHqIUF7RsCNZOz
+	tAnaUNEc+8uJG2+f3o2hYzydLE3u4wOw4IO0iQCYnJFBU3bfhPvrFRfGDYtXEOkBr2AnuDx
+	hVoj+YlxnVc9cimQSjGmjjqwCDnFYLQ7J9AixiqpKGhsUjq38lQonoMnlHEHZI0YZ06M5nf
+	aUH49cKrq6OsGdzVRfkcnks62OLMCFmlmdtD/kTWmGtb6jwwdimI87FoFvmErhaZUhGWeTb
+	Cvi5ecQEBId7CJtiMQZAQzVx3Uw1kJPbUShSMyUWtRZtqoPI5pSeZBRalG2kO+MtczBI7dS
+	Ean8am5uoihWs/rPLcd+8bzarHaMD9gxQcqH7sWzSeTauRRIiwDyE/s/HTXPfY+I+gaAc72
+	fGWD/bOP3Rl2fgpJ7+G/aLXro2Iro3vnuSCNyOaGRcrCbrTjIoYN8Eg3dnbLSO9JR4iA8C7
+	lq/FVNJFR74q7FSXd4MOKkU4oqcNZj3pZe9W0RkLAVcKCGYE6qVjKHRe3ejaG5mCaR2JPBD
+	DSWS8mqdPSMHwBzI7ittjaZwAB0R3nFyRWry2GElvUO1MbgtH0YPcX3DEBX1pYxid+9+I/k
+	QMDFI0DKPrMyry1kmeNR/MpE/vCWtAGycaOcKjgi7XCno10JuwMbHwBvUk4LTVRKVD6OZ19
+	dzFVQe/dk2gcPiGjKkWVIWtl+ctR/BQl+hBUCM4cQBGGP9VBc0sHTNTgDdiJ7OVgXk+biCo
+	8OTWm2TOzFXeE0ol03wjqcLm8g5uK+uWZ9S7UbxpbDHokQNpXIdclegpbV1q76J1z9ZHsuX
+	SUD5q1U+9elkN5awvfoyJdBjFP61ODdL/0UToK3tyE06Adqvar5yaRRUAg==
+X-BQ-XMRINFO: OWPUhxQsoeAVDk3Ok8+Gg1LhAe2uJGr63Q==
+X-BQ-RECHKSPAM: 0
+
+<div><img src=3D"https://cdn.m.tencent.com/hr/hr_middletier/mail_template/z=
+haohuo_header.png" alt=3D"" width=3D"960" height=3D"140" /></div>
+<div style=3D"background-color: #fff; width: 930px; font-family: 'Microsoft=
+ Yahei'; font-size: 10pt; line-height: 2; padding-top: 20px; padding-left: =
+15px; padding-right: 15px;">
+<div>=E4=BA=B2=E7=88=B1=E7=9A=84 <span>=E7=8E=8B=E5=B0=8F=E6=98=8E</span>=
+=E5=90=8C=E5=AD=A6:<br />=E6=84=9F=E8=B0=A2=E4=BD=A0=E6=8A=95=E9=80=92=E8=
+=85=BE=E8=AE=AF=E6=A0=A1=E5=9B=AD=E6=8B=9B=E8=81=98=EF=BC=8C=E7=8E=B0=E9=82=
+=80=E8=AF=B7=E4=BD=A0=E5=8F=82=E5=8A=A0=E4=BB=A5=E4=B8=8B=E9=9D=A2=E8=AF=95=
+=EF=BC=8C=E6=9C=9F=E5=BE=85=E4=B8=8E=E4=BD=A0=E7=9A=84=E4=BC=9A=E9=9D=A2=E3=
+=80=82</div>
+
+<br />
+<div><strong>=E3=80=90=E9=9D=A2=E8=AF=95=E4=BF=A1=E6=81=AF=E3=80=91</strong=
+><br />=E9=9D=A2=E8=AF=95=E6=97=B6=E9=97=B4[=E5=8C=97=E4=BA=AC=E6=97=B6=E9=
+=97=B4]=EF=BC=9A<span>2026-04-19 (=E5=91=A8=E6=97=A5) 16:15-17:00</span><br=
+ />=E9=9D=A2=E8=AF=95=E5=BD=A2=E5=BC=8F=EF=BC=9A<span>=E5=8D=95=E9=9D=A2</s=
+pan><br />=E9=9D=A2=E8=AF=95=E8=81=8C=E4=BD=8D=EF=BC=9A<span>=E5=90=8E=E5=
+=8F=B0=E5=BC=80=E5=8F=91</span><br />=E9=9D=A2=E8=AF=95=E9=83=A8=E9=97=A8=
+=EF=BC=9A<span>=E5=85=83=E5=AE=9D</span><br />=E9=9D=A2=E8=AF=95=E6=96=B9=
+=E5=BC=8F=EF=BC=9A<span>=E8=85=BE=E8=AE=AF=E4=BC=9A=E8=AE=AE</span><br />=
+=E9=9D=A2=E8=AF=95=E9=93=BE=E6=8E=A5=EF=BC=9A<span>https://meeting.tencent.=
+com/dm/riQzyp6WA011</span></div>
+<br />
+<div><strong>=E3=80=90=E6=B3=A8=E6=84=8F=E4=BA=8B=E9=A1=B9=E3=80=91</strong=
+><br />1=E3=80=81=E5=A6=82=E9=9C=80=E8=B0=83=E6=95=B4=E6=9C=AC=E6=AC=A1=E9=
+=9D=A2=E8=AF=95=E9=82=80=E8=AF=B7=EF=BC=8C=E6=82=A8=E5=8F=AF=E6=89=AB=E6=8F=
+=8F=E4=B8=8B=E6=96=B9=E4=BA=8C=E7=BB=B4=E7=A0=81=E8=BF=9B=E5=85=A5=E8=85=BE=
+=E8=AE=AF=E5=AE=98=E6=96=B9=E5=85=AC=E4=BC=97=E5=8F=B7=E3=80=90=E8=85=BE=E8=
+=AE=AF=E6=8B=9B=E8=81=98=E3=80=91=E6=88=96=E7=82=B9=E5=87=BB=E9=93=BE=E6=8E=
+=A5=EF=BC=9A=EF=BC=88<a href=3D"https://join.qq.com/interview_reply.html" r=
+el=3D"noopener" target=3D"_blank">https://join.qq.com/interview_reply.html<=
+/a>=EF=BC=89
+<p><span><img alt=3D"code" src=3D"https://mp.weixin.qq.com/cgi-bin/showqrco=
+de?ticket=3DgQHF8TwAAAAAAAAAAS5odHRwOi8vd2VpeGluLnFxLmNvbS9xLzAyRjlVdmxwRkQ=
+3Mk8xMDAwMDAwNzUAAgS500toAwQAAAAA" width=3D"200" style=3D"display: block; m=
+argin-left: auto; margin-right: auto;" /></span></p>
+2=E3=80=81=E8=AF=B7=E6=8F=90=E5=89=8D=E8=BF=9B=E5=85=A5=E9=9D=A2=E8=AF=95=
+=E9=93=BE=E6=8E=A5=E6=A3=80=E6=B5=8B=E8=AE=BE=E5=A4=87=E6=98=AF=E5=90=A6=E5=
+=8F=AF=E7=94=A8=EF=BC=8C=E5=B9=B6=E5=9C=A8=E9=9D=A2=E8=AF=95=E5=BC=80=E5=A7=
+=8B=E5=89=8D10=E5=88=86=E9=92=9F=E7=82=B9=E5=87=BB=E9=93=BE=E6=8E=A5=E8=BF=
+=9B=E5=85=A5=E9=9D=A2=E8=AF=95=E3=80=82<br />3=E3=80=81=E7=BB=88=E7=AB=AF=
+=E8=AF=B4=E6=98=8E=EF=BC=9A=E5=A6=82=E9=9D=A2=E8=AF=95=E5=B2=97=E4=BD=8D=E4=
+=B8=BA=E6=8A=80=E6=9C=AF=E7=B1=BB=E5=B2=97=E4=BD=8D=EF=BC=8C=E9=9D=A2=E8=AF=
+=95=E5=AE=98=E6=9C=89=E5=8F=AF=E8=83=BD=E5=AF=B9=E4=BD=A0=E7=9A=84=E4=BB=A3=
+=E7=A0=81=E8=83=BD=E5=8A=9B=E8=BF=9B=E8=A1=8C=E5=9C=A8=E7=BA=BF=E8=80=83=E5=
+=AF=9F=EF=BC=8C=E8=AF=B7=E5=9C=A8PC=E7=AB=AF=E4=BD=BF=E7=94=A8Chrome=E6=B5=
+=8F=E8=A7=88=E5=99=A8=E5=8A=A0=E5=85=A5=E9=9D=A2=E8=AF=95=E3=80=82<br />4=
+=E3=80=81=E4=B8=BA=E4=BF=9D=E9=9A=9C=E6=82=A8=E7=9A=84=E9=9D=A2=E8=AF=95=E4=
+=BD=93=E9=AA=8C=EF=BC=8C=E8=AF=B7=E6=8F=90=E5=89=8D=E5=AE=89=E8=A3=85=E8=85=
+=BE=E8=AE=AF=E4=BC=9A=E8=AE=AE=E6=88=96=E5=8D=87=E7=BA=A7=E5=88=B0=E6=9C=80=
+=E6=96=B0=E7=89=88=E6=9C=AC=EF=BC=8C=E6=B5=B7=E5=A4=96=E5=90=8C=E5=AD=A6=E8=
+=AF=B7=E4=B8=8B=E8=BD=BDVooV Meeting=E3=80=82<br />=E6=94=AF=E6=8C=81=E6=89=
+=8B=E6=9C=BA=E3=80=81=E7=94=B5=E8=84=91=E3=80=81=E5=B9=B3=E6=9D=BF=E7=89=88=
+=E8=85=BE=E8=AE=AF=E4=BC=9A=E8=AE=AE=E5=8A=A0=E5=85=A5=E9=9D=A2=E8=AF=95=EF=
+=BC=8C=E6=8E=A8=E8=8D=90=E4=BD=BF=E7=94=A8=E7=94=B5=E8=84=91=E7=89=88=E8=85=
+=BE=E8=AE=AF=E4=BC=9A=E8=AE=AE=E3=80=82<br />5=E3=80=81 =E7=BD=91=E7=BB=9C=
+=E7=8E=AF=E5=A2=83=EF=BC=9A=E8=AF=B7=E4=BD=BF=E7=94=A8=E7=BD=91=E7=BB=9C=E8=
+=89=AF=E5=A5=BD=E7=9A=84WIFI=E7=8E=AF=E5=A2=83=E8=BF=9B=E8=A1=8C=E9=9D=A2=
+=E8=AF=95=EF=BC=8C=E4=BB=A5=E4=BF=9D=E8=AF=81=E9=9D=A2=E8=AF=95=E8=B4=A8=E9=
+=87=8F=E3=80=82 <br />6=E3=80=81=E5=A6=82=E9=9D=A2=E8=AF=95=E8=BF=87=E7=A8=
+=8B=E4=B8=AD=E9=81=87=E5=88=B0=E7=89=B9=E6=AE=8A=E6=83=85=E5=86=B5=E6=88=96=
+=E8=B6=85=E8=BF=87=E9=A2=84=E5=AE=9A=E6=97=B6=E9=97=B410=E5=88=86=E9=92=9F=
+=EF=BC=8C=E9=9D=A2=E8=AF=95=E5=AE=98=E4=BB=8D=E6=9C=AA=E6=9D=A5=E7=94=B5=EF=
+=BC=8C=E8=AF=B7=E8=81=94=E7=B3=BB<span>0755-86013388=EF=BC=88=E6=8E=A5=E9=
+=80=9A=E5=90=8E=E6=8C=89=E6=8F=90=E7=A4=BA=E9=9F=B3=E8=BE=93=E5=85=A5 85599=
+9=EF=BC=89</span>=E7=A1=AE=E8=AE=A4=E6=88=96=E8=80=85=E5=9B=9E=E5=A4=8D=E9=
+=9D=A2=E8=AF=95=E9=82=AE=E4=BB=B6=E5=92=A8=E8=AF=A2=EF=BC=88=E6=9C=8D=E5=8A=
+=A1=E6=97=B6=E9=97=B4=EF=BC=9A=E5=B7=A5=E4=BD=9C=E6=97=A509:00-12:00 &amp; =
+14:00-18:00=EF=BC=89 =EF=BC=9B=E5=85=B6=E4=BB=96=E6=97=B6=E9=97=B4=E8=AF=B7=
+=E8=81=94=E7=B3=BB0755-86013388,=E8=BD=AC885295=E7=A1=AE=E8=AE=A4=E3=80=82<=
+br />7=E3=80=81=E6=9C=AA=E7=BB=8F=E8=85=BE=E8=AE=AF=E6=8B=9B=E8=81=98=E5=AE=
+=98=E6=96=B9=E8=AE=B8=E5=8F=AF=EF=BC=8C=E8=AF=B7=E5=8B=BF=E5=AF=B9=E6=9C=AC=
+=E6=AC=A1=E9=9D=A2=E8=AF=95=E8=BF=87=E7=A8=8B=E5=BD=95=E9=9F=B3=E6=88=96=E5=
+=BD=95=E5=83=8F=E3=80=82</div>
+<br /><br />
+<div>=E8=85=BE=E8=AE=AF=E6=A0=A1=E5=9B=AD=E6=8B=9B=E8=81=98</div>
+</div><div style=3D"width: 960px;"><img src=3D"https://cdn.m.tencent.com/hr=
+/hr_middletier/mail_template/zhaohuo_footer.png" alt=3D"" width=3D"960" hei=
+ght=3D"60" /></div>

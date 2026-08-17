@@ -1,0 +1,293 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "minimax_perk_noise",
+      "eml": "【MiniMax】送你一份小礼物｜Token_Plan_Ultra_免费权益.eml",
+      "category": "noise",
+      "expect": {
+        "coarse_pass": false,
+        "stage": null,
+        "action": null,
+        "event_type": null,
+        "should_create_event": false,
+        "company_contains": null,
+        "start_at_prefix": null,
+        "must_not_start_at_prefix": null
+      },
+      "notes": "福利/营销信，非招聘日程"
+    },
+    {
+      "id": "jd_application_ack",
+      "eml": "【京东校招】我们已收到你的申请，请及时关注后续进展.eml",
+      "category": "application_ack",
+      "expect": {
+        "coarse_pass": false,
+        "stage": null,
+        "action": null,
+        "event_type": null,
+        "should_create_event": false,
+        "company_contains": null,
+        "start_at_prefix": null,
+        "must_not_start_at_prefix": null
+      },
+      "notes": "投递确认，无测评/面试安排"
+    },
+    {
+      "id": "fanruan_resume_ack",
+      "eml": "【帆软招聘】帆软校园招聘简历投递成功通知.eml",
+      "category": "application_ack",
+      "expect": {
+        "coarse_pass": false,
+        "stage": null,
+        "action": null,
+        "event_type": null,
+        "should_create_event": false,
+        "company_contains": null,
+        "start_at_prefix": null,
+        "must_not_start_at_prefix": null
+      },
+      "notes": "简历投递成功；正文流程里的笔试/面试不是本封安排"
+    },
+    {
+      "id": "didi_campus_promo",
+      "eml": "【滴滴】诚挚邀请你参加2027届秋季校招！.eml",
+      "category": "promo",
+      "expect": {
+        "coarse_pass": false,
+        "stage": null,
+        "action": null,
+        "event_type": null,
+        "should_create_event": false,
+        "company_contains": null,
+        "start_at_prefix": null,
+        "must_not_start_at_prefix": null
+      },
+      "notes": "催网申宣推，非具体场次"
+    },
+    {
+      "id": "antgroup_campus_promo",
+      "eml": "蚂蚁集团2027校招启动🔥超80%AI岗+笔试可用AI，赶紧冲！.eml",
+      "category": "promo",
+      "expect": {
+        "coarse_pass": false,
+        "stage": null,
+        "action": null,
+        "event_type": null,
+        "should_create_event": false,
+        "company_contains": null,
+        "start_at_prefix": null,
+        "must_not_start_at_prefix": null
+      },
+      "notes": "校招启动营销；标题含笔试但无个人场次"
+    },
+    {
+      "id": "oppo_info_session_promo",
+      "eml": "速戳预约直播｜OPPO_2027届校园招聘空中宣讲会.eml",
+      "category": "info_session",
+      "expect": {
+        "coarse_pass": false,
+        "stage": null,
+        "action": null,
+        "event_type": null,
+        "should_create_event": false,
+        "company_contains": null,
+        "start_at_prefix": null,
+        "must_not_start_at_prefix": null
+      },
+      "notes": "badcase：空中宣讲会直播群发，正文『面试官』曾误判为面试，把直播时间写成面试日程"
+    },
+    {
+      "id": "jd_jds_assessment",
+      "eml": "【京东校招】2027_JDS测评通知.eml",
+      "category": "assessment_open_window",
+      "expect": {
+        "coarse_pass": true,
+        "stage": "confirmed",
+        "action": "create",
+        "event_type": "assessment",
+        "should_create_event": false,
+        "company_contains": ["京东"],
+        "start_at_prefix": null,
+        "must_not_start_at_prefix": null
+      },
+      "notes": "开放窗口测评（48小时内），无固定开考时刻，不建日程"
+    },
+    {
+      "id": "kuaishou_assessment",
+      "eml": "【快手校园招聘】在线人才测评邀请.eml",
+      "category": "assessment_open_window",
+      "expect": {
+        "coarse_pass": true,
+        "stage": "unknown",
+        "action": "create",
+        "event_type": "assessment",
+        "should_create_event": false,
+        "company_contains": ["快手"],
+        "start_at_prefix": null,
+        "must_not_start_at_prefix": null
+      },
+      "notes": "N 个工作日内完成测评，无固定时刻"
+    },
+    {
+      "id": "dewu_exam_window",
+      "eml": "【得物App】-_2027届暑期实习在线考试邀请函！.eml",
+      "category": "exam_fixed_or_window",
+      "expect": {
+        "coarse_pass": true,
+        "stage": "confirmed",
+        "action": "create",
+        "event_type": "exam",
+        "should_create_event": true,
+        "company_contains": ["得物"],
+        "start_at_prefix": "2026-05-16T10:00",
+        "must_not_start_at_prefix": null
+      },
+      "notes": "笔试开放窗口，以开始时间建提醒"
+    },
+    {
+      "id": "pdd_exam_slot",
+      "eml": "【拼多多集团-PDD】2027届校园招聘-在线笔试邀请_(请务必认真阅读防作弊注意事项，直接关乎笔试结果！）.eml",
+      "category": "exam_fixed_or_window",
+      "expect": {
+        "coarse_pass": true,
+        "stage": "confirmed",
+        "action": "create",
+        "event_type": "exam",
+        "should_create_event": true,
+        "company_contains": ["拼多多"],
+        "start_at_prefix": "2026-08-16T19:00",
+        "must_not_start_at_prefix": null
+      },
+      "notes": "固定场次牛客笔试"
+    },
+    {
+      "id": "weride_exam_window",
+      "eml": "【笔试通知】文远知行邀请您参加笔试.eml",
+      "category": "exam_fixed_or_window",
+      "expect": {
+        "coarse_pass": true,
+        "stage": "confirmed",
+        "action": "create",
+        "event_type": "exam",
+        "should_create_event": true,
+        "company_contains": ["文远"],
+        "start_at_prefix": "2026-05-17T08:00",
+        "must_not_start_at_prefix": null
+      },
+      "notes": "笔试窗口；正文「改期机会」不是本封改期通知"
+    },
+    {
+      "id": "kuaishou_schedule_invite",
+      "eml": "【快手科技】邀请你参加面试，请预约你的面试时间_.eml",
+      "category": "schedule_invite",
+      "expect": {
+        "coarse_pass": true,
+        "stage": "schedule_invite",
+        "action": "create",
+        "event_type": "interview",
+        "should_create_event": false,
+        "company_contains": ["快手"],
+        "start_at_prefix": null,
+        "must_not_start_at_prefix": null
+      },
+      "notes": "请候选人选时间，正式邀约另发"
+    },
+    {
+      "id": "iflytek_schedule_invite",
+      "eml": "科大讯飞股份有限公司邀请您参加面试，请及时预约面试时间.eml",
+      "category": "schedule_invite",
+      "expect": {
+        "coarse_pass": true,
+        "stage": "schedule_invite",
+        "action": "create",
+        "event_type": "interview",
+        "should_create_event": false,
+        "company_contains": ["讯飞"],
+        "start_at_prefix": null,
+        "must_not_start_at_prefix": "2026-05-11T23:59"
+      },
+      "notes": "预约截止日不是面试开始时间"
+    },
+    {
+      "id": "tencent_interview_confirmed",
+      "eml": "腾讯校园招聘——校招面试邀请函.eml",
+      "category": "interview_confirmed",
+      "expect": {
+        "coarse_pass": true,
+        "stage": "confirmed",
+        "action": "create",
+        "event_type": "interview",
+        "should_create_event": true,
+        "company_contains": ["腾讯"],
+        "start_at_prefix": "2026-04-19T16:15",
+        "must_not_start_at_prefix": null
+      },
+      "notes": "腾讯会议正式面试邀约"
+    },
+    {
+      "id": "netease_job_transfer",
+      "eml": "【网易互娱2027届实习】AI_Agent工程师（游戏研发方向）岗位流转邀请与意向确认.eml",
+      "category": "non_schedule_action",
+      "expect": {
+        "coarse_pass": true,
+        "stage": "unknown",
+        "action": "create",
+        "event_type": "other",
+        "should_create_event": false,
+        "company_contains": ["网易"],
+        "start_at_prefix": null,
+        "must_not_start_at_prefix": "2027-06-07T18:00"
+      },
+      "notes": "岗位流转意向确认截止，不是面试/笔试场次"
+    },
+    {
+      "id": "deepseek_pricing_noise",
+      "eml": "DeepSeek_V4_定价调整通知.eml",
+      "category": "noise",
+      "expect": {
+        "coarse_pass": false,
+        "stage": null,
+        "action": null,
+        "event_type": null,
+        "should_create_event": false,
+        "company_contains": null,
+        "start_at_prefix": null,
+        "must_not_start_at_prefix": null
+      },
+      "notes": "API 定价通知，非招聘"
+    },
+    {
+      "id": "tencent_interview_cancel",
+      "eml": "腾讯面试邀请-面试已取消.eml",
+      "category": "cancel",
+      "expect": {
+        "coarse_pass": true,
+        "stage": null,
+        "action": "cancel",
+        "event_type": "interview",
+        "should_create_event": true,
+        "company_contains": ["腾讯"],
+        "start_at_prefix": null,
+        "must_not_start_at_prefix": null
+      },
+      "notes": "腾讯正式取消信，应产出 action=cancel（不要求开始时间）"
+    },
+    {
+      "id": "synthetic_interview_reschedule",
+      "eml": "_synthetic_interview_reschedule.eml",
+      "category": "reschedule",
+      "expect": {
+        "coarse_pass": true,
+        "stage": "confirmed",
+        "action": "reschedule",
+        "event_type": "interview",
+        "should_create_event": true,
+        "company_contains": ["美团"],
+        "start_at_prefix": "2026-08-28T15:00",
+        "must_not_start_at_prefix": null
+      },
+      "notes": "合成：改期通知"
+    }
+  ]
+}

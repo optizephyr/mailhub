@@ -6,10 +6,10 @@ import argparse
 import json
 from pathlib import Path
 
-from qiuzhao_mail2calendar import cli
-from qiuzhao_mail2calendar.config import Settings
-from qiuzhao_mail2calendar.mail_qq import FetchResult, MailItem
-from qiuzhao_mail2calendar.store import EventStore
+from core import cli
+from core.config import Settings
+from core.mail_qq import FetchResult, MailItem
+from core.store import EventStore
 
 
 def _settings(tmp_path: Path, **kwargs) -> Settings:
@@ -289,7 +289,7 @@ def test_dry_run_merges_duplicate_pdd_invites(tmp_path: Path, monkeypatch):
     ]
     # 第二封启发式猜到的公司可能是「拼多多集团-PDD」或「拼多多」；
     # 用 monkeypatch 固定两封解析结果以覆盖「公司名不一致」场景。
-    from qiuzhao_mail2calendar.models import CandidateEvent
+    from core.models import CandidateEvent
 
     parsed = [
         CandidateEvent(
@@ -361,7 +361,7 @@ def test_sync_merges_fuzzy_company_across_runs(tmp_path: Path, monkeypatch):
     first = _pdd_exam_mail(message_id="<first@nowcoder.net>")
     second = _pdd_exam_mail(message_id="<second@nowcoder.net>")
 
-    from qiuzhao_mail2calendar.models import CandidateEvent
+    from core.models import CandidateEvent
 
     events = {
         first.message_id: CandidateEvent(
