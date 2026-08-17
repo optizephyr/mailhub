@@ -22,7 +22,7 @@
 ## 安装
 
 ```bash
-cd /path/to/mail-to-calendar
+cd /path/to/qiuzhao-mail2calendar
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -34,22 +34,22 @@ cp .env.example .env
 
 ```bash
 # 列出本机 Apple 日历名
-python3 -m mail_to_calendar list-apple
+python3 -m qiuzhao_mail2calendar list-apple
 
 # 列出目标日历里已有的日程（核对匹配用）
-python3 -m mail_to_calendar scan-apple --days 60
+python3 -m qiuzhao_mail2calendar scan-apple --days 60
 
 # 先干跑：只读匹配，展示最终动作与日程，不写入
-python3 -m mail_to_calendar sync --dry-run
+python3 -m qiuzhao_mail2calendar sync --dry-run
 
 # 正式同步（有游标后自动增量）
-python3 -m mail_to_calendar sync
+python3 -m qiuzhao_mail2calendar sync
 
 # 忽略游标，按 LOOKBACK_DAYS 重扫
-python3 -m mail_to_calendar sync --full
+python3 -m qiuzhao_mail2calendar sync --full
 
 # 干跑并输出 JSON（含 apply / match_via / event）
-python3 -m mail_to_calendar sync --dry-run --json
+python3 -m qiuzhao_mail2calendar sync --dry-run --json
 ```
 
 建议用 launchd / cron 每 15～30 分钟跑一次 `sync`。
@@ -145,7 +145,7 @@ LLM_MODEL=deepseek-v4-flash
 
 本地库没命中时，**回到 Apple 日历里找已有日程并接管**（`CALENDAR_SCAN_DAYS` 天窗口，默认 90，设 0 关闭）：
 
-4. 兼容旧日程：描述里的来源邮件 id（`[mail-to-calendar] mid=...`）落在本封邮件的回复链上
+4. 兼容旧日程：描述里的来源邮件 id（`[qiuzhao-mail2calendar] mid=...`，旧前缀 `[mail-to-calendar]` 仍可读）落在本封邮件的回复链上
 5. 标题形如 `[面试] 公司名` 且公司名对得上、学段不冲突的最近一场（也兼容旧英文标签）
 
 同公司同学段若已存在**相同开始时间**的日程，后到的邮件会跳过（不重复建）；时间不同则更新旧日程。同一轮里两封重复邀请（不同 message-id）会因此合并成一条。
@@ -155,7 +155,7 @@ LLM_MODEL=deepseek-v4-flash
 核对日历里读到了什么：
 
 ```bash
-python3 -m mail_to_calendar scan-apple --days 60
+python3 -m qiuzhao_mail2calendar scan-apple --days 60
 ```
 
 ## 规则引擎评测
@@ -175,7 +175,7 @@ python -m pytest tests/ -q
 ## 目录
 
 ```
-mail_to_calendar/
+qiuzhao_mail2calendar/
   mail_qq.py      # QQ IMAP（增量 UID）
   rules.py        # 规则粗过滤
   parser.py       # 启发式 / LLM 精解析、改期 / 取消

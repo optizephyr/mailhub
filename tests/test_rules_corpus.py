@@ -6,14 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from mail_to_calendar.parser import (
+from qiuzhao_mail2calendar.parser import (
     classify_stage,
     detect_action,
     detect_event_type,
     guess_company,
     heuristic_parse,
 )
-from mail_to_calendar.rules import coarse_filter
+from qiuzhao_mail2calendar.rules import coarse_filter
 from tests.eml_loader import EMAIL_EXAMPLE_DIR, iter_labeled_cases, load_labels
 
 

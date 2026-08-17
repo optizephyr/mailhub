@@ -19,12 +19,12 @@ cp .env.example .env        # 已有 .env 勿覆盖
 ## Commands
 
 ```bash
-python -m mail_to_calendar list-apple
-python -m mail_to_calendar scan-apple --days 60
-python -m mail_to_calendar sync --dry-run
-python -m mail_to_calendar sync --dry-run --json
-python -m mail_to_calendar sync
-python -m mail_to_calendar sync --full
+python -m qiuzhao_mail2calendar list-apple
+python -m qiuzhao_mail2calendar scan-apple --days 60
+python -m qiuzhao_mail2calendar sync --dry-run
+python -m qiuzhao_mail2calendar sync --dry-run --json
+python -m qiuzhao_mail2calendar sync
+python -m qiuzhao_mail2calendar sync --full
 python -m pytest tests/ -q
 ```
 

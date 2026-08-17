@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from mail_to_calendar.lifecycle_log import JSONL_MAX_LINES, append_jsonl
+from qiuzhao_mail2calendar.lifecycle_log import JSONL_MAX_LINES, append_jsonl
 
 
 def test_append_jsonl_keeps_newest_max_lines(tmp_path: Path):

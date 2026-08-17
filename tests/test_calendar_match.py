@@ -1,15 +1,15 @@
 from pathlib import Path
 
-from mail_to_calendar import cli
-from mail_to_calendar.calendar_match import (
+from qiuzhao_mail2calendar import cli
+from qiuzhao_mail2calendar.calendar_match import (
     extract_marker_message_id,
     marker_line,
     match_calendar_event,
     split_title,
 )
-from mail_to_calendar.config import Settings
-from mail_to_calendar.models import AppleEventRef, CandidateEvent
-from mail_to_calendar.store import EventStore
+from qiuzhao_mail2calendar.config import Settings
+from qiuzhao_mail2calendar.models import AppleEventRef, CandidateEvent
+from qiuzhao_mail2calendar.store import EventStore
 
 
 def _settings(tmp_path: Path, **kwargs) -> Settings:
@@ -60,6 +60,11 @@ def test_marker_round_trip():
     desc = f"来源邮件: xxx\n\n{marker_line('<old@qq.com>')}"
     assert extract_marker_message_id(desc) == "<old@qq.com>"
     assert extract_marker_message_id("没有标记") == ""
+    # 旧前缀仍可读
+    assert (
+        extract_marker_message_id("[mail-to-calendar] mid=<legacy@qq.com>")
+        == "<legacy@qq.com>"
+    )
 
 
 def test_split_title():

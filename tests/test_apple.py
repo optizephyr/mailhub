@@ -2,8 +2,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from mail_to_calendar import apple
-from mail_to_calendar.models import CandidateEvent
+from qiuzhao_mail2calendar import apple
+from qiuzhao_mail2calendar.models import CandidateEvent
 
 
 def _event(**kwargs) -> CandidateEvent:
@@ -33,7 +33,7 @@ def test_create_apple_event_uses_empty_description(monkeypatch):
     assert apple.create_apple_event(_event(), "日历", 30) == "uid-1"
     assert 'description:""' in scripts[0]
     assert "不应写入日历" not in scripts[0]
-    assert "[mail-to-calendar]" not in scripts[0]
+    assert "[qiuzhao-mail2calendar]" not in scripts[0]
 
 
 def test_create_apple_event_requires_location():

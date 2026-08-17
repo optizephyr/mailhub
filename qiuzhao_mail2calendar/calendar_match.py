@@ -7,8 +7,11 @@ from typing import Iterable, Optional
 
 from .models import AppleEventRef, CandidateEvent
 
-MARKER_PREFIX = "[mail-to-calendar]"
-_MARKER_RE = re.compile(re.escape(MARKER_PREFIX) + r"\s*mid=(\S+)")
+MARKER_PREFIX = "[qiuzhao-mail2calendar]"
+# 旧前缀保留读取，兼容此前写入的日程描述。
+_MARKER_RE = re.compile(
+    r"\[(?:qiuzhao-mail2calendar|mail-to-calendar)\]\s*mid=(\S+)"
+)
 
 # 当前标题使用中文标签；英文标签保留用于兼容既有日程。
 LABEL_TO_TYPE = {

@@ -657,7 +657,7 @@ def cmd_sync(args: argparse.Namespace) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="mail-to-calendar",
+        prog="qiuzhao-mail2calendar",
         description="从 QQ 邮箱解析秋招面试/笔试/测评邮件，写入 Apple 日历",
     )
     sub = parser.add_subparsers(dest="command", required=True)
