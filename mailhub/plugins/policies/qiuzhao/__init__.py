@@ -36,9 +36,10 @@ def candidate_to_resolved(event: CandidateEvent, message: MailMessage) -> Resolv
         "reschedule": "updated",
         "cancel": "cancelled",
     }
-    precision = "fixed"
-    if not event.start_at:
-        precision = "unknown"
+    precision = event.time_precision if event.time_precision in ("fixed", "window") else "fixed"
+    if not event.start_at and not event.end_at:
+        if precision != "window":
+            precision = "unknown"
     time = None
     if event.start_at or event.end_at:
         time = TimeConstraint(
@@ -46,6 +47,11 @@ def candidate_to_resolved(event: CandidateEvent, message: MailMessage) -> Resolv
             end_at=event.end_at or None,
             timezone="Asia/Shanghai",
             precision=precision,
+        )
+    elif precision == "window":
+        time = TimeConstraint(
+            timezone="Asia/Shanghai",
+            precision="window",
         )
     links = [event.meeting_url] if event.meeting_url else []
     return ResolvedMail(
@@ -69,6 +75,7 @@ def candidate_to_resolved(event: CandidateEvent, message: MailMessage) -> Resolv
             "subject": event.subject,
             "source_snippet": event.source_snippet,
             "candidate": event.to_dict(),
+            "time_precision": event.time_precision,
         },
         confidence=event.confidence,
     )
@@ -93,6 +100,10 @@ def resolved_to_candidate(resolved: ResolvedMail) -> CandidateEvent:
         description=str(resolved.attributes.get("description") or ""),
         meeting_url=(resolved.links[0] if resolved.links else "")
         or str(resolved.attributes.get("meeting_url") or ""),
+        time_precision=str(
+            resolved.attributes.get("time_precision")
+            or (resolved.time.precision if resolved.time else "fixed")
+        ),
         confidence=resolved.confidence,
         references=list(resolved.attributes.get("references") or []),
     )

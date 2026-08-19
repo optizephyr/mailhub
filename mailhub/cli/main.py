@@ -9,9 +9,10 @@ from typing import Optional
 from mailhub.contracts.messages import IngestBatch, MailMessage, SourceRef
 from mailhub.logging.lifecycle import new_trace_id
 from mailhub.plugins.dispatch.apple_calendar import list_apple_calendars, list_apple_events
+from mailhub.plugins.dispatch.apple_reminders import list_apple_reminder_lists
 from mailhub.plugins.policies.qiuzhao import QiuzhaoResolver
 from mailhub.plugins.sources.qq_imap import QqImapSource
-from mailhub.runtime.config import Settings, load_settings, require_mail_credentials
+from mailhub.runtime.config import load_settings, require_mail_credentials
 from mailhub.runtime.context import RunContext
 from mailhub.runtime.engine import run_once
 from mailhub.store.sqlite import EventStore
@@ -27,6 +28,13 @@ def cmd_list_apple(_: argparse.Namespace) -> None:
 def _scan_window(days: int) -> tuple[datetime, datetime]:
     now = datetime.now()
     return now - timedelta(days=1), now + timedelta(days=days)
+
+
+def cmd_list_reminders(_: argparse.Namespace) -> None:
+    names = list_apple_reminder_lists()
+    print("本机提醒事项列表：")
+    for name in names:
+        print(f"  - {name}")
 
 
 def cmd_scan_apple(args: argparse.Namespace) -> None:
@@ -78,6 +86,9 @@ def cmd_run(args: argparse.Namespace) -> None:
         "update_apple_event",
         "delete_apple_event",
         "list_apple_events",
+        "create_apple_reminder",
+        "update_apple_reminder",
+        "delete_apple_reminder",
     ):
         fn = getattr(cmd_run, f"_test_{key}", None)
         if fn is not None:
@@ -167,6 +178,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     apple = sub.add_parser("list-apple", help="列出本机 Apple 日历名称")
     apple.set_defaults(func=cmd_list_apple)
+
+    reminders = sub.add_parser("list-reminders", help="列出本机提醒事项列表名称")
+    reminders.set_defaults(func=cmd_list_reminders)
 
     scan = sub.add_parser("scan-apple", help="列出目标日历里已有的日程")
     scan.add_argument(

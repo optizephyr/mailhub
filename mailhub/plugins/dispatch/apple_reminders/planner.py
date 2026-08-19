@@ -1,25 +1,22 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta
 from typing import Optional
 
 from mailhub.contracts.actions import ActionRequest
 from mailhub.contracts.resolve import ResolvedMail
+from mailhub.plugins.dispatch.apple_calendar.match import companies_match
 from mailhub.plugins.policies.qiuzhao.types import CandidateEvent
 from mailhub.runtime.config import Settings
 from mailhub.store.sqlite import EventStore, StoredEvent
 
-from .calendar_io import list_apple_events
-from .match import companies_match, match_calendar_event
-from .types import AppleEventRef
-
-
 SINK_REMINDERS = "reminders"
 
-
-def _is_reminders_only(row: StoredEvent) -> bool:
-    return bool(row.sinks.get(SINK_REMINDERS)) and not row.sinks.get("apple")
+ACTION_CREATE = "apple_reminders.create"
+ACTION_UPDATE = "apple_reminders.update"
+ACTION_CANCEL = "apple_reminders.cancel"
+ACTION_SKIP = "apple_reminders.skip"
+ACTION_FAIL = "apple_reminders.fail"
 
 
 def _resolved_to_candidate(resolved: ResolvedMail) -> CandidateEvent:
@@ -27,11 +24,9 @@ def _resolved_to_candidate(resolved: ResolvedMail) -> CandidateEvent:
 
     return resolved_to_candidate(resolved)
 
-ACTION_CREATE = "apple_calendar.create"
-ACTION_UPDATE = "apple_calendar.update"
-ACTION_CANCEL = "apple_calendar.cancel"
-ACTION_SKIP = "apple_calendar.skip"
-ACTION_FAIL = "apple_calendar.fail"
+
+def _is_reminders_row(row: StoredEvent) -> bool:
+    return bool(row.sinks.get(SINK_REMINDERS))
 
 
 def _session_event_from_candidate(event: CandidateEvent) -> StoredEvent:
@@ -44,7 +39,7 @@ def _session_event_from_candidate(event: CandidateEvent) -> StoredEvent:
         end_at=event.end_at,
         status="active",
         source_message_id=event.message_id,
-        sinks={},
+        sinks={SINK_REMINDERS: ""},
     )
 
 
@@ -57,7 +52,7 @@ def _match_session(
         return None
     want_type = event.event_type if event.event_type != "other" else ""
     for candidate in reversed(session):
-        if _is_reminders_only(candidate):
+        if not _is_reminders_row(candidate):
             continue
         if want_type and candidate.event_type not in ("", "other", want_type):
             continue
@@ -66,70 +61,15 @@ def _match_session(
     return None
 
 
-def _scan_window(days: int) -> tuple[datetime, datetime]:
-    now = datetime.now()
-    return now - timedelta(days=1), now + timedelta(days=days)
-
-
-def _peek_calendar_match(
-    event: CandidateEvent, settings: Settings
-) -> Optional[AppleEventRef]:
-    if settings.calendar_scan_days <= 0:
-        return None
-    start, end = _scan_window(settings.calendar_scan_days)
-    try:
-        existing = list_apple_events(settings.apple_calendar_name, start, end)
-    except RuntimeError:
-        return None
-    return match_calendar_event(event, existing)
-
-
-def _adopt_from_calendar(
-    store: EventStore,
-    event: CandidateEvent,
-    settings: Settings,
-) -> Optional[StoredEvent]:
-    matched = _peek_calendar_match(event, settings)
-    if not matched:
-        return None
-    row_id = store.create_event(
-        company=event.company,
-        event_type=event.event_type,
-        title=matched.summary,
-        start_at=matched.start_at,
-        end_at=matched.end_at,
-        source_message_id=matched.marker_message_id or event.message_id,
-        sinks={"apple": matched.uid},
-    )
-    return store.get_event(row_id)
-
-
-def _virtual_from_calendar(matched: AppleEventRef, event: CandidateEvent) -> StoredEvent:
-    return StoredEvent(
-        id=0,
-        company=event.company,
-        event_type=event.event_type,
-        title=matched.summary,
-        start_at=matched.start_at,
-        end_at=matched.end_at,
-        status="active",
-        source_message_id=matched.marker_message_id or event.message_id,
-        sinks={"apple": matched.uid},
-    )
-
-
 def find_target(
     store: EventStore,
     event: CandidateEvent,
-    settings: Settings,
-    *,
-    adopt: bool = True,
     session: Optional[list[StoredEvent]] = None,
 ) -> tuple[Optional[StoredEvent], str]:
     refs = [r for r in event.references if r]
     if refs:
         target = store.find_active_event(references=refs)
-        if target:
+        if target and _is_reminders_row(target):
             return target, "references"
 
     session_hit = _match_session(event, session or [])
@@ -140,21 +80,18 @@ def find_target(
         company=event.company,
         event_type=event.event_type if event.event_type != "other" else "",
     )
-    if target:
+    if target and _is_reminders_row(target):
         return target, "company_type"
-
-    if adopt:
-        adopted = _adopt_from_calendar(store, event, settings)
-        if adopted:
-            return adopted, "calendar_adopt"
-    else:
-        matched = _peek_calendar_match(event, settings)
-        if matched:
-            return _virtual_from_calendar(matched, event), "calendar_adopt"
     return None, "none"
 
 
-class AppleCalendarPlanner:
+def _same_window(event: CandidateEvent, target: StoredEvent) -> bool:
+    if event.start_at or event.end_at:
+        return target.start_at == event.start_at and target.end_at == event.end_at
+    return True
+
+
+class AppleRemindersPlanner:
     def __init__(
         self,
         store: EventStore,
@@ -172,11 +109,10 @@ class AppleCalendarPlanner:
 
     def plan(self, resolved: ResolvedMail) -> list[ActionRequest]:
         event = _resolved_to_candidate(resolved)
-        if event.action != "cancel" and event.time_precision == "window":
+        if event.action != "cancel" and event.time_precision != "window":
             return []
-        mid = event.message_id
 
-        if self.store.already_processed(mid, self.source_id):
+        if self.store.already_processed(event.message_id, self.source_id):
             return [
                 self._req(
                     ACTION_SKIP,
@@ -187,14 +123,8 @@ class AppleCalendarPlanner:
                 )
             ]
 
-        target, via = find_target(
-            self.store,
-            event,
-            self.settings,
-            adopt=not self.dry_run,
-            session=self.session,
-        )
-        if target and _is_reminders_only(target):
+        target, via = find_target(self.store, event, session=self.session)
+        if event.action == "cancel" and event.time_precision != "window" and not target:
             return []
 
         row_id = target.id if target and target.id > 0 else None
@@ -206,9 +136,9 @@ class AppleCalendarPlanner:
                         ACTION_FAIL,
                         event,
                         result="would_fail" if self.dry_run else "failed",
-                        summary="取消失败：未找到可取消的旧日程",
+                        summary="取消失败：未找到可取消的提醒事项",
                         match_via=via,
-                        error="no matching active event",
+                        error="no matching active reminder",
                     )
                 ]
             return [
@@ -216,7 +146,7 @@ class AppleCalendarPlanner:
                     ACTION_CANCEL,
                     event,
                     result="would_cancel" if self.dry_run else "cancel",
-                    summary="将取消匹配到的旧日程" if self.dry_run else "取消日程",
+                    summary="将取消匹配到的提醒事项" if self.dry_run else "取消提醒事项",
                     match_via=via,
                     event_row_id=row_id,
                     target=target,
@@ -230,7 +160,7 @@ class AppleCalendarPlanner:
                         ACTION_UPDATE,
                         event,
                         result="would_update" if self.dry_run else "update",
-                        summary="将改期并更新匹配到的旧日程" if self.dry_run else "改期更新",
+                        summary="将更新匹配到的提醒事项" if self.dry_run else "更新提醒事项",
                         match_via=via,
                         event_row_id=row_id,
                         target=target,
@@ -241,33 +171,32 @@ class AppleCalendarPlanner:
                     ACTION_CREATE,
                     event,
                     result="would_create" if self.dry_run else "create",
-                    summary="改期未匹配到旧日程，将新建" if self.dry_run else "改期新建",
+                    summary="改期未匹配到旧提醒，将新建" if self.dry_run else "改期新建提醒事项",
                     match_via=via,
                 )
             ]
 
-        # create
-        if target and target.start_at and target.start_at != event.start_at:
-            return [
-                self._req(
-                    ACTION_UPDATE,
-                    event,
-                    result="would_update" if self.dry_run else "update",
-                    summary="检测到时间变化，将更新匹配到的旧日程"
-                    if self.dry_run
-                    else "时间变化更新",
-                    match_via=via,
-                    event_row_id=row_id,
-                    target=target,
-                )
-            ]
-        if target and target.start_at == event.start_at:
+        if target and _same_window(event, target):
             return [
                 self._req(
                     ACTION_SKIP,
                     event,
                     result="would_skip_same" if self.dry_run else "skipped_same",
-                    summary="已存在相同时间日程，将跳过" if self.dry_run else "相同时间跳过",
+                    summary="已存在相同窗口提醒，将跳过" if self.dry_run else "相同窗口跳过",
+                    match_via=via,
+                    event_row_id=row_id,
+                    target=target,
+                )
+            ]
+        if target:
+            return [
+                self._req(
+                    ACTION_UPDATE,
+                    event,
+                    result="would_update" if self.dry_run else "update",
+                    summary="检测到窗口变化，将更新提醒事项"
+                    if self.dry_run
+                    else "窗口变化更新",
                     match_via=via,
                     event_row_id=row_id,
                     target=target,
@@ -278,7 +207,7 @@ class AppleCalendarPlanner:
                 ACTION_CREATE,
                 event,
                 result="would_create" if self.dry_run else "create",
-                summary="将新建日程" if self.dry_run else "新建日程",
+                summary="将新建提醒事项" if self.dry_run else "新建提醒事项",
                 match_via=via,
             )
         ]
@@ -305,6 +234,7 @@ class AppleCalendarPlanner:
             "candidate": event.to_dict(),
             "dry_run": self.dry_run,
             "source_id": self.source_id,
+            "channel": "reminders",
         }
         if target is not None:
             payload["target"] = {
@@ -326,6 +256,5 @@ class AppleCalendarPlanner:
         )
 
 
-# re-export helpers for session updates in engine
 session_event_from_candidate = _session_event_from_candidate
 match_session = _match_session

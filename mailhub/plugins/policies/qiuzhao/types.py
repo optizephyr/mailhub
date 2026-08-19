@@ -42,6 +42,7 @@ class CandidateEvent:
     company: str = ""
     description: str = ""
     meeting_url: str = ""
+    time_precision: str = "fixed"  # fixed | window
     confidence: float = 0.5
     source_snippet: str = ""
     references: list[str] = field(default_factory=list)

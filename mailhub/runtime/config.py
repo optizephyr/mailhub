@@ -21,6 +21,7 @@ class Settings:
     data_dir: Path
     calendar_scan_days: int = 90
     source_id: str = "qq.default"
+    apple_reminders_list: str = "提醒事项"
 
     @property
     def llm_enabled(self) -> bool:
@@ -55,6 +56,8 @@ def load_settings(env_file: str | None = None) -> Settings:
         data_dir=data_dir,
         calendar_scan_days=int(os.getenv("CALENDAR_SCAN_DAYS", "90")),
         source_id=os.getenv("MAIL_SOURCE_ID", "qq.default").strip() or "qq.default",
+        apple_reminders_list=os.getenv("APPLE_REMINDERS_LIST", "提醒事项").strip()
+        or "提醒事项",
     )
 
 

@@ -80,6 +80,36 @@ def test_heuristic_interview_mail():
     assert "meeting.tencent.com" in event.meeting_url
 
 
+def test_heuristic_assessment_window_without_clock():
+    mail = _mail(
+        subject="【京东校招】测评通知",
+        text="建议您在48小时内完成测评，测评完成后，方可进入后续流程。https://example.com/a",
+        date="Wed, 19 Aug 2026 03:00:00 +0800",
+    )
+    event = heuristic_parse(mail)
+    assert event is not None
+    assert event.time_precision == "window"
+    assert event.event_type == "assessment"
+    assert event.end_at.startswith("2026-08-21T03:00")
+
+
+def test_heuristic_exam_open_window_uses_span():
+    mail = _mail(
+        subject="【笔试通知】文远知行邀请您参加笔试",
+        text=(
+            "考试开始时间（北京时间）：2026-05-17 08:00:00\n"
+            "考试结束时间（北京时间）：2026-05-17 21:00:00\n"
+            "此时间范围内任选两小时完成笔试。\n"
+            "考试地址：https://exam.nowcoder.com/cts/x"
+        ),
+    )
+    event = heuristic_parse(mail)
+    assert event is not None
+    assert event.time_precision == "window"
+    assert event.start_at.startswith("2026-05-17T08:00")
+    assert event.end_at.startswith("2026-05-17T21:00")
+
+
 def test_skip_schedule_invite_with_candidate_slots():
     mail = MailItem(
         message_id="<invite@qq.com>",

@@ -2,7 +2,7 @@
 
 本地 CLI：拉取邮箱 → 筛选重要邮件 → 通过日程等方式提醒用户。
 
-当前内置插件：QQ IMAP 取信、秋招重要性策略、Apple 日历分发。面向 macOS；日历经 AppleScript 操作。
+当前内置插件：QQ IMAP 取信、秋招重要性策略、Apple 日历 / 提醒事项分发。面向 macOS；日历与提醒事项经 AppleScript 操作。
 
 ## 准备
 
@@ -18,6 +18,14 @@
 2. 看左侧日历名称，填到 `APPLE_CALENDAR_NAME`（常见：`日历` / `Home` / iCloud 下某个日历）
 3. 首次写入时，系统可能弹窗请求「自动化 / 日历」权限，点允许
 4. 若 `list-apple` 卡住，到 **系统设置 → 隐私与安全性 → 自动化 / 日历**，允许终端或 Python 访问「日历」
+
+### 3. Apple 提醒事项
+
+开放窗口类任务（测评、任选时段笔试）写入「提醒事项」，可勾选完成。
+
+1. 打开 macOS「提醒事项」App，看左侧列表名，填到 `APPLE_REMINDERS_LIST`（常见：`提醒事项`）
+2. 首次写入时系统可能弹窗请求「自动化 / 提醒事项」权限
+3. `uv run mailhub list-reminders` 可核对列表名
 
 ## 安装
 
@@ -35,6 +43,9 @@ cp .env.example .env
 ```bash
 # 列出本机 Apple 日历名
 uv run mailhub list-apple
+
+# 列出本机提醒事项列表名
+uv run mailhub list-reminders
 
 # 列出目标日历里已有的日程（核对匹配用）
 uv run mailhub scan-apple --days 60
@@ -66,7 +77,7 @@ Ingest（取信）→ Resolve（研判）→ Dispatch（分发）
 
 - **Ingest**：`plugins/sources/qq_imap.py`，返回 `IngestBatch`（messages + next_checkpoint）
 - **Resolve**：`plugins/policies/qiuzhao`，产出与渠道无关的 `ResolvedMail` / `IgnoredMail`
-- **Dispatch**：Planner 生成 `ActionRequest`，Handler 执行（当前为 Apple 日历）
+- **Dispatch**：Planner 生成 `ActionRequest`，Handler 执行（Apple 日历 + 提醒事项）
 
 ## 行为说明
 
@@ -86,9 +97,10 @@ Ingest（取信）→ Resolve（研判）→ Dispatch（分发）
 
 1. 粗过滤：无招聘信号 / 噪声 / 宣讲群发 → 忽略
 2. 精解析：启用 LLM 时先模型；模型明确拒绝不兜底；超时/坏 JSON 才回退启发式
-3. `schedule_invite`、开放窗口测评 → 不建日程
-4. 新建/改期需开始、结束、地点；线上用会议链接当地点
-5. 标题：`[面试|笔试|测评|其他] 公司名`
+3. `schedule_invite` 不建日程、不建提醒
+4. 固定场次（已确认时刻 + 地点）→ 日历；开放窗口（测评 / 任选时段）→ 提醒事项
+5. 日历新建/改期需开始、结束、地点；线上用会议链接当地点
+6. 标题：`[面试|笔试|测评|其他] 公司名`
 
 ### 查日志
 
@@ -115,6 +127,7 @@ mailhub/
     sources/qq_imap.py
     policies/qiuzhao/
     dispatch/apple_calendar/
+    dispatch/apple_reminders/
   cli/
 ```
 

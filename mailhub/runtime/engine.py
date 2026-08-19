@@ -16,6 +16,19 @@ from mailhub.plugins.dispatch.apple_calendar import (
     match_session,
     session_event_from_candidate,
 )
+from mailhub.plugins.dispatch.apple_reminders import (
+    ACTION_CANCEL as REM_CANCEL,
+    ACTION_CREATE as REM_CREATE,
+    ACTION_FAIL as REM_FAIL,
+    ACTION_SKIP as REM_SKIP,
+    ACTION_UPDATE as REM_UPDATE,
+    AppleRemindersHandler,
+    AppleRemindersPlanner,
+)
+from mailhub.plugins.dispatch.apple_reminders import (
+    match_session as rem_match_session,
+    session_event_from_candidate as rem_session_event_from_candidate,
+)
 from mailhub.plugins.policies.qiuzhao import resolved_to_candidate
 from mailhub.plugins.policies.qiuzhao.types import CandidateEvent
 from mailhub.runtime.context import RunContext, RunResult
@@ -34,8 +47,15 @@ def run_once(ctx: RunContext) -> RunResult:
     result.received_count = len(batch.messages)
     result.scanned = result.received_count
 
+    CREATE_TYPES = {ACTION_CREATE, REM_CREATE}
+    UPDATE_TYPES = {ACTION_UPDATE, REM_UPDATE}
+    CANCEL_TYPES = {ACTION_CANCEL, REM_CANCEL}
+    SKIP_TYPES = {ACTION_SKIP, REM_SKIP}
+    FAIL_TYPES = {ACTION_FAIL, REM_FAIL}
+
     session: list[StoredEvent] = []
     handler = AppleCalendarHandler(store, settings)
+    rem_handler = AppleRemindersHandler(store, settings)
     if "create_apple_event" in ctx.extras:
         handler.create_apple_event = ctx.extras["create_apple_event"]
     if "update_apple_event" in ctx.extras:
@@ -46,8 +66,17 @@ def run_once(ctx: RunContext) -> RunResult:
         import mailhub.plugins.dispatch.apple_calendar.planner as planner_mod
 
         planner_mod.list_apple_events = ctx.extras["list_apple_events"]
+    if "create_apple_reminder" in ctx.extras:
+        rem_handler.create_apple_reminder = ctx.extras["create_apple_reminder"]
+    if "update_apple_reminder" in ctx.extras:
+        rem_handler.update_apple_reminder = ctx.extras["update_apple_reminder"]
+    if "delete_apple_reminder" in ctx.extras:
+        rem_handler.delete_apple_reminder = ctx.extras["delete_apple_reminder"]
 
     planner = AppleCalendarPlanner(
+        store, settings, session, dry_run=dry_run, source_id=ctx.source_id
+    )
+    rem_planner = AppleRemindersPlanner(
         store, settings, session, dry_run=dry_run, source_id=ctx.source_id
     )
     handlers = {
@@ -56,6 +85,11 @@ def run_once(ctx: RunContext) -> RunResult:
         ACTION_CANCEL: handler,
         ACTION_SKIP: handler,
         ACTION_FAIL: handler,
+        REM_CREATE: rem_handler,
+        REM_UPDATE: rem_handler,
+        REM_CANCEL: rem_handler,
+        REM_SKIP: rem_handler,
+        REM_FAIL: rem_handler,
     }
     resolver = ctx.resolver
     run_meta = {"dry_run": dry_run, "full": ctx.full, "source_id": ctx.source_id}
@@ -95,16 +129,18 @@ def run_once(ctx: RunContext) -> RunResult:
         result.matched += 1
         result.events.append(event.to_dict())
 
-        requests = planner.plan(resolve_result)
+        requests = planner.plan(resolve_result) + rem_planner.plan(resolve_result)
         if not requests:
             result.ignored_count += 1
             continue
         req = requests[0]
         payload = req.payload
+        is_reminder = req.type.startswith("apple_reminders.")
+        noun = "提醒事项" if is_reminder else "日程"
 
         if dry_run:
             _print_event_details(event)
-            _tally_dry_run(result, str(payload.get("result")))
+            _tally_dry_run(result, str(payload.get("result")), payload.get("summary"))
             planned = planned_event_brief(event)
             result.dry_run_reports.append(
                 {
@@ -114,12 +150,19 @@ def run_once(ctx: RunContext) -> RunResult:
                 }
             )
             if payload.get("result") == "would_create":
-                session.append(session_event_from_candidate(event))
+                if is_reminder:
+                    session.append(rem_session_event_from_candidate(event))
+                else:
+                    session.append(session_event_from_candidate(event))
             elif (
                 payload.get("result") == "would_update"
                 and payload.get("match_via") == "session"
             ):
-                hit = match_session(event, session)
+                hit = (
+                    rem_match_session(event, session)
+                    if is_reminder
+                    else match_session(event, session)
+                )
                 if hit:
                     hit.start_at = event.start_at
                     hit.end_at = event.end_at
@@ -153,7 +196,7 @@ def run_once(ctx: RunContext) -> RunResult:
         event_row_id = meta.get("event_row_id") or payload.get("event_row_id")
         sinks = meta.get("sinks")
 
-        if receipt.status == "failed" or req.type == ACTION_FAIL:
+        if receipt.status == "failed" or req.type in FAIL_TYPES:
             result.failed_count += 1
             err = receipt.error or summary
             result.failed.append(err)
@@ -168,7 +211,7 @@ def run_once(ctx: RunContext) -> RunResult:
             )
             continue
 
-        if req.type == ACTION_SKIP:
+        if req.type in SKIP_TYPES:
             result.skipped += 1
             print(f"  - {summary}")
             status = (
@@ -188,39 +231,39 @@ def run_once(ctx: RunContext) -> RunResult:
             )
             continue
 
-        if req.type == ACTION_CREATE:
+        if req.type in CREATE_TYPES:
             result.created += 1
             row_id = int(receipt.external_id) if receipt.external_id else 0
             created = store.get_event(row_id) if row_id else None
             if created:
                 session.append(created)
             if "未找到" in summary:
-                print("  - 未找到旧日程，已新建")
+                print(f"  - 未找到旧{noun}，已新建")
             else:
                 print("  - 已创建")
             _finish_applied(
                 trace,
                 store,
                 result="created",
-                summary=f"已新建日程 #{row_id}"
-                if "新建" in summary or summary == "新建日程"
+                summary=f"已新建{noun} #{row_id}"
+                if "新建" in summary or summary in ("新建日程", "新建提醒事项")
                 else summary,
                 match_via=match_via,
                 event_row_id=row_id,
             )
-        elif req.type == ACTION_UPDATE:
+        elif req.type in UPDATE_TYPES:
             result.updated += 1
             row_id = int(receipt.external_id) if receipt.external_id else 0
-            print(f"  - 已更新日程 #{row_id}")
+            print(f"  - 已更新{noun} #{row_id}")
             _finish_applied(
                 trace,
                 store,
                 result="updated",
-                summary=summary if "更新" in summary else f"已更新日程 #{row_id}",
+                summary=summary if "更新" in summary else f"已更新{noun} #{row_id}",
                 match_via=match_via,
                 event_row_id=row_id,
             )
-        elif req.type == ACTION_CANCEL:
+        elif req.type in CANCEL_TYPES:
             result.cancelled += 1
             target = payload.get("target") or {}
             tid = int(target.get("id") or receipt.external_id or 0)
@@ -231,12 +274,12 @@ def run_once(ctx: RunContext) -> RunResult:
                 session[:] = [
                     s for s in session if s.source_message_id != smid
                 ]
-            print(f"  - 已删除旧日程 #{tid}")
+            print(f"  - 已删除旧{noun} #{tid}")
             _finish_applied(
                 trace,
                 store,
                 result="cancelled",
-                summary=f"已取消日程 #{tid}",
+                summary=f"已取消{noun} #{tid}",
                 match_via=match_via,
                 event_row_id=tid,
                 sinks=target.get("sinks"),
@@ -277,6 +320,8 @@ def _print_event_details(event: CandidateEvent) -> None:
     ]
     if event.location:
         lines.append(f"  地点={event.location}")
+    if getattr(event, "time_precision", "") == "window":
+        lines.append("  渠道=提醒事项（窗口内完成）")
     if event.meeting_url:
         lines.append(f"  会议={event.meeting_url}")
     if desc:
@@ -285,7 +330,9 @@ def _print_event_details(event: CandidateEvent) -> None:
     print("\n".join(lines))
 
 
-def _tally_dry_run(result: RunResult, plan_result: Optional[str]) -> None:
+def _tally_dry_run(
+    result: RunResult, plan_result: Optional[str], summary: Optional[str] = None
+) -> None:
     if plan_result == "would_create":
         result.created += 1
     elif plan_result == "would_update":
@@ -295,7 +342,7 @@ def _tally_dry_run(result: RunResult, plan_result: Optional[str]) -> None:
     elif plan_result in ("would_skip_duplicate", "would_skip_same"):
         result.skipped += 1
     elif plan_result == "would_fail":
-        result.failed.append("取消失败：未找到可取消的旧日程")
+        result.failed.append(str(summary or "取消失败"))
 
 
 def _finish_apply(

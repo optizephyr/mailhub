@@ -4,6 +4,7 @@ import json
 import re
 import time
 from datetime import datetime, timedelta
+from email.utils import parsedate_to_datetime
 from typing import Any, Optional
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
@@ -139,6 +140,24 @@ CONFIRMED_SIGNALS = (
     "your interview is scheduled",
     "has been scheduled",
 )
+
+# 开放窗口：窗口内任意时刻完成，走提醒事项而非日历场次
+WINDOW_SIGNALS = (
+    "时间范围内任选",
+    "范围内任选",
+    "任选两小时",
+    "任选一小时",
+    "任意时段",
+    "任意时间完成",
+    "小时内完成",
+    "工作日之内",
+    "个工作日内",
+    "工作日内完成",
+    "开放窗口",
+)
+RELATIVE_HOURS_RE = re.compile(r"(\d+)\s*小时内")
+RELATIVE_WORKDAYS_RE = re.compile(r"(\d+)\s*个工作日")
+WINDOW_MIN_SPAN = timedelta(hours=4)
 
 # 选时间截止日里的“时间”，不是面试开始时间
 DEADLINE_CONTEXT_RE = re.compile(
@@ -294,27 +313,94 @@ def guess_company(subject: str, body: str) -> str:
     return ""
 
 
+def _datetime_from_match(m: re.Match[str], now: datetime) -> Optional[datetime]:
+    parts = m.groupdict()
+    year = int(parts["y"]) if parts.get("y") else now.year
+    month = int(parts["m"])
+    day = int(parts["d"])
+    hour = int(parts["h"])
+    minute = int(parts["min"])
+    try:
+        dt = datetime(year, month, day, hour, minute, tzinfo=TZ)
+    except ValueError:
+        return None
+    if "y" not in parts and dt < now - timedelta(days=60):
+        dt = dt.replace(year=now.year + 1)
+    return dt
+
+
 def parse_datetime(text: str, now: Optional[datetime] = None) -> Optional[datetime]:
     now = now or datetime.now(TZ)
     for pattern in DATETIME_PATTERNS:
         m = pattern.search(text)
         if not m:
             continue
-        parts = m.groupdict()
-        year = int(parts["y"]) if parts.get("y") else now.year
-        month = int(parts["m"])
-        day = int(parts["d"])
-        hour = int(parts["h"])
-        minute = int(parts["min"])
-        try:
-            dt = datetime(year, month, day, hour, minute, tzinfo=TZ)
-        except ValueError:
-            continue
-        # if year omitted and date already passed by >60 days, assume next year
-        if "y" not in parts and dt < now - timedelta(days=60):
-            dt = dt.replace(year=now.year + 1)
-        return dt
+        dt = _datetime_from_match(m, now)
+        if dt is not None:
+            return dt
     return None
+
+
+def parse_all_datetimes(text: str, now: Optional[datetime] = None) -> list[datetime]:
+    now = now or datetime.now(TZ)
+    found: list[tuple[int, datetime]] = []
+    seen: set[str] = set()
+    for pattern in DATETIME_PATTERNS:
+        for match in pattern.finditer(text):
+            dt = _datetime_from_match(match, now)
+            if dt is None:
+                continue
+            key = f"{dt.month:02d}-{dt.day:02d}T{dt.hour:02d}:{dt.minute:02d}"
+            if key in seen:
+                continue
+            seen.add(key)
+            found.append((match.start(), dt))
+    found.sort(key=lambda item: item[0])
+    return [dt for _, dt in found]
+
+
+def is_open_window(text: str, event_type: str, times: list[datetime]) -> bool:
+    if event_type == "assessment":
+        return True
+    if any(s in text for s in WINDOW_SIGNALS):
+        return True
+    if event_type == "exam" and len(times) >= 2 and (times[-1] - times[0]) >= WINDOW_MIN_SPAN:
+        return True
+    return False
+
+
+def relative_deadline(text: str, now: datetime) -> Optional[datetime]:
+    match = RELATIVE_HOURS_RE.search(text)
+    if match:
+        return now + timedelta(hours=int(match.group(1)))
+    match = RELATIVE_WORKDAYS_RE.search(text)
+    if match:
+        return now + timedelta(days=int(match.group(1)))
+    return None
+
+
+def _anchor_now(mail: MailItem) -> datetime:
+    if mail.date:
+        try:
+            parsed = parsedate_to_datetime(mail.date)
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=TZ)
+            return parsed.astimezone(TZ)
+        except (TypeError, ValueError, OverflowError):
+            try:
+                parsed = datetime.fromisoformat(mail.date)
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=TZ)
+                return parsed.astimezone(TZ)
+            except ValueError:
+                pass
+    return datetime.now(TZ)
+
+
+def _iso(dt: Optional[datetime]) -> str:
+    if dt is None:
+        return ""
+    return dt.replace(tzinfo=None).isoformat(timespec="seconds")
 
 
 def default_duration_hours(event_type: str) -> float:
@@ -479,21 +565,50 @@ def heuristic_parse(mail: MailItem) -> Optional[CandidateEvent]:
     if should_skip_as_schedule_invite(blob):
         return None
 
-    start = parse_datetime(blob)
+    now = _anchor_now(mail)
+    times = parse_all_datetimes(blob, now=now)
+    meeting_url = extract_meeting_url(body)
+    location = extract_location(body) or meeting_url
+    title = build_title(event_type, company, action, mail.subject)
+    stage = classify_stage(blob)
+    confidence = 0.75 if stage == "confirmed" or action == "reschedule" else 0.55
+    if company:
+        confidence += 0.1
+
+    if is_open_window(blob, event_type, times):
+        start = times[0] if times else None
+        end = times[-1] if len(times) >= 2 else None
+        if end is None:
+            end = relative_deadline(blob, now)
+        if start is not None and end is None and len(times) == 1:
+            end = start
+            start = None
+        return CandidateEvent(
+            message_id=mail.message_id,
+            subject=mail.subject,
+            title=title[:200],
+            event_type=event_type,
+            action=action,
+            start_at=_iso(start),
+            end_at=_iso(end),
+            location=(location or "")[:200],
+            company=company,
+            description="",
+            meeting_url=meeting_url,
+            time_precision="window",
+            confidence=min(confidence, 0.95),
+            source_snippet=body[:300],
+            references=list(mail.references),
+        )
+
+    start = times[0] if times else None
     if not start:
         return None
 
     hours = default_duration_hours(event_type)
     end = start + timedelta(hours=hours)
-    title = build_title(event_type, company, action, mail.subject)
-    meeting_url = extract_meeting_url(body)
-    location = extract_location(body) or meeting_url
     if not location:
         return None
-    stage = classify_stage(blob)
-    confidence = 0.75 if stage == "confirmed" or action == "reschedule" else 0.55
-    if company:
-        confidence += 0.1
 
     return CandidateEvent(
         message_id=mail.message_id,
@@ -501,12 +616,13 @@ def heuristic_parse(mail: MailItem) -> Optional[CandidateEvent]:
         title=title[:200],
         event_type=event_type,
         action=action,
-        start_at=start.replace(tzinfo=None).isoformat(timespec="seconds"),
-        end_at=end.replace(tzinfo=None).isoformat(timespec="seconds"),
+        start_at=_iso(start),
+        end_at=_iso(end),
         location=location[:200],
         company=company,
         description="",
         meeting_url=meeting_url,
+        time_precision="fixed",
         confidence=min(confidence, 0.95),
         source_snippet=body[:300],
         references=list(mail.references),
@@ -532,6 +648,7 @@ def normalize_event(event: CandidateEvent) -> CandidateEvent:
         company=company,
         description="",
         meeting_url=str(event.meeting_url or ""),
+        time_precision="window" if event.time_precision == "window" else "fixed",
         confidence=float(event.confidence or 0.5),
         source_snippet=str(event.source_snippet or "")[:300],
         references=list(event.references or []),
@@ -554,17 +671,34 @@ def _event_from_llm_data(mail: MailItem, data: dict[str, Any]) -> LlmParseResult
     action = data.get("action") or "create"
     if action not in ("create", "reschedule", "cancel"):
         action = "create"
-    if action != "cancel" and (
-        not data.get("start_at")
-        or not data.get("end_at")
-        or not data.get("location")
-    ):
-        return LlmParseResult(
-            decision="incomplete",
-            error="missing start_at/end_at/location for non-cancel action",
-        )
-
     event_type = data.get("event_type") or "other"
+    precision = str(data.get("time_precision") or "").strip()
+    if precision not in ("fixed", "window"):
+        if event_type == "assessment":
+            precision = "window"
+        elif action != "cancel" and not data.get("location") and (
+            data.get("start_at") or data.get("end_at")
+        ):
+            precision = "window"
+        else:
+            precision = "fixed"
+    if action != "cancel":
+        if precision == "window":
+            if not data.get("start_at") and not data.get("end_at"):
+                return LlmParseResult(
+                    decision="incomplete",
+                    error="missing start_at/end_at for window task",
+                )
+        elif (
+            not data.get("start_at")
+            or not data.get("end_at")
+            or not data.get("location")
+        ):
+            return LlmParseResult(
+                decision="incomplete",
+                error="missing start_at/end_at/location for non-cancel action",
+            )
+
     title = data.get("title") or mail.subject
     company = str(data.get("company") or "").strip() or guess_company(
         mail.subject, mail.body
@@ -582,6 +716,7 @@ def _event_from_llm_data(mail: MailItem, data: dict[str, Any]) -> LlmParseResult
         company=str(company)[:40],
         description="",
         meeting_url=str(data.get("meeting_url") or ""),
+        time_precision=precision,
         confidence=float(data.get("confidence") or 0.8),
         source_snippet=mail.body[:300],
         references=list(mail.references),
@@ -614,16 +749,22 @@ def llm_parse(
                 "字段: relevant(bool), action(create|reschedule|cancel), "
                 "stage(confirmed|schedule_invite|other), "
                 "event_type(interview|exam|assessment|other), "
+                "time_precision(fixed|window), "
                 "title, company, start_at(YYYY-MM-DDTHH:MM:SS, Asia/Shanghai), "
                 "end_at, location, meeting_url, confidence(0-1).\n"
                 "规则:\n"
                 "- company 必填：填招聘方公司/机构简称（如 美团、字节跳动、快手）；"
                 "实在无法判断时填空串。\n"
                 "- 取消面试/无需参加：action=cancel，relevant=true，可不填时间。\n"
-                "- 新建和改期必须填写 start_at、end_at、location；线上日程的 location 填会议链接。\n"
-                "- 改期/时间变更为：action=reschedule，必须填新的时间和地点。\n"
+                "- 已确认时刻的面试、固定开考笔试：time_precision=fixed，"
+                "必须填 start_at、end_at、location；线上日程的 location 填会议链接。\n"
+                "- 开放窗口（测评、任选时段完成的笔试、N 小时/工作日内完成）："
+                "time_precision=window，end_at 填截止，start_at 填窗口开始（可空），"
+                "location 可空，链接放 meeting_url。\n"
+                "- 改期/时间变更为：action=reschedule，fixed 必须填新的时间和地点；"
+                "window 必须填新的截止或窗口。\n"
                 "- 若是让候选人「选择/预约/挑选」面试时间：stage=schedule_invite，relevant=false。\n"
-                "- 只有时间已确认的正式通知才 action=create 且 relevant=true。\n"
+                "- 只有时间已确认的正式通知，或可完成的开放窗口，才 action=create 且 relevant=true。\n"
                 "- 选时间的截止日不是面试开始时间。\n\n"
                 f"主题: {mail.subject}\n"
                 f"正文:\n{mail.body[:4000]}"

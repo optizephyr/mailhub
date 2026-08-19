@@ -2,7 +2,7 @@
 
 本地 CLI「邮件处理中心」（包名 `mailhub`）：拉取邮箱 → 筛选重要邮件 → 经日程等渠道提醒用户。
 
-当前插件：QQ IMAP、秋招策略、Apple 日历。面向 macOS。人读说明见 `README.md`。
+当前插件：QQ IMAP、秋招策略、Apple 日历、Apple 提醒事项。面向 macOS。人读说明见 `README.md`。
 
 ## Setup
 
@@ -17,6 +17,7 @@ cp .env.example .env        # 已有 .env 勿覆盖
 
 ```bash
 uv run mailhub list-apple
+uv run mailhub list-reminders
 uv run mailhub scan-apple --days 60
 uv run mailhub run --dry-run
 uv run mailhub run --dry-run --json
@@ -43,7 +44,8 @@ uv run pytest tests/ -q
 | `mailhub/logging/` | lifecycle / llm_io JSONL |
 | `mailhub/plugins/sources/qq_imap.py` | QQ IMAP |
 | `mailhub/plugins/policies/qiuzhao/` | 秋招粗过滤 + 解析 |
-| `mailhub/plugins/dispatch/apple_calendar/` | Apple Planner/Handler |
+| `mailhub/plugins/dispatch/apple_calendar/` | Apple 日历 Planner/Handler |
+| `mailhub/plugins/dispatch/apple_reminders/` | Apple 提醒事项 Planner/Handler |
 | `mailhub/cli/` | argparse 与展示 |
 
 运行态在 `data/`（gitignore）。评测语料在 `tests/fixtures/email_corpus/`。
@@ -51,7 +53,7 @@ uv run pytest tests/ -q
 ## Domain invariants
 
 - **全局**：dry-run 不写渠道、不推游标；Ingest 不做重要性过滤；contracts 不依赖 plugins
-- **秋招 policy 局部**：标题格式、`schedule_invite` 不建日程、create 需起止+地点
+- **秋招 policy 局部**：标题格式、`schedule_invite` 不建日程、日历 create 需起止+地点、开放窗口走提醒事项
 - 系统 Python 3.9 + LibreSSL：保持 `urllib3<2`（见 `pyproject.toml` 注释）
 
 ## Code conventions
@@ -67,5 +69,5 @@ uv run pytest tests/ -q
 - **勿提交 / 勿打印** `.env`、授权码、API key、真实邮件正文中的隐私
 - **勿提交** `data/`（sqlite、日志）；语料用脱敏样例
 - 正式 `run` 会改本机日历并推进游标；调试默认 `--dry-run`
-- AppleScript / 日历权限失败时，引导查系统设置「自动化 / 日历」，勿伪造成功写入
+- AppleScript / 日历或提醒事项权限失败时，引导查系统设置「自动化 / 日历 / 提醒事项」，勿伪造成功写入
 - 不要把核心改成绑死单一日历后端；新渠道以 Planner + Handler 插件形式加入

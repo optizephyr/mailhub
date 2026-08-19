@@ -91,6 +91,9 @@ def _run_sync(
     cli.cmd_run._test_update_apple_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
     cli.cmd_run._test_delete_apple_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
     cli.cmd_run._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
+    cli.cmd_run._test_create_apple_reminder = lambda *_a, **_k: "rem-1"  # type: ignore[attr-defined]
+    cli.cmd_run._test_update_apple_reminder = lambda *_a, **_k: None  # type: ignore[attr-defined]
+    cli.cmd_run._test_delete_apple_reminder = lambda *_a, **_k: None  # type: ignore[attr-defined]
 
     try:
         args = argparse.Namespace(dry_run=dry_run, full=True, json=False)
@@ -102,6 +105,9 @@ def _run_sync(
             "_test_update_apple_event",
             "_test_delete_apple_event",
             "_test_list_apple_events",
+            "_test_create_apple_reminder",
+            "_test_update_apple_reminder",
+            "_test_delete_apple_reminder",
         ):
             if hasattr(cli.cmd_run, name):
                 delattr(cli.cmd_run, name)

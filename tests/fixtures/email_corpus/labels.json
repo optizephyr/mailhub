@@ -107,11 +107,12 @@
         "action": "create",
         "event_type": "assessment",
         "should_create_event": false,
+        "should_create_reminder": true,
         "company_contains": ["京东"],
         "start_at_prefix": null,
         "must_not_start_at_prefix": null
       },
-      "notes": "开放窗口测评（48小时内），无固定开考时刻，不建日程"
+      "notes": "开放窗口测评（48小时内），无固定开考时刻，建提醒事项"
     },
     {
       "id": "kuaishou_assessment",
@@ -123,11 +124,12 @@
         "action": "create",
         "event_type": "assessment",
         "should_create_event": false,
+        "should_create_reminder": true,
         "company_contains": ["快手"],
         "start_at_prefix": null,
         "must_not_start_at_prefix": null
       },
-      "notes": "N 个工作日内完成测评，无固定时刻"
+      "notes": "N 个工作日内完成测评，无固定时刻，建提醒事项"
     },
     {
       "id": "dewu_exam_window",
@@ -170,12 +172,14 @@
         "stage": "confirmed",
         "action": "create",
         "event_type": "exam",
-        "should_create_event": true,
+        "should_create_event": false,
+        "should_create_reminder": true,
         "company_contains": ["文远"],
         "start_at_prefix": "2026-05-17T08:00",
+        "end_at_prefix": "2026-05-17T21:00",
         "must_not_start_at_prefix": null
       },
-      "notes": "笔试窗口；正文「改期机会」不是本封改期通知"
+      "notes": "笔试窗口（范围内任选）；正文「改期机会」不是本封改期通知"
     },
     {
       "id": "kuaishou_schedule_invite",

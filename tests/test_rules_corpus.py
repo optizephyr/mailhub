@@ -53,8 +53,14 @@ def test_rules_corpus_case(case, mail):
         )
 
     event = heuristic_parse(mail)
-    if expect["should_create_event"]:
+    want_event = expect["should_create_event"]
+    want_reminder = expect.get("should_create_reminder", False)
+    if want_event or want_reminder:
         assert event is not None, f"{case['id']}: expected event"
+        if want_reminder:
+            assert event.time_precision == "window", case["id"]
+        else:
+            assert event.time_precision != "window", case["id"]
         if expect["action"] is not None:
             assert event.action == expect["action"], case["id"]
         if expect["event_type"] is not None:
@@ -62,6 +68,10 @@ def test_rules_corpus_case(case, mail):
         if expect["start_at_prefix"]:
             assert event.start_at.startswith(expect["start_at_prefix"]), (
                 f"{case['id']}: start_at={event.start_at!r}"
+            )
+        if expect.get("end_at_prefix"):
+            assert event.end_at.startswith(expect["end_at_prefix"]), (
+                f"{case['id']}: end_at={event.end_at!r}"
             )
         if expect["must_not_start_at_prefix"]:
             assert not event.start_at.startswith(expect["must_not_start_at_prefix"]), case["id"]
