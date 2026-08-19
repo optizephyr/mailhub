@@ -19,7 +19,8 @@ class Settings:
     llm_api_key: str
     llm_model: str
     data_dir: Path
-    calendar_scan_days: int = 90  # 本地无记录时回扫日历的天数；0 表示关闭
+    calendar_scan_days: int = 90
+    source_id: str = "qq.default"
 
     @property
     def llm_enabled(self) -> bool:
@@ -35,7 +36,7 @@ class Settings:
 
 
 def load_settings(env_file: str | None = None) -> Settings:
-    root = Path(__file__).resolve().parent.parent
+    root = Path(__file__).resolve().parents[2]
     load_dotenv(env_file or root / ".env")
 
     data_dir = root / "data"
@@ -53,6 +54,7 @@ def load_settings(env_file: str | None = None) -> Settings:
         llm_model=os.getenv("LLM_MODEL", "gpt-4o-mini").strip(),
         data_dir=data_dir,
         calendar_scan_days=int(os.getenv("CALENDAR_SCAN_DAYS", "90")),
+        source_id=os.getenv("MAIL_SOURCE_ID", "qq.default").strip() or "qq.default",
     )
 
 

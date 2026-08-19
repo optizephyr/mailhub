@@ -3,10 +3,10 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from core.config import Settings, load_settings
-from core.mail_qq import MailItem
-from core.models import CandidateEvent
-from core.parser import (
+from mailhub.runtime.config import Settings, load_settings
+from mailhub.plugins.policies.qiuzhao.types import MailItem
+from mailhub.plugins.policies.qiuzhao.types import CandidateEvent
+from mailhub.plugins.policies.qiuzhao.parser import (
     build_title,
     classify_stage,
     detect_action,
@@ -16,8 +16,8 @@ from core.parser import (
     parse_llm_json,
     parse_mail,
 )
-from core.rules import coarse_filter
-from core.store import EventStore
+from mailhub.plugins.policies.qiuzhao.rules import coarse_filter
+from mailhub.store.sqlite import EventStore
 
 
 def _settings(tmp_path: Path, **kwargs) -> Settings:
@@ -222,7 +222,7 @@ def test_parse_mail_coarse_reject_skips_llm(tmp_path: Path, monkeypatch):
         called["n"] += 1
         raise AssertionError("LLM should not be called")
 
-    monkeypatch.setattr("core.parser.llm_parse", boom)
+    monkeypatch.setattr("mailhub.plugins.policies.qiuzhao.parser.llm_parse", boom)
     mail = _mail(subject="账单通知", text="本月话费 30 元。")
     assert parse_mail(mail, settings) is None
     assert called["n"] == 0
@@ -268,7 +268,7 @@ def test_parse_mail_model_reject_no_heuristic_fallback(tmp_path: Path, monkeypat
             }
 
     monkeypatch.setattr(
-        "core.parser.requests.post",
+        "mailhub.plugins.policies.qiuzhao.parser.requests.post",
         lambda *a, **k: FakeResp(),
     )
     # 若走启发式，这封信也会被 skip；用 spy 确认启发式未被调用
@@ -279,7 +279,7 @@ def test_parse_mail_model_reject_no_heuristic_fallback(tmp_path: Path, monkeypat
         called["heuristic"] += 1
         return real_heuristic(m)
 
-    monkeypatch.setattr("core.parser.heuristic_parse", wrapped)
+    monkeypatch.setattr("mailhub.plugins.policies.qiuzhao.parser.heuristic_parse", wrapped)
     assert parse_mail(mail, settings) is None
     assert called["heuristic"] == 0
 
@@ -356,7 +356,7 @@ def test_parse_mail_keeps_think_in_raw_but_not_as_separate_field(
             return {"choices": [{"message": {"content": content}}]}
 
     monkeypatch.setattr(
-        "core.parser.requests.post",
+        "mailhub.plugins.policies.qiuzhao.parser.requests.post",
         lambda *a, **k: FakeResp(),
     )
 
@@ -405,7 +405,7 @@ def test_parse_mail_llm_error_falls_back_heuristic(tmp_path: Path, monkeypatch):
     def boom(*_a, **_k):
         raise RuntimeError("network down")
 
-    monkeypatch.setattr("core.parser.requests.post", boom)
+    monkeypatch.setattr("mailhub.plugins.policies.qiuzhao.parser.requests.post", boom)
     event = parse_mail(mail, settings)
     assert event is not None
     assert event.start_at.startswith("2026-08-25T10:00")
@@ -528,7 +528,7 @@ def test_llm_empty_company_falls_back_to_guess(tmp_path: Path, monkeypatch):
             }
 
     monkeypatch.setattr(
-        "core.parser.requests.post",
+        "mailhub.plugins.policies.qiuzhao.parser.requests.post",
         lambda *a, **k: FakeResp(),
     )
     event = parse_mail(mail, settings)

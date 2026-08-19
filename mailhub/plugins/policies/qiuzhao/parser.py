@@ -10,11 +10,11 @@ from zoneinfo import ZoneInfo
 
 import requests
 
-from .config import Settings
-from .lifecycle_log import MailTrace, event_brief, log_llm_io, new_trace_id
-from .mail_qq import MailItem
-from .models import CandidateEvent, LlmParseResult
+from mailhub.logging.lifecycle import MailTrace, event_brief, log_llm_io, new_trace_id
+from mailhub.runtime.config import Settings
+
 from .rules import coarse_filter
+from .types import CandidateEvent, LlmParseResult, MailItem
 
 TZ = ZoneInfo("Asia/Shanghai")
 

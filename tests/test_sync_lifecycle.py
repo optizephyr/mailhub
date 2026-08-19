@@ -1,4 +1,4 @@
-"""cmd_sync 生命周期日志：覆盖 apply 终态。"""
+"""cmd_run 生命周期日志：覆盖 apply 终态。"""
 
 from __future__ import annotations
 
@@ -6,10 +6,11 @@ import argparse
 import json
 from pathlib import Path
 
-from core import cli
-from core.config import Settings
-from core.mail_qq import FetchResult, MailItem
-from core.store import EventStore
+import mailhub.cli.main as cli
+from mailhub.contracts.messages import IngestBatch, MailMessage, SourceRef
+from mailhub.plugins.policies.qiuzhao.types import CandidateEvent, MailItem
+from mailhub.runtime.config import Settings
+from mailhub.store.sqlite import EventStore
 
 
 def _settings(tmp_path: Path, **kwargs) -> Settings:
@@ -25,9 +26,22 @@ def _settings(tmp_path: Path, **kwargs) -> Settings:
         llm_model="gpt-4o-mini",
         data_dir=tmp_path,
         calendar_scan_days=0,
+        source_id="qq.default",
     )
     base.update(kwargs)
     return Settings(**base)
+
+
+def _to_message(mail: MailItem, source_id: str = "qq.default") -> MailMessage:
+    return MailMessage(
+        source=SourceRef(source_id=source_id, message_id=mail.message_id),
+        subject=mail.subject,
+        sender=mail.from_,
+        sent_at=mail.date,
+        text=mail.text,
+        html=mail.html,
+        references=list(mail.references),
+    )
 
 
 def _interview_mail(**kwargs) -> MailItem:
@@ -67,22 +81,30 @@ def _run_sync(
     settings = _settings(tmp_path)
     monkeypatch.setattr(cli, "load_settings", lambda: settings)
     monkeypatch.setattr(cli, "require_mail_credentials", lambda _s: None)
-    monkeypatch.setattr(
-        cli,
-        "fetch_mails",
-        lambda *_a, **_k: FetchResult(
-            mails=mails, max_uid=99, mode="full", examined=len(mails)
-        ),
-    )
-    monkeypatch.setattr(cli, "create_apple_event", lambda *_a, **_k: create_uid)
-    monkeypatch.setattr(
-        cli, "update_apple_event", lambda *_a, **_k: None
-    )
-    monkeypatch.setattr(cli, "delete_apple_event", lambda *_a, **_k: None)
-    monkeypatch.setattr(cli, "list_apple_events", lambda *_a, **_k: [])
 
-    args = argparse.Namespace(dry_run=dry_run, full=True, json=False)
-    cli.cmd_sync(args)
+    batch = IngestBatch(
+        messages=[_to_message(m) for m in mails],
+        next_checkpoint="99",
+    )
+    cli.cmd_run._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
+    cli.cmd_run._test_create_apple_event = lambda *_a, **_k: create_uid  # type: ignore[attr-defined]
+    cli.cmd_run._test_update_apple_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
+    cli.cmd_run._test_delete_apple_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
+    cli.cmd_run._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
+
+    try:
+        args = argparse.Namespace(dry_run=dry_run, full=True, json=False)
+        cli.cmd_run(args)
+    finally:
+        for name in (
+            "_test_fetch",
+            "_test_create_apple_event",
+            "_test_update_apple_event",
+            "_test_delete_apple_event",
+            "_test_list_apple_events",
+        ):
+            if hasattr(cli.cmd_run, name):
+                delattr(cli.cmd_run, name)
 
 
 def test_sync_dry_run_logs_apply_would_create(tmp_path: Path, monkeypatch):
@@ -97,7 +119,6 @@ def test_sync_dry_run_logs_apply_would_create(tmp_path: Path, monkeypatch):
     assert apply["planned_event"]["title"]
     assert "event_row_id" not in apply
 
-    # dry-run must not write store / mark processed
     store = EventStore(tmp_path / "synced.sqlite")
     assert not store.already_processed("<sync@qq.com>")
     store.close()
@@ -130,19 +151,18 @@ def test_sync_dry_run_logs_would_skip_same(tmp_path: Path, monkeypatch):
 
     monkeypatch.setattr(cli, "load_settings", lambda: settings)
     monkeypatch.setattr(cli, "require_mail_credentials", lambda _s: None)
-    monkeypatch.setattr(
-        cli,
-        "fetch_mails",
-        lambda *_a, **_k: FetchResult(
-            mails=[_interview_mail(message_id="<newer@qq.com>")],
-            max_uid=5,
-            mode="full",
-            examined=1,
-        ),
+    batch = IngestBatch(
+        messages=[_to_message(_interview_mail(message_id="<newer@qq.com>"))],
+        next_checkpoint="5",
     )
-    monkeypatch.setattr(cli, "list_apple_events", lambda *_a, **_k: [])
+    cli.cmd_run._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
+    cli.cmd_run._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
+    try:
+        cli.cmd_run(argparse.Namespace(dry_run=True, full=True, json=False))
+    finally:
+        delattr(cli.cmd_run, "_test_fetch")
+        delattr(cli.cmd_run, "_test_list_apple_events")
 
-    cli.cmd_sync(argparse.Namespace(dry_run=True, full=True, json=False))
     records = _read_lifecycle(tmp_path)
     assert records[-1]["outcome"]["status"] == "dry_run"
     apply = next(s for s in records[-1]["stages"] if s["name"] == "apply")
@@ -189,24 +209,22 @@ def test_sync_same_time_logs_skipped_same(tmp_path: Path, monkeypatch):
 
     monkeypatch.setattr(cli, "load_settings", lambda: settings)
     monkeypatch.setattr(cli, "require_mail_credentials", lambda _s: None)
-    monkeypatch.setattr(
-        cli,
-        "fetch_mails",
-        lambda *_a, **_k: FetchResult(
-            mails=[_interview_mail(message_id="<newer@qq.com>")],
-            max_uid=5,
-            mode="full",
-            examined=1,
-        ),
+    batch = IngestBatch(
+        messages=[_to_message(_interview_mail(message_id="<newer@qq.com>"))],
+        next_checkpoint="5",
     )
-    monkeypatch.setattr(
-        cli,
-        "create_apple_event",
-        lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("不应新建")),
+    cli.cmd_run._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
+    cli.cmd_run._test_create_apple_event = lambda *_a, **_k: (_ for _ in ()).throw(  # type: ignore[attr-defined]
+        AssertionError("不应新建")
     )
-    monkeypatch.setattr(cli, "list_apple_events", lambda *_a, **_k: [])
+    cli.cmd_run._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
+    try:
+        cli.cmd_run(argparse.Namespace(dry_run=False, full=True, json=False))
+    finally:
+        for name in ("_test_fetch", "_test_create_apple_event", "_test_list_apple_events"):
+            if hasattr(cli.cmd_run, name):
+                delattr(cli.cmd_run, name)
 
-    cli.cmd_sync(argparse.Namespace(dry_run=False, full=True, json=False))
     records = _read_lifecycle(tmp_path)
     assert records[-1]["outcome"]["status"] == "skipped_same"
     apply = next(s for s in records[-1]["stages"] if s["name"] == "apply")
@@ -216,21 +234,22 @@ def test_sync_same_time_logs_skipped_same(tmp_path: Path, monkeypatch):
 def test_sync_create_failure_logs_failed(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(cli, "load_settings", lambda: _settings(tmp_path))
     monkeypatch.setattr(cli, "require_mail_credentials", lambda _s: None)
-    monkeypatch.setattr(
-        cli,
-        "fetch_mails",
-        lambda *_a, **_k: FetchResult(
-            mails=[_interview_mail()], max_uid=1, mode="full", examined=1
-        ),
+    batch = IngestBatch(
+        messages=[_to_message(_interview_mail())],
+        next_checkpoint="1",
     )
-    monkeypatch.setattr(
-        cli,
-        "create_apple_event",
-        lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("apple down")),
+    cli.cmd_run._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
+    cli.cmd_run._test_create_apple_event = lambda *_a, **_k: (_ for _ in ()).throw(  # type: ignore[attr-defined]
+        RuntimeError("apple down")
     )
-    monkeypatch.setattr(cli, "list_apple_events", lambda *_a, **_k: [])
+    cli.cmd_run._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
+    try:
+        cli.cmd_run(argparse.Namespace(dry_run=False, full=True, json=False))
+    finally:
+        for name in ("_test_fetch", "_test_create_apple_event", "_test_list_apple_events"):
+            if hasattr(cli.cmd_run, name):
+                delattr(cli.cmd_run, name)
 
-    cli.cmd_sync(argparse.Namespace(dry_run=False, full=True, json=False))
     records = _read_lifecycle(tmp_path)
     assert records[-1]["outcome"]["status"] == "failed"
     apply = next(s for s in records[-1]["stages"] if s["name"] == "apply")
@@ -272,7 +291,8 @@ def test_store_finds_fuzzy_company(tmp_path: Path):
 
 
 def test_dry_run_merges_duplicate_pdd_invites(tmp_path: Path, monkeypatch):
-    """同批两封拼多多笔试邀请（公司名略不同）应合并：一新建一跳过。"""
+    from mailhub.plugins.policies.qiuzhao import parser as parser_mod
+
     mails = [
         _pdd_exam_mail(
             message_id="<1786696273191@nowcoder.net>",
@@ -287,10 +307,6 @@ def test_dry_run_merges_duplicate_pdd_invites(tmp_path: Path, monkeypatch):
             ),
         ),
     ]
-    # 第二封启发式猜到的公司可能是「拼多多集团-PDD」或「拼多多」；
-    # 用 monkeypatch 固定两封解析结果以覆盖「公司名不一致」场景。
-    from core.models import CandidateEvent
-
     parsed = [
         CandidateEvent(
             message_id=mails[0].message_id,
@@ -345,7 +361,7 @@ def test_dry_run_merges_duplicate_pdd_invites(tmp_path: Path, monkeypatch):
             )
         return event
 
-    monkeypatch.setattr(cli, "parse_mail", fake_parse)
+    monkeypatch.setattr(parser_mod, "parse_mail", fake_parse)
     _run_sync(tmp_path, monkeypatch, mails=mails, dry_run=True)
     records = _read_lifecycle(tmp_path)
     assert len(records) == 2
@@ -357,11 +373,10 @@ def test_dry_run_merges_duplicate_pdd_invites(tmp_path: Path, monkeypatch):
 
 
 def test_sync_merges_fuzzy_company_across_runs(tmp_path: Path, monkeypatch):
-    """上一轮已建成「拼多多集团-PDD」后，再来「拼多多」同时间应跳过。"""
+    from mailhub.plugins.policies.qiuzhao import parser as parser_mod
+
     first = _pdd_exam_mail(message_id="<first@nowcoder.net>")
     second = _pdd_exam_mail(message_id="<second@nowcoder.net>")
-
-    from core.models import CandidateEvent
 
     events = {
         first.message_id: CandidateEvent(
@@ -411,7 +426,7 @@ def test_sync_merges_fuzzy_company_across_runs(tmp_path: Path, monkeypatch):
             )
         return event
 
-    monkeypatch.setattr(cli, "parse_mail", fake_parse)
+    monkeypatch.setattr(parser_mod, "parse_mail", fake_parse)
     creates: list[str] = []
 
     def track_create(*_a, **_k):
@@ -421,28 +436,32 @@ def test_sync_merges_fuzzy_company_across_runs(tmp_path: Path, monkeypatch):
     settings = _settings(tmp_path)
     monkeypatch.setattr(cli, "load_settings", lambda: settings)
     monkeypatch.setattr(cli, "require_mail_credentials", lambda _s: None)
-    monkeypatch.setattr(cli, "create_apple_event", track_create)
-    monkeypatch.setattr(cli, "update_apple_event", lambda *_a, **_k: None)
-    monkeypatch.setattr(cli, "delete_apple_event", lambda *_a, **_k: None)
-    monkeypatch.setattr(cli, "list_apple_events", lambda *_a, **_k: [])
 
-    monkeypatch.setattr(
-        cli,
-        "fetch_mails",
-        lambda *_a, **_k: FetchResult(
-            mails=[first], max_uid=1, mode="full", examined=1
-        ),
-    )
-    cli.cmd_sync(argparse.Namespace(dry_run=False, full=True, json=False))
+    def run_with(mails: list[MailItem], uid: str) -> None:
+        batch = IngestBatch(
+            messages=[_to_message(m) for m in mails],
+            next_checkpoint=uid,
+        )
+        cli.cmd_run._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
+        cli.cmd_run._test_create_apple_event = track_create  # type: ignore[attr-defined]
+        cli.cmd_run._test_update_apple_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
+        cli.cmd_run._test_delete_apple_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
+        cli.cmd_run._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
+        try:
+            cli.cmd_run(argparse.Namespace(dry_run=False, full=True, json=False))
+        finally:
+            for name in (
+                "_test_fetch",
+                "_test_create_apple_event",
+                "_test_update_apple_event",
+                "_test_delete_apple_event",
+                "_test_list_apple_events",
+            ):
+                if hasattr(cli.cmd_run, name):
+                    delattr(cli.cmd_run, name)
 
-    monkeypatch.setattr(
-        cli,
-        "fetch_mails",
-        lambda *_a, **_k: FetchResult(
-            mails=[second], max_uid=2, mode="full", examined=1
-        ),
-    )
-    cli.cmd_sync(argparse.Namespace(dry_run=False, full=True, json=False))
+    run_with([first], "1")
+    run_with([second], "2")
 
     assert len(creates) == 1
     records = _read_lifecycle(tmp_path)

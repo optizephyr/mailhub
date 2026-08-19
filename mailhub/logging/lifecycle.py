@@ -6,11 +6,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from .mail_qq import MailItem
-from .models import CandidateEvent
-
-# 每个 JSONL 日志文件最多保留的行数（超出则删最旧、留最新）
 JSONL_MAX_LINES = 100
+
 
 
 def append_jsonl(path: Path, record: dict[str, Any]) -> None:
@@ -21,7 +18,6 @@ def append_jsonl(path: Path, record: dict[str, Any]) -> None:
 
 
 def _trim_jsonl(path: Path, max_lines: int) -> None:
-    """超过 max_lines 时只保留文件末尾的最新行。"""
     lines = [
         line
         for line in path.read_text(encoding="utf-8").splitlines()
@@ -37,8 +33,7 @@ def new_trace_id() -> str:
     return f"{stamp}-{secrets.token_hex(3)}"
 
 
-def event_brief(event: CandidateEvent) -> dict[str, Any]:
-    """主日志里的精简日程字段（不含 description 全文）。"""
+def event_brief(event: Any) -> dict[str, Any]:
     return {
         "action": event.action,
         "event_type": event.event_type,
@@ -52,8 +47,7 @@ def event_brief(event: CandidateEvent) -> dict[str, Any]:
     }
 
 
-def planned_event_brief(event: CandidateEvent, *, desc_limit: int = 200) -> dict[str, Any]:
-    """dry-run 计划日程：event_brief + 截断 description。"""
+def planned_event_brief(event: Any, *, desc_limit: int = 200) -> dict[str, Any]:
     brief = event_brief(event)
     desc = event.description or ""
     if len(desc) > desc_limit:
@@ -78,7 +72,6 @@ def log_llm_io(
     error: Optional[str],
     latency_ms: int,
 ) -> None:
-    """旁路：完整 LLM I/O（不含 thinking），用 trace_id 关联主生命周期记录。"""
     append_jsonl(
         path,
         {
@@ -100,25 +93,36 @@ def log_llm_io(
 
 
 class MailTrace:
-    """一封邮件一条生命周期记录：分阶段追加，finish 时落盘。"""
-
     def __init__(
         self,
         *,
         lifecycle_path: Path,
-        mail: MailItem,
+        mail: Any,
         run: Optional[dict[str, Any]] = None,
     ) -> None:
         self.lifecycle_path = lifecycle_path
         self.trace_id = new_trace_id()
         self.ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
         self.run = dict(run or {})
+        # Support MailMessage (contracts) and legacy MailItem
+        if hasattr(mail, "source"):
+            message_id = mail.source.message_id
+            uid = 0
+            sender = mail.sender
+            date = mail.sent_at
+            subject = mail.subject
+        else:
+            message_id = mail.message_id
+            uid = getattr(mail, "uid", 0)
+            sender = getattr(mail, "from_", "")
+            date = getattr(mail, "date", None)
+            subject = mail.subject
         self.mail = {
-            "message_id": mail.message_id,
-            "uid": mail.uid,
-            "subject": mail.subject,
-            "from": mail.from_,
-            "date": mail.date,
+            "message_id": message_id,
+            "uid": uid,
+            "subject": subject,
+            "from": sender,
+            "date": date,
         }
         self.stages: list[dict[str, Any]] = []
         self._finished = False
@@ -153,7 +157,6 @@ class MailTrace:
         planned_event: Optional[dict[str, Any]] = None,
         error: Optional[str] = None,
     ) -> None:
-        """parse_only / dry-run：补 apply 阶段再落盘。sync dry-run 可带 would_* 与 planned_event。"""
         stage: dict[str, Any] = {"name": "apply", "result": result}
         if result != "dry_run":
             stage["match"] = {"via": match_via}

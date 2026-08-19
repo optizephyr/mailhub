@@ -8,7 +8,7 @@ from email import policy
 from pathlib import Path
 from typing import Any
 
-from core.mail_qq import MailItem
+from mailhub.plugins.policies.qiuzhao.types import MailItem
 
 EMAIL_EXAMPLE_DIR = Path(__file__).resolve().parent / "fixtures" / "email_corpus"
 LABELS_PATH = EMAIL_EXAMPLE_DIR / "labels.json"

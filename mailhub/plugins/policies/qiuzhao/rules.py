@@ -2,7 +2,35 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .mail_qq import RECRUIT_KEYWORDS, MailItem
+from .types import MailItem
+
+RECRUIT_KEYWORDS = (
+    "面试",
+    "笔试",
+    "测评",
+    "机考",
+    "线上面试",
+    "视频面试",
+    "面试邀约",
+    "面试通知",
+    "笔试通知",
+    "在线测评",
+    "能力测评",
+    "取消面试",
+    "面试取消",
+    "改期",
+    "时间调整",
+    "assessment",
+    "interview",
+    "online test",
+    "written test",
+    "hirevue",
+    "cancelled",
+    "reschedule",
+    "牛客",
+    "赛码",
+    "北森",
+)
 
 # 粗过滤额外召回：生命周期 / 强确认（避免取消信等被挡）
 COARSE_LIFECYCLE_SIGNALS = (

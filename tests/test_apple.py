@@ -2,8 +2,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from core import apple
-from core.models import CandidateEvent
+from mailhub.plugins.dispatch.apple_calendar import calendar_io as apple
+from mailhub.plugins.policies.qiuzhao.types import CandidateEvent
 
 
 def _event(**kwargs) -> CandidateEvent:

@@ -1,83 +1,71 @@
 # AGENTS.md
 
-本地 CLI：从 QQ 邮箱增量拉取秋招相关邮件 → 粗过滤 → LLM/启发式解析 → 写入/更新/删除 **Apple 日历**。
+本地 CLI「邮件处理中心」（包名 `mailhub`）：拉取邮箱 → 筛选重要邮件 → 经日程等渠道提醒用户。
 
-面向 macOS；日历通过 AppleScript 操作。人读说明见 `README.md`。
+当前插件：QQ IMAP、秋招策略、Apple 日历。面向 macOS。人读说明见 `README.md`。
 
 ## Setup
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-pip install pytest          # 测试用，未列入 requirements
+uv sync --extra dev
 cp .env.example .env        # 已有 .env 勿覆盖
 ```
 
-配置键见 `.env.example`。启用 LLM 需同时有 `LLM_API_BASE` + `LLM_API_KEY`。
+依赖：`pyproject.toml` + `uv.lock`。pytest 在 optional `dev` extra。配置键见 `.env.example`。启用 LLM 需同时有 `LLM_API_BASE` + `LLM_API_KEY`。
 
 ## Commands
 
 ```bash
-python -m core list-apple
-python -m core scan-apple --days 60
-python -m core sync --dry-run
-python -m core sync --dry-run --json
-python -m core sync
-python -m core sync --full
-python -m pytest tests/ -q
+uv run mailhub list-apple
+uv run mailhub scan-apple --days 60
+uv run mailhub run --dry-run
+uv run mailhub run --dry-run --json
+uv run mailhub run
+uv run mailhub run --full
+uv run mailhub sync --dry-run   # sync 为 run 的别名
+uv run pytest tests/ -q
 ```
 
-改解析 / 匹配 / 规则后：先跑相关单测，再 `sync --dry-run` 核对；不要默认对真实日历执行正式 `sync`。
-
+改解析 / 匹配 / 规则后：先跑相关单测，再 `run --dry-run` 核对；不要默认对真实日历执行正式 `run`。
 ## Architecture
 
-流水线（`cli.cmd_sync`）：
+主链：`runtime.engine.run_once`
 
-1. `mail_qq.fetch_mails` — IMAP UID 增量（游标在 `data/synced.sqlite`）
-2. `rules.coarse_filter` — 无招聘信号 / 噪声 / 宣讲群发 → 丢弃，不调 LLM
-3. `parser.parse_mail` — 有 LLM 先模型；模型明确拒绝不兜底；超时/坏 JSON/字段残缺才回退启发式
-4. 匹配旧日程 — 本地库 → 本轮 session → Apple 日历兜底（`calendar_match` + `CALENDAR_SCAN_DAYS`）
-5. 写入 — `apple.create/update/delete_*`；dry-run 只规划不写库、不写日历、不推进游标
+1. **Ingest** — `IngestSource.fetch` → `IngestBatch`
+2. **Resolve** — `MailResolver.resolve` → `ResolvedMail | IgnoredMail | ResolveFailure`
+3. **Dispatch** — `DispatchPlanner.plan` → `ActionRequest` → `ActionHandler.handle` → `ActionReceipt`
 
-| 模块 | 职责 |
+| 路径 | 职责 |
 |------|------|
-| `mail_qq.py` | QQ IMAP、`MailItem` |
-| `rules.py` | 粗过滤 |
-| `parser.py` | 启发式 + LLM 精解析 |
-| `calendar_match.py` | 邮件 ↔ 已有日程匹配 |
-| `apple.py` | macOS Calendar 读写 |
-| `store.py` | 游标、去重、活跃日程 |
-| `lifecycle_log.py` | `mail_lifecycle.jsonl` + `llm_io.jsonl`（`trace_id` 关联；每文件最多 100 行） |
-| `cli.py` | 编排与命令行 |
-| `models.py` | `CandidateEvent` 等数据结构 |
-| `config.py` | `.env` → `Settings` |
+| `mailhub/contracts/` | 跨阶段 DTO 与 Protocol（无 IO） |
+| `mailhub/runtime/` | `run_once`、Settings、RunContext |
+| `mailhub/store/` | checkpoint、processed、action 幂等、日历行 |
+| `mailhub/logging/` | lifecycle / llm_io JSONL |
+| `mailhub/plugins/sources/qq_imap.py` | QQ IMAP |
+| `mailhub/plugins/policies/qiuzhao/` | 秋招粗过滤 + 解析 |
+| `mailhub/plugins/dispatch/apple_calendar/` | Apple Planner/Handler |
+| `mailhub/cli/` | argparse 与展示 |
 
-运行态在 `data/`（gitignore：sqlite、日志）。评测语料在 `tests/fixtures/email_corpus/`（已脱敏 `.eml` + `labels.json`），由 `tests/test_rules_corpus.py` 消费。
+运行态在 `data/`（gitignore）。评测语料在 `tests/fixtures/email_corpus/`。
 
 ## Domain invariants
 
-改行为时保持这些约定（详见 README「行为说明」）：
-
-- 标题固定：`[面试|笔试|测评|其他] 公司名`；日历描述留空（匹配标记可埋在实现约定处，勿塞全文）
-- `schedule_invite`（选时间）与开放窗口测评 → **不建日程**
-- `create` / `reschedule` 必须同时有开始、结束、地点；线上用会议链接当地点
-- 同公司同学段：相同开始时间 → 跳过；不同时间 → 更新旧日程
-- 粗过滤拒绝或未调模型时只有主日志；LLM I/O 旁路保留完整 `output_raw` / `output_parsed`，不单独落 thinking
-- 系统 Python 3.9 + LibreSSL：保持 `urllib3<2`（见 `requirements.txt` 注释）
+- **全局**：dry-run 不写渠道、不推游标；Ingest 不做重要性过滤；contracts 不依赖 plugins
+- **秋招 policy 局部**：标题格式、`schedule_invite` 不建日程、create 需起止+地点
+- 系统 Python 3.9 + LibreSSL：保持 `urllib3<2`（见 `pyproject.toml` 注释）
 
 ## Code conventions
 
 - Python 3.9+；`from __future__ import annotations`；dataclass 建模
-- 新增配置：同步改 `config.Settings`、`.env.example`、必要时 README
-- 解析/匹配逻辑优先纯函数，便于单测；副作用集中在 `cli` / `apple` / `store`
-- 中文用户可见文案（CLI 输出、`outcome.summary`）保持简洁准确
-- 改规则或启发式时：在 `tests/fixtures/email_corpus/` 补/改 `.eml`，并更新 `labels.json`
+- 新增配置：同步改 `runtime.config.Settings`、`.env.example`、必要时 README
+- QQ / 秋招 / Apple 名字只出现在 `mailhub/plugins/`（及对应测试）
+- 中文用户可见文案保持简洁准确
+- 改秋招规则：在 `tests/fixtures/email_corpus/` 补/改 `.eml`，并更新 `labels.json`
 
 ## Guardrails
 
 - **勿提交 / 勿打印** `.env`、授权码、API key、真实邮件正文中的隐私
-- **勿提交** `data/`（sqlite、日志）；语料用脱敏样例放在 `tests/fixtures/email_corpus/`
-- 正式 `sync` 会改本机日历并推进游标；调试默认 `--dry-run`
+- **勿提交** `data/`（sqlite、日志）；语料用脱敏样例
+- 正式 `run` 会改本机日历并推进游标；调试默认 `--dry-run`
 - AppleScript / 日历权限失败时，引导查系统设置「自动化 / 日历」，勿伪造成功写入
-- 不要把此工具改成非 macOS 通用日历后端，除非用户明确要求
+- 不要把核心改成绑死单一日历后端；新渠道以 Planner + Handler 插件形式加入

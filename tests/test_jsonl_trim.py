@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from core.lifecycle_log import JSONL_MAX_LINES, append_jsonl
+from mailhub.logging.lifecycle import JSONL_MAX_LINES, append_jsonl
 
 
 def test_append_jsonl_keeps_newest_max_lines(tmp_path: Path):

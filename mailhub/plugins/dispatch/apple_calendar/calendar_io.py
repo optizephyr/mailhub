@@ -3,8 +3,10 @@ from __future__ import annotations
 import subprocess
 from datetime import datetime
 
-from .calendar_match import extract_marker_message_id
-from .models import AppleEventRef, CandidateEvent
+from .types import AppleEventRef
+from mailhub.plugins.policies.qiuzhao.types import CandidateEvent
+
+from .match import extract_marker_message_id
 
 # 读回日程时用的分隔符：正文里几乎不可能出现
 _FIELD_SEP = "<<M2C_FS>>"
@@ -48,7 +50,7 @@ set evLoc to "{_as_escape(event.location)}"
 tell application "Calendar"
   set calList to every calendar whose name is calName
   if (count of calList) is 0 then
-    error "找不到名为「" & calName & "」的日历，请先运行: python3 -m core list-apple"
+    error "找不到名为「" & calName & "」的日历，请先运行: python3 -m mailhub list-apple"
   end if
   set theCal to item 1 of calList
 {_date_block("startDate", start)}
@@ -188,7 +190,7 @@ set rs to "{_RECORD_SEP}"
 tell application "Calendar"
   set calList to every calendar whose name is calName
   if (count of calList) is 0 then
-    error "找不到名为「" & calName & "」的日历，请先运行: python3 -m core list-apple"
+    error "找不到名为「" & calName & "」的日历，请先运行: python3 -m mailhub list-apple"
   end if
   set theCal to item 1 of calList
   tell theCal

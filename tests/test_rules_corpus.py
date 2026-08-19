@@ -6,14 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from core.parser import (
+from mailhub.plugins.policies.qiuzhao.parser import (
     classify_stage,
     detect_action,
     detect_event_type,
     guess_company,
     heuristic_parse,
 )
-from core.rules import coarse_filter
+from mailhub.plugins.policies.qiuzhao.rules import coarse_filter
 from tests.eml_loader import EMAIL_EXAMPLE_DIR, iter_labeled_cases, load_labels
 
 

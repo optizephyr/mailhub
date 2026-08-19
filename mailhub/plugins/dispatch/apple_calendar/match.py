@@ -5,12 +5,14 @@ from __future__ import annotations
 import re
 from typing import Iterable, Optional
 
-from .models import AppleEventRef, CandidateEvent
+from mailhub.plugins.policies.qiuzhao.types import CandidateEvent
 
-MARKER_PREFIX = "[qiuzhao-mail2calendar]"
+from .types import AppleEventRef
+
+MARKER_PREFIX = "[mailhub]"
 # 旧前缀保留读取，兼容此前写入的日程描述。
 _MARKER_RE = re.compile(
-    r"\[(?:qiuzhao-mail2calendar|mail-to-calendar)\]\s*mid=(\S+)"
+    r"\[(?:mailhub|qiuzhao-mail2calendar|mail-to-calendar)\]\s*mid=(\S+)"
 )
 
 # 当前标题使用中文标签；英文标签保留用于兼容既有日程。

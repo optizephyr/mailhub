@@ -5,12 +5,42 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from .calendar_match import companies_match
-from .models import StoredEvent
+
+def _companies_match(company: str, title_company: str) -> bool:
+    left, right = company.strip(), title_company.strip()
+    if not left or not right:
+        return False
+    return left in right or right in left
+
+
+class StoredEvent:
+    """Local calendar/reminder row used by calendar plugins."""
+
+    def __init__(
+        self,
+        id: int,
+        company: str,
+        event_type: str,
+        title: str,
+        start_at: str,
+        end_at: str,
+        status: str,
+        source_message_id: str,
+        sinks: Optional[dict[str, str]] = None,
+    ) -> None:
+        self.id = id
+        self.company = company
+        self.event_type = event_type
+        self.title = title
+        self.start_at = start_at
+        self.end_at = end_at
+        self.status = status
+        self.source_message_id = source_message_id
+        self.sinks = sinks or {}
 
 
 class EventStore:
-    """Cursor + processed mails + active calendar events with sink ids."""
+    """Checkpoints, processed mail, action receipts, and plugin calendar rows."""
 
     def __init__(self, db_path: Path) -> None:
         self.db_path = db_path
@@ -27,11 +57,27 @@ class EventStore:
                 updated_at TEXT
             );
 
+            CREATE TABLE IF NOT EXISTS source_checkpoints (
+                source_id TEXT PRIMARY KEY,
+                checkpoint TEXT NOT NULL,
+                updated_at TEXT
+            );
+
             CREATE TABLE IF NOT EXISTS processed_messages (
                 message_id TEXT PRIMARY KEY,
                 action TEXT,
                 event_row_id INTEGER,
-                processed_at TEXT
+                processed_at TEXT,
+                source_id TEXT NOT NULL DEFAULT ''
+            );
+
+            CREATE TABLE IF NOT EXISTS action_executions (
+                idempotency_key TEXT PRIMARY KEY,
+                action_type TEXT NOT NULL,
+                status TEXT NOT NULL,
+                external_id TEXT,
+                error TEXT,
+                executed_at TEXT
             );
 
             CREATE TABLE IF NOT EXISTS calendar_events (
@@ -55,7 +101,53 @@ class EventStore:
             );
             """
         )
+        self._migrate_processed_source_id()
         self._conn.commit()
+
+    def _migrate_processed_source_id(self) -> None:
+        cols = {
+            r["name"]
+            for r in self._conn.execute("PRAGMA table_info(processed_messages)").fetchall()
+        }
+        if "source_id" not in cols:
+            self._conn.execute(
+                "ALTER TABLE processed_messages ADD COLUMN source_id TEXT NOT NULL DEFAULT ''"
+            )
+
+    # --- checkpoints ---
+
+    def get_checkpoint(self, source_id: str) -> Optional[str]:
+        row = self._conn.execute(
+            "SELECT checkpoint FROM source_checkpoints WHERE source_id = ?",
+            (source_id,),
+        ).fetchone()
+        if row:
+            return str(row["checkpoint"])
+        # legacy IMAP uid cursor
+        uid = self.get_last_uid("INBOX")
+        return str(uid) if uid is not None else None
+
+    def set_checkpoint(self, source_id: str, checkpoint: str) -> None:
+        now = datetime.utcnow().isoformat(timespec="seconds")
+        self._conn.execute(
+            """
+            INSERT INTO source_checkpoints (source_id, checkpoint, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(source_id) DO UPDATE SET
+              checkpoint = excluded.checkpoint,
+              updated_at = excluded.updated_at
+            """,
+            (source_id, checkpoint, now),
+        )
+        # keep legacy cursor in sync when checkpoint is numeric
+        try:
+            uid = int(checkpoint)
+        except (TypeError, ValueError):
+            uid = None
+        if uid is not None:
+            self.set_last_uid(uid, "INBOX")
+        else:
+            self._conn.commit()
 
     def get_last_uid(self, folder: str = "INBOX") -> Optional[int]:
         row = self._conn.execute(
@@ -76,30 +168,83 @@ class EventStore:
         )
         self._conn.commit()
 
-    def already_processed(self, message_id: str) -> bool:
-        row = self._conn.execute(
-            "SELECT 1 FROM processed_messages WHERE message_id = ?",
-            (message_id,),
-        ).fetchone()
+    # --- processed mail ---
+
+    def already_processed(self, message_id: str, source_id: str = "") -> bool:
+        if source_id:
+            row = self._conn.execute(
+                """
+                SELECT 1 FROM processed_messages
+                WHERE message_id = ? AND (source_id = ? OR source_id = '')
+                """,
+                (message_id, source_id),
+            ).fetchone()
+        else:
+            row = self._conn.execute(
+                "SELECT 1 FROM processed_messages WHERE message_id = ?",
+                (message_id,),
+            ).fetchone()
         return row is not None
 
     def mark_processed(
-        self, message_id: str, action: str, event_row_id: Optional[int] = None
+        self,
+        message_id: str,
+        action: str,
+        event_row_id: Optional[int] = None,
+        source_id: str = "",
     ) -> None:
         self._conn.execute(
             """
             INSERT OR REPLACE INTO processed_messages
-            (message_id, action, event_row_id, processed_at)
-            VALUES (?, ?, ?, ?)
+            (message_id, action, event_row_id, processed_at, source_id)
+            VALUES (?, ?, ?, ?, ?)
             """,
             (
                 message_id,
                 action,
                 event_row_id,
                 datetime.utcnow().isoformat(timespec="seconds"),
+                source_id,
             ),
         )
         self._conn.commit()
+
+    # --- action idempotency ---
+
+    def get_action_receipt(self, idempotency_key: str) -> Optional[dict]:
+        row = self._conn.execute(
+            "SELECT * FROM action_executions WHERE idempotency_key = ?",
+            (idempotency_key,),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def save_action_receipt(
+        self,
+        *,
+        idempotency_key: str,
+        action_type: str,
+        status: str,
+        external_id: Optional[str] = None,
+        error: Optional[str] = None,
+    ) -> None:
+        self._conn.execute(
+            """
+            INSERT OR REPLACE INTO action_executions
+            (idempotency_key, action_type, status, external_id, error, executed_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                idempotency_key,
+                action_type,
+                status,
+                external_id,
+                error,
+                datetime.utcnow().isoformat(timespec="seconds"),
+            ),
+        )
+        self._conn.commit()
+
+    # --- calendar rows (apple plugin) ---
 
     def _load_sinks(self, event_row_id: int) -> dict[str, str]:
         rows = self._conn.execute(
@@ -149,7 +294,6 @@ class EventStore:
                 return self._row_to_event(row)
 
         if company:
-            # 模糊匹配公司名：拼多多 ≈ 拼多多集团-PDD（与日历认领一致）
             rows = self._conn.execute(
                 """
                 SELECT * FROM calendar_events
@@ -161,7 +305,7 @@ class EventStore:
             ).fetchall()
             for row in rows:
                 candidate = self._row_to_event(row)
-                if companies_match(company, candidate.company):
+                if _companies_match(company, candidate.company):
                     return candidate
 
         return None
