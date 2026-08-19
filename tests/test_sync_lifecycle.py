@@ -1,4 +1,4 @@
-"""cmd_run 生命周期日志：覆盖 apply 终态。"""
+"""cmd_sync 生命周期日志：覆盖 apply 终态。"""
 
 from __future__ import annotations
 
@@ -86,18 +86,18 @@ def _run_sync(
         messages=[_to_message(m) for m in mails],
         next_checkpoint="99",
     )
-    cli.cmd_run._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
-    cli.cmd_run._test_create_apple_event = lambda *_a, **_k: create_uid  # type: ignore[attr-defined]
-    cli.cmd_run._test_update_apple_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
-    cli.cmd_run._test_delete_apple_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
-    cli.cmd_run._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
-    cli.cmd_run._test_create_apple_reminder = lambda *_a, **_k: "rem-1"  # type: ignore[attr-defined]
-    cli.cmd_run._test_update_apple_reminder = lambda *_a, **_k: None  # type: ignore[attr-defined]
-    cli.cmd_run._test_delete_apple_reminder = lambda *_a, **_k: None  # type: ignore[attr-defined]
+    cli.cmd_sync._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
+    cli.cmd_sync._test_create_apple_event = lambda *_a, **_k: create_uid  # type: ignore[attr-defined]
+    cli.cmd_sync._test_update_apple_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
+    cli.cmd_sync._test_delete_apple_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
+    cli.cmd_sync._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
+    cli.cmd_sync._test_create_apple_reminder = lambda *_a, **_k: "rem-1"  # type: ignore[attr-defined]
+    cli.cmd_sync._test_update_apple_reminder = lambda *_a, **_k: None  # type: ignore[attr-defined]
+    cli.cmd_sync._test_delete_apple_reminder = lambda *_a, **_k: None  # type: ignore[attr-defined]
 
     try:
         args = argparse.Namespace(dry_run=dry_run, full=True, json=False)
-        cli.cmd_run(args)
+        cli.cmd_sync(args)
     finally:
         for name in (
             "_test_fetch",
@@ -109,8 +109,8 @@ def _run_sync(
             "_test_update_apple_reminder",
             "_test_delete_apple_reminder",
         ):
-            if hasattr(cli.cmd_run, name):
-                delattr(cli.cmd_run, name)
+            if hasattr(cli.cmd_sync, name):
+                delattr(cli.cmd_sync, name)
 
 
 def test_sync_dry_run_logs_apply_would_create(tmp_path: Path, monkeypatch):
@@ -161,13 +161,13 @@ def test_sync_dry_run_logs_would_skip_same(tmp_path: Path, monkeypatch):
         messages=[_to_message(_interview_mail(message_id="<newer@qq.com>"))],
         next_checkpoint="5",
     )
-    cli.cmd_run._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
-    cli.cmd_run._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
+    cli.cmd_sync._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
+    cli.cmd_sync._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
     try:
-        cli.cmd_run(argparse.Namespace(dry_run=True, full=True, json=False))
+        cli.cmd_sync(argparse.Namespace(dry_run=True, full=True, json=False))
     finally:
-        delattr(cli.cmd_run, "_test_fetch")
-        delattr(cli.cmd_run, "_test_list_apple_events")
+        delattr(cli.cmd_sync, "_test_fetch")
+        delattr(cli.cmd_sync, "_test_list_apple_events")
 
     records = _read_lifecycle(tmp_path)
     assert records[-1]["outcome"]["status"] == "dry_run"
@@ -219,17 +219,17 @@ def test_sync_same_time_logs_skipped_same(tmp_path: Path, monkeypatch):
         messages=[_to_message(_interview_mail(message_id="<newer@qq.com>"))],
         next_checkpoint="5",
     )
-    cli.cmd_run._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
-    cli.cmd_run._test_create_apple_event = lambda *_a, **_k: (_ for _ in ()).throw(  # type: ignore[attr-defined]
+    cli.cmd_sync._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
+    cli.cmd_sync._test_create_apple_event = lambda *_a, **_k: (_ for _ in ()).throw(  # type: ignore[attr-defined]
         AssertionError("不应新建")
     )
-    cli.cmd_run._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
+    cli.cmd_sync._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
     try:
-        cli.cmd_run(argparse.Namespace(dry_run=False, full=True, json=False))
+        cli.cmd_sync(argparse.Namespace(dry_run=False, full=True, json=False))
     finally:
         for name in ("_test_fetch", "_test_create_apple_event", "_test_list_apple_events"):
-            if hasattr(cli.cmd_run, name):
-                delattr(cli.cmd_run, name)
+            if hasattr(cli.cmd_sync, name):
+                delattr(cli.cmd_sync, name)
 
     records = _read_lifecycle(tmp_path)
     assert records[-1]["outcome"]["status"] == "skipped_same"
@@ -244,17 +244,17 @@ def test_sync_create_failure_logs_failed(tmp_path: Path, monkeypatch):
         messages=[_to_message(_interview_mail())],
         next_checkpoint="1",
     )
-    cli.cmd_run._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
-    cli.cmd_run._test_create_apple_event = lambda *_a, **_k: (_ for _ in ()).throw(  # type: ignore[attr-defined]
+    cli.cmd_sync._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
+    cli.cmd_sync._test_create_apple_event = lambda *_a, **_k: (_ for _ in ()).throw(  # type: ignore[attr-defined]
         RuntimeError("apple down")
     )
-    cli.cmd_run._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
+    cli.cmd_sync._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
     try:
-        cli.cmd_run(argparse.Namespace(dry_run=False, full=True, json=False))
+        cli.cmd_sync(argparse.Namespace(dry_run=False, full=True, json=False))
     finally:
         for name in ("_test_fetch", "_test_create_apple_event", "_test_list_apple_events"):
-            if hasattr(cli.cmd_run, name):
-                delattr(cli.cmd_run, name)
+            if hasattr(cli.cmd_sync, name):
+                delattr(cli.cmd_sync, name)
 
     records = _read_lifecycle(tmp_path)
     assert records[-1]["outcome"]["status"] == "failed"
@@ -448,13 +448,13 @@ def test_sync_merges_fuzzy_company_across_runs(tmp_path: Path, monkeypatch):
             messages=[_to_message(m) for m in mails],
             next_checkpoint=uid,
         )
-        cli.cmd_run._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
-        cli.cmd_run._test_create_apple_event = track_create  # type: ignore[attr-defined]
-        cli.cmd_run._test_update_apple_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
-        cli.cmd_run._test_delete_apple_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
-        cli.cmd_run._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
+        cli.cmd_sync._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
+        cli.cmd_sync._test_create_apple_event = track_create  # type: ignore[attr-defined]
+        cli.cmd_sync._test_update_apple_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
+        cli.cmd_sync._test_delete_apple_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
+        cli.cmd_sync._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
         try:
-            cli.cmd_run(argparse.Namespace(dry_run=False, full=True, json=False))
+            cli.cmd_sync(argparse.Namespace(dry_run=False, full=True, json=False))
         finally:
             for name in (
                 "_test_fetch",
@@ -463,8 +463,8 @@ def test_sync_merges_fuzzy_company_across_runs(tmp_path: Path, monkeypatch):
                 "_test_delete_apple_event",
                 "_test_list_apple_events",
             ):
-                if hasattr(cli.cmd_run, name):
-                    delattr(cli.cmd_run, name)
+                if hasattr(cli.cmd_sync, name):
+                    delattr(cli.cmd_sync, name)
 
     run_with([first], "1")
     run_with([second], "2")

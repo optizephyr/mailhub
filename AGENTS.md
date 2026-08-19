@@ -19,11 +19,10 @@ cp .env.example .env        # 已有 .env 勿覆盖
 uv run mailhub list-apple
 uv run mailhub list-reminders
 uv run mailhub scan-apple --days 60
-uv run mailhub run --dry-run
-uv run mailhub run --dry-run --json
-uv run mailhub run
-uv run mailhub run --full
-uv run mailhub sync --dry-run   # sync 为 run 的别名
+uv run mailhub sync --dry-run
+uv run mailhub sync --dry-run --json
+uv run mailhub sync
+uv run mailhub sync --full
 uv run pytest tests/ -q
 ```
 

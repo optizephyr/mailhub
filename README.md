@@ -51,24 +51,21 @@ uv run mailhub list-reminders
 uv run mailhub scan-apple --days 60
 
 # 先干跑：只读匹配，展示最终动作与日程，不写入
-uv run mailhub run --dry-run
+uv run mailhub sync --dry-run
 
 # 正式运行（有游标后自动增量）
-uv run mailhub run
+uv run mailhub sync
 
 # 忽略游标，按 LOOKBACK_DAYS 重扫
-uv run mailhub run --full
+uv run mailhub sync --full
 
 # 干跑并输出 JSON
-uv run mailhub run --dry-run --json
-
-# 兼容旧命令名
-uv run mailhub sync --dry-run
+uv run mailhub sync --dry-run --json
 
 # 等价：uv run python -m mailhub ...
 ```
 
-建议用 launchd / cron 每 15～30 分钟跑一次 `uv run mailhub run`。
+建议用 launchd / cron 每 15～30 分钟跑一次 `uv run mailhub sync`。
 ## 流水线
 
 ```text

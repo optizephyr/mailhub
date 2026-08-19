@@ -48,7 +48,7 @@ def cmd_scan_apple(args: argparse.Namespace) -> None:
         print(f"  - {ev.start_at}  {ev.summary}  uid={ev.uid}{marker}")
 
 
-def cmd_run(args: argparse.Namespace) -> None:
+def cmd_sync(args: argparse.Namespace) -> None:
     settings = load_settings()
     require_mail_credentials(settings)
     dry_run = bool(args.dry_run)
@@ -64,8 +64,8 @@ def cmd_run(args: argparse.Namespace) -> None:
         full=full,
     )
     # Allow tests to replace fetch via monkeypatch on this module
-    if hasattr(cmd_run, "_test_fetch"):
-        source.fetch = cmd_run._test_fetch  # type: ignore[method-assign]
+    if hasattr(cmd_sync, "_test_fetch"):
+        source.fetch = cmd_sync._test_fetch  # type: ignore[method-assign]
 
     resolver = QiuzhaoResolver(settings)
     checkpoint = None if full else store.get_checkpoint(settings.source_id)
@@ -90,7 +90,7 @@ def cmd_run(args: argparse.Namespace) -> None:
         "update_apple_reminder",
         "delete_apple_reminder",
     ):
-        fn = getattr(cmd_run, f"_test_{key}", None)
+        fn = getattr(cmd_sync, f"_test_{key}", None)
         if fn is not None:
             extras[key] = fn
 
@@ -144,10 +144,6 @@ def cmd_run(args: argparse.Namespace) -> None:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
 
 
-# backward-compatible alias
-cmd_sync = cmd_run
-
-
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="mailhub",
@@ -155,26 +151,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    run = sub.add_parser("run", help="拉取 → 研判 → 分发提醒")
-    run.add_argument(
+    sync = sub.add_parser("sync", help="拉取 → 研判 → 同步到日历/提醒事项")
+    sync.add_argument(
         "--dry-run",
         action="store_true",
         help="只读匹配并展示最终动作，不写入、不推进游标",
     )
-    run.add_argument(
+    sync.add_argument(
         "--full",
         action="store_true",
         help="忽略增量游标，按 LOOKBACK_DAYS 窗口重扫",
     )
-    run.add_argument("--json", action="store_true", help="输出解析结果 JSON")
-    run.set_defaults(func=cmd_run)
-
-    # alias
-    sync = sub.add_parser("sync", help="同 run（兼容旧命令）")
-    sync.add_argument("--dry-run", action="store_true")
-    sync.add_argument("--full", action="store_true")
-    sync.add_argument("--json", action="store_true")
-    sync.set_defaults(func=cmd_run)
+    sync.add_argument("--json", action="store_true", help="输出解析结果 JSON")
+    sync.set_defaults(func=cmd_sync)
 
     apple = sub.add_parser("list-apple", help="列出本机 Apple 日历名称")
     apple.set_defaults(func=cmd_list_apple)
