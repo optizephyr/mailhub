@@ -15,7 +15,7 @@
 ### 2. Apple 日历
 
 1. 打开 macOS「日历」App
-2. 看左侧日历名称，填到 `APPLE_CALENDAR_NAME`（常见：`日历` / `Home` / iCloud 下某个日历）
+2. 看左侧日历名称，填到 `apple_calendar_name`（常见：`日历` / `Home` / iCloud 下某个日历）
 3. 首次写入时，系统可能弹窗请求「自动化 / 日历」权限，点允许
 4. 若 `list-apple` 卡住，到 **系统设置 → 隐私与安全性 → 自动化 / 日历**，允许终端或 Python 访问「日历」
 
@@ -23,7 +23,7 @@
 
 开放窗口类任务（测评、任选时段笔试）写入「提醒事项」，可勾选完成。
 
-1. 打开 macOS「提醒事项」App，看左侧列表名，填到 `APPLE_REMINDERS_LIST`（常见：`提醒事项`）
+1. 打开 macOS「提醒事项」App，看左侧列表名，填到 `apple_reminders_list`（常见：`提醒事项`）
 2. 首次写入时系统可能弹窗请求「自动化 / 提醒事项」权限
 3. `uv run mailhub list-reminders` 可核对列表名
 
@@ -32,8 +32,8 @@
 ```bash
 cd /path/to/qiuzhao-mail2calendar
 uv sync --extra dev
-cp .env.example .env
-# 编辑 .env 填入凭证
+cp config.example.yaml config.yaml
+# 编辑 config.yaml 填入凭证
 ```
 
 依赖由 `pyproject.toml` + `uv.lock` 管理；`uv sync` 会创建 `.venv` 并安装本包。
@@ -130,4 +130,4 @@ mailhub/
 
 ## LLM 配置
 
-见 `.env.example`。需同时配置 `LLM_API_BASE` + `LLM_API_KEY`。
+见 `config.example.yaml`。需同时配置 `llm_api_base` + `llm_api_key`。

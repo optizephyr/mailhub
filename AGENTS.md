@@ -8,10 +8,10 @@
 
 ```bash
 uv sync --extra dev
-cp .env.example .env        # 已有 .env 勿覆盖
+cp config.example.yaml config.yaml    # 已有 config.yaml 勿覆盖
 ```
 
-依赖：`pyproject.toml` + `uv.lock`。pytest 在 optional `dev` extra。配置键见 `.env.example`。启用 LLM 需同时有 `LLM_API_BASE` + `LLM_API_KEY`。
+依赖：`pyproject.toml` + `uv.lock`。pytest 在 optional `dev` extra。配置键见 `config.example.yaml`。启用 LLM 需同时有 `llm_api_base` + `llm_api_key`。
 
 ## Commands
 
@@ -58,15 +58,29 @@ uv run pytest tests/ -q
 ## Code conventions
 
 - Python 3.9+；`from __future__ import annotations`；dataclass 建模
-- 新增配置：同步改 `runtime.config.Settings`、`.env.example`、必要时 README
+- 新增配置：同步改 `runtime.config.Settings`、`config.example.yaml`、必要时 README
 - QQ / 秋招 / Apple 名字只出现在 `mailhub/plugins/`（及对应测试）
 - 中文用户可见文案保持简洁准确
 - 改秋招规则：在 `tests/fixtures/email_corpus/` 补/改 `.eml`，并更新 `labels.json`
 
 ## Guardrails
 
-- **勿提交 / 勿打印** `.env`、授权码、API key、真实邮件正文中的隐私
+- **勿提交 / 勿打印** `config.yaml`、授权码、API key、真实邮件正文中的隐私
 - **勿提交** `data/`（sqlite、日志）；语料用脱敏样例
 - 正式 `run` 会改本机日历并推进游标；调试默认 `--dry-run`
 - AppleScript / 日历或提醒事项权限失败时，引导查系统设置「自动化 / 日历 / 提醒事项」，勿伪造成功写入
 - 不要把核心改成绑死单一日历后端；新渠道以 Planner + Handler 插件形式加入
+
+## Agent 技能
+
+### 议题跟踪
+
+议题记在 GitHub Issues（`optizephyr/qiuzhao-mail2calendar`），用 `gh` 读写。详见 `docs/agents/issue-tracker.md`。
+
+### 分诊标签
+
+五个角色与标签一一对应：`needs-triage`、`needs-info`、`ready-for-agent`、`ready-for-human`、`wontfix`。详见 `docs/agents/triage-labels.md`。
+
+### 领域文档
+
+单上下文：仓库根目录 `CONTEXT.md` 与 `docs/adr/`。详见 `docs/agents/domain.md`。

@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
     "imap-tools>=1.7.0",
-    "python-dotenv>=1.0.0",
+    "PyYAML>=6.0",
     "requests>=2.31.0",
     # 系统 Python 3.9 的 ssl 基于 LibreSSL 2.8.3，urllib3 2.x 要求 OpenSSL 1.1.1+
     "urllib3<2",

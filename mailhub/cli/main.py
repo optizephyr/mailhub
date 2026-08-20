@@ -13,6 +13,8 @@ from mailhub.plugins.dispatch.apple_reminders import list_apple_reminder_lists
 from mailhub.plugins.policies.qiuzhao import QiuzhaoResolver
 from mailhub.plugins.sources.qq_imap import QqImapSource
 from mailhub.runtime.config import load_settings, require_mail_credentials
+
+import yaml
 from mailhub.runtime.context import RunContext
 from mailhub.runtime.engine import run_once
 from mailhub.store.sqlite import EventStore
@@ -183,7 +185,16 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> None:
     parser = build_parser()
     args = parser.parse_args(argv)
-    args.func(args)
+    try:
+        args.func(args)
+    except FileNotFoundError as e:
+        # 配置缺失/路径错误：loader 已自带 cp 提示
+        print(str(e), file=sys.stderr)
+        sys.exit(2)
+    except (yaml.YAMLError, ValueError) as e:
+        # 配置格式错或类型错：报错不带 traceback
+        print(f"配置文件解析失败：{e}", file=sys.stderr)
+        sys.exit(2)
 
 
 if __name__ == "__main__":

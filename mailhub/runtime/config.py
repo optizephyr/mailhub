@@ -1,24 +1,25 @@
 from __future__ import annotations
 
-import os
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from pathlib import Path
+from typing import Any
 
-from dotenv import load_dotenv
+import yaml
 
 
 @dataclass(frozen=True)
 class Settings:
-    qq_email: str
-    qq_auth_code: str
-    apple_calendar_name: str
-    lookback_days: int
-    mail_limit: int
-    reminder_minutes: int
-    llm_api_base: str
-    llm_api_key: str
-    llm_model: str
+    # data_dir 由 loader 注入；YAML 不控制。
     data_dir: Path
+    qq_email: str = ""
+    qq_auth_code: str = ""
+    apple_calendar_name: str = "日历"
+    lookback_days: int = 14
+    mail_limit: int = 80
+    reminder_minutes: int = 30
+    llm_api_base: str = ""
+    llm_api_key: str = ""
+    llm_model: str = "gpt-4o-mini"
     calendar_scan_days: int = 90
     source_id: str = "qq.default"
     apple_reminders_list: str = "提醒事项"
@@ -36,33 +37,86 @@ class Settings:
         return self.data_dir / "logs" / "llm_io.jsonl"
 
 
-def load_settings(env_file: str | None = None) -> Settings:
+_INT_FIELDS = frozenset(
+    {"lookback_days", "mail_limit", "reminder_minutes", "calendar_scan_days"}
+)
+
+# 空字符串回退到默认值的字符串字段
+_STRING_FALLBACKS = {
+    "apple_calendar_name": "日历",
+    "llm_model": "gpt-4o-mini",
+    "source_id": "qq.default",
+    "apple_reminders_list": "提醒事项",
+}
+
+
+def _coerce(key: str, value: Any) -> Any:
+    """校验类型并规范化字符串值。"""
+    if key in _INT_FIELDS:
+        # bool 是 int 的子类，先排除
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ValueError(
+                f"{key} 必须是整数（如 14），当前得到 {value!r}（{type(value).__name__}）"
+            )
+        return value
+
+    if not isinstance(value, str):
+        raise ValueError(
+            f"{key} 必须是字符串，当前得到 {value!r}（{type(value).__name__}）"
+        )
+
+    cleaned = value.strip()
+    if key == "llm_api_base":
+        # URL 末尾斜杠归一，避免与子路径拼接出现 //
+        return cleaned.rstrip("/")
+    if key in _STRING_FALLBACKS:
+        return cleaned or _STRING_FALLBACKS[key]
+    return cleaned
+
+
+def load_settings(config_path: Path | str | None = None) -> Settings:
+    """从 YAML 文件加载配置；缺文件即报错并提示复制示例。"""
     root = Path(__file__).resolve().parents[2]
-    load_dotenv(env_file or root / ".env")
+    config_file = Path(config_path) if config_path else root / "config.yaml"
+
+    if not config_file.exists():
+        raise FileNotFoundError(
+            f"找不到配置文件 {config_file}\n"
+            f"请先复制示例：cp {root / 'config.example.yaml'} {config_file}\n"
+            f"然后填入 QQ_EMAIL 和 QQ_AUTH_CODE"
+        )
+
+    with config_file.open("r", encoding="utf-8") as f:
+        raw = yaml.safe_load(f)
+
+    if raw is None:
+        raw = {}
+    if not isinstance(raw, dict):
+        raise ValueError(
+            f"{config_file} 顶层必须是 key: value 映射，当前是 {type(raw).__name__}"
+        )
 
     data_dir = root / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
 
-    return Settings(
-        qq_email=os.getenv("QQ_EMAIL", "").strip(),
-        qq_auth_code=os.getenv("QQ_AUTH_CODE", "").strip(),
-        apple_calendar_name=os.getenv("APPLE_CALENDAR_NAME", "日历").strip() or "日历",
-        lookback_days=int(os.getenv("LOOKBACK_DAYS", "14")),
-        mail_limit=int(os.getenv("MAIL_LIMIT", "80")),
-        reminder_minutes=int(os.getenv("REMINDER_MINUTES", "30")),
-        llm_api_base=os.getenv("LLM_API_BASE", "").strip().rstrip("/"),
-        llm_api_key=os.getenv("LLM_API_KEY", "").strip(),
-        llm_model=os.getenv("LLM_MODEL", "gpt-4o-mini").strip(),
-        data_dir=data_dir,
-        calendar_scan_days=int(os.getenv("CALENDAR_SCAN_DAYS", "90")),
-        source_id=os.getenv("MAIL_SOURCE_ID", "qq.default").strip() or "qq.default",
-        apple_reminders_list=os.getenv("APPLE_REMINDERS_LIST", "提醒事项").strip()
-        or "提醒事项",
-    )
+    # YAML 只能填 Settings 认识的键；未知键直接报错，避免拼写错误静默用默认值。
+    allowed = {f.name for f in fields(Settings)} - {"data_dir"}
+    unknown = sorted(set(raw) - allowed)
+    if unknown:
+        raise ValueError(
+            f"{config_file} 包含未知配置项 {unknown}；允许的项：{sorted(allowed)}"
+        )
+
+    clean: dict[str, Any] = {"data_dir": data_dir}
+    for key, value in raw.items():
+        clean[key] = _coerce(key, value)
+
+    return Settings(**clean)
 
 
 def require_mail_credentials(settings: Settings) -> None:
     if not settings.qq_email or not settings.qq_auth_code:
         raise SystemExit(
-            "请先在 .env 填写 QQ_EMAIL 和 QQ_AUTH_CODE（QQ邮箱授权码，不是登录密码）"
+            "请先在 config.yaml 填写 qq_email 和 qq_auth_code"
+            "（QQ邮箱授权码，不是登录密码）"
         )

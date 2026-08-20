@@ -1,29 +1,29 @@
 # QQ 邮箱（设置 → 账户 → 开启 IMAP/SMTP → 生成授权码）
-QQ_EMAIL=your@qq.com
-QQ_AUTH_CODE=your_qq_auth_code
+qq_email: your@qq.com
+qq_auth_code: your_qq_auth_code
 
 # 邮箱实例 id（多邮箱时区分 checkpoint）
-MAIL_SOURCE_ID=qq.default
+source_id: qq.default
 
 # Apple 日历名称（「日历」App 左侧列表里的名字，常见：日历 / Home / 工作）
-APPLE_CALENDAR_NAME=日历
+apple_calendar_name: 日历
 
 # 提醒事项列表名称（「提醒事项」App 左侧列表，常见：提醒事项）
-APPLE_REMINDERS_LIST=提醒事项
+apple_reminders_list: 提醒事项
 
 # 扫描范围
-LOOKBACK_DAYS=14
-MAIL_LIMIT=80
+lookback_days: 14
+mail_limit: 80
 
 # 提醒：开始前多少分钟
-REMINDER_MINUTES=30
+reminder_minutes: 30
 
 # 本地无记录时，回到日历里找已有日程的时间窗（天）；0 关闭
-CALENDAR_SCAN_DAYS=90
+calendar_scan_days: 90
 
 # 可选：任意 OpenAI Chat Completions 兼容接口
 # 启用后：秋招策略先规则粗过滤，再调 LLM
 # 生命周期：data/logs/mail_lifecycle.jsonl ；LLM 原文：data/logs/llm_io.jsonl
-# LLM_API_BASE=https://your-provider.example/v1
-# LLM_API_KEY=
-# LLM_MODEL=your-model
+# llm_api_base: https://your-provider.example/v1
+# llm_api_key:
+# llm_model: gpt-4o-mini

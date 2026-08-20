@@ -188,12 +188,18 @@ def test_reschedule_mail_action():
     assert event.start_at.startswith("2026-08-28T15:00")
 
 
-def test_openai_compatible_llm_settings(monkeypatch, tmp_path: Path):
-    monkeypatch.setenv("LLM_API_BASE", "https://api.example.com/v1/")
-    monkeypatch.setenv("LLM_API_KEY", "test-key")
-    monkeypatch.setenv("LLM_MODEL", "example-model")
+def test_openai_compatible_llm_settings(tmp_path: Path):
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text(
+        "qq_email: a@qq.com\n"
+        "qq_auth_code: x\n"
+        "llm_api_base: https://api.example.com/v1/\n"
+        "llm_api_key: test-key\n"
+        "llm_model: example-model\n",
+        encoding="utf-8",
+    )
 
-    settings = load_settings(str(tmp_path / "missing.env"))
+    settings = load_settings(config_file)
 
     assert settings.llm_enabled
     assert settings.llm_api_base == "https://api.example.com/v1"
