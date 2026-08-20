@@ -1,0 +1,18 @@
+# 部署项来自同目录 .env；旋钮在镜像内的 config.yaml。
+# 同一 source_id 任意时刻只跑一个写入方。
+services:
+  mailhub:
+    build: .
+    env_file: .env
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 1m
+    # 每 15 分钟跑一次；改间隔只动这里，不必重建业务配置
+    command:
+      - sh
+      - -c
+      - while true; do mailhub sync; sleep 900; done

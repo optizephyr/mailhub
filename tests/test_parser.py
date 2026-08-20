@@ -203,14 +203,31 @@ def test_reschedule_mail_action():
     assert event.start_at.startswith("2026-08-28T15:00")
 
 
-def test_openai_compatible_llm_settings(tmp_path: Path):
+_DEPLOY_ENV = (
+    "QQ_EMAIL",
+    "QQ_AUTH_CODE",
+    "CALDAV_URL",
+    "CALDAV_USERNAME",
+    "CALDAV_PASSWORD",
+    "LLM_API_BASE",
+    "LLM_API_KEY",
+    "BARK_SERVER_URL",
+    "BARK_KEY",
+)
+
+
+@pytest.fixture
+def isolated_deploy_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in _DEPLOY_ENV:
+        monkeypatch.delenv(name, raising=False)
+
+
+def test_openai_compatible_llm_settings(tmp_path: Path, isolated_deploy_env):
     config_file = tmp_path / "config.yaml"
-    config_file.write_text(
-        "qq_email: a@qq.com\n"
-        "qq_auth_code: x\n"
-        "llm_api_base: https://api.example.com/v1/\n"
-        "llm_api_key: test-key\n"
-        "llm_model: example-model\n",
+    config_file.write_text("llm_model: example-model\n", encoding="utf-8")
+    (tmp_path / ".env").write_text(
+        "LLM_API_BASE=https://api.example.com/v1/\n"
+        "LLM_API_KEY=test-key\n",
         encoding="utf-8",
     )
 
@@ -222,12 +239,14 @@ def test_openai_compatible_llm_settings(tmp_path: Path):
     assert settings.llm_model == "example-model"
 
 
-def test_bark_settings_require_boolean_and_normalize_server_url(tmp_path: Path):
+def test_bark_settings_from_env_normalize_server_url(
+    tmp_path: Path, isolated_deploy_env
+):
     config_file = tmp_path / "config.yaml"
-    config_file.write_text(
-        "bark_enabled: true\n"
-        "bark_key: test-device-key\n"
-        "bark_server_url: https://bark.example.com/\n",
+    config_file.write_text("source_id: qq.default\n", encoding="utf-8")
+    (tmp_path / ".env").write_text(
+        "BARK_KEY=test-device-key\n"
+        "BARK_SERVER_URL=https://bark.example.com/\n",
         encoding="utf-8",
     )
 
@@ -238,15 +257,28 @@ def test_bark_settings_require_boolean_and_normalize_server_url(tmp_path: Path):
     assert settings.bark_server_url == "https://bark.example.com"
 
 
-def test_bark_enabled_rejects_non_boolean_value(tmp_path: Path):
+def test_dotenv_does_not_override_existing_env(
+    tmp_path: Path, isolated_deploy_env, monkeypatch: pytest.MonkeyPatch
+):
     config_file = tmp_path / "config.yaml"
-    config_file.write_text('bark_enabled: "true"\n', encoding="utf-8")
+    config_file.write_text("{}\n", encoding="utf-8")
+    (tmp_path / ".env").write_text("QQ_EMAIL=from-file@qq.com\n", encoding="utf-8")
+    monkeypatch.setenv("QQ_EMAIL", "from-process@qq.com")
 
-    with pytest.raises(ValueError, match="bark_enabled 必须是布尔值"):
+    settings = load_settings(config_file)
+
+    assert settings.qq_email == "from-process@qq.com"
+
+
+def test_yaml_rejects_deploy_keys(tmp_path: Path, isolated_deploy_env):
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("qq_email: a@qq.com\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="未知配置项"):
         load_settings(config_file)
 
 
-def test_settings_reject_unknown_key(tmp_path: Path):
+def test_settings_reject_unknown_key(tmp_path: Path, isolated_deploy_env):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("bark_sever_url: https://typo.example.com\n", encoding="utf-8")
 

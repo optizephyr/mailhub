@@ -1,10 +1,48 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+import os
 
 import yaml
+from dotenv import load_dotenv
+
+
+# YAML 只允许这些旋钮；部署项只来自环境变量。
+_YAML_KEYS = frozenset(
+    {
+        "source_id",
+        "calendar_name",
+        "reminders_list",
+        "lookback_days",
+        "mail_limit",
+        "reminder_minutes",
+        "calendar_scan_days",
+        "llm_model",
+    }
+)
+
+_ENV_KEYS = {
+    "QQ_EMAIL": "qq_email",
+    "QQ_AUTH_CODE": "qq_auth_code",
+    "CALDAV_URL": "caldav_url",
+    "CALDAV_USERNAME": "caldav_username",
+    "CALDAV_PASSWORD": "caldav_password",
+    "LLM_API_BASE": "llm_api_base",
+    "LLM_API_KEY": "llm_api_key",
+    "BARK_SERVER_URL": "bark_server_url",
+    "BARK_KEY": "bark_key",
+}
+
+_INT_FIELDS = frozenset(
+    {"lookback_days", "mail_limit", "reminder_minutes", "calendar_scan_days"}
+)
+
+_STRING_FALLBACKS = {
+    "llm_model": "gpt-4o-mini",
+    "source_id": "qq.default",
+}
 
 
 @dataclass(frozen=True)
@@ -26,13 +64,16 @@ class Settings:
     llm_model: str = "gpt-4o-mini"
     calendar_scan_days: int = 90
     source_id: str = "qq.default"
-    bark_enabled: bool = False
     bark_key: str = ""
     bark_server_url: str = ""
 
     @property
     def llm_enabled(self) -> bool:
         return bool(self.llm_api_key and self.llm_api_base)
+
+    @property
+    def bark_enabled(self) -> bool:
+        return bool(self.bark_key and self.bark_server_url)
 
     @property
     def lifecycle_log_path(self) -> Path:
@@ -43,18 +84,6 @@ class Settings:
         return self.data_dir / "logs" / "llm_io.jsonl"
 
 
-_INT_FIELDS = frozenset(
-    {"lookback_days", "mail_limit", "reminder_minutes", "calendar_scan_days"}
-)
-_BOOL_FIELDS = frozenset({"bark_enabled"})
-
-# 空字符串回退到默认值的字符串字段
-_STRING_FALLBACKS = {
-    "llm_model": "gpt-4o-mini",
-    "source_id": "qq.default",
-}
-
-
 def _coerce(key: str, value: Any) -> Any:
     """校验类型并规范化字符串值。"""
     if key in _INT_FIELDS:
@@ -62,14 +91,6 @@ def _coerce(key: str, value: Any) -> Any:
         if isinstance(value, bool) or not isinstance(value, int):
             raise ValueError(
                 f"{key} 必须是整数（如 14），当前得到 {value!r}（{type(value).__name__}）"
-            )
-        return value
-
-    if key in _BOOL_FIELDS:
-        if not isinstance(value, bool):
-            raise ValueError(
-                f"{key} 必须是布尔值（true 或 false），"
-                f"当前得到 {value!r}（{type(value).__name__}）"
             )
         return value
 
@@ -87,17 +108,24 @@ def _coerce(key: str, value: Any) -> Any:
     return cleaned
 
 
+def _project_root() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
 def load_settings(config_path: Path | str | None = None) -> Settings:
-    """从 YAML 文件加载配置；缺文件即报错并提示复制示例。"""
-    root = Path(__file__).resolve().parents[2]
+    """从 YAML 旋钮与环境变量部署项加载配置。"""
+    root = _project_root()
     config_file = Path(config_path) if config_path else root / "config.yaml"
 
     if not config_file.exists():
         raise FileNotFoundError(
             f"找不到配置文件 {config_file}\n"
-            f"请先复制示例：cp {root / 'config.example.yaml'} {config_file}\n"
-            f"然后填入 QQ_EMAIL 和 QQ_AUTH_CODE"
+            f"仓库应包含 config.yaml（行为旋钮）。部署项见 .env.example。"
         )
+
+    dotenv_file = config_file.parent / ".env"
+    if dotenv_file.is_file():
+        load_dotenv(dotenv_file, override=False)
 
     with config_file.open("r", encoding="utf-8") as f:
         raw = yaml.safe_load(f)
@@ -112,17 +140,23 @@ def load_settings(config_path: Path | str | None = None) -> Settings:
     data_dir = root / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
 
-    # YAML 只能填 Settings 认识的键；未知键直接报错，避免拼写错误静默用默认值。
-    allowed = {f.name for f in fields(Settings)} - {"data_dir"}
-    unknown = sorted(set(raw) - allowed)
+    unknown = sorted(set(raw) - _YAML_KEYS)
     if unknown:
         raise ValueError(
-            f"{config_file} 包含未知配置项 {unknown}；允许的项：{sorted(allowed)}"
+            f"{config_file} 包含未知配置项 {unknown}；"
+            f"YAML 允许的项：{sorted(_YAML_KEYS)}。"
+            f"邮箱、口令、服务入口请写在 .env（见 .env.example）"
         )
 
     clean: dict[str, Any] = {"data_dir": data_dir}
     for key, value in raw.items():
         clean[key] = _coerce(key, value)
+
+    for env_name, field in _ENV_KEYS.items():
+        value = os.environ.get(env_name)
+        if value is None:
+            continue
+        clean[field] = _coerce(field, value)
 
     return Settings(**clean)
 
@@ -130,22 +164,25 @@ def load_settings(config_path: Path | str | None = None) -> Settings:
 def require_mail_credentials(settings: Settings) -> None:
     if not settings.qq_email or not settings.qq_auth_code:
         raise SystemExit(
-            "请先在 config.yaml 填写 qq_email 和 qq_auth_code"
+            "请先在环境变量或 .env 填写 QQ_EMAIL 和 QQ_AUTH_CODE"
             "（QQ邮箱授权码，不是登录密码）"
         )
 
 
 def require_bark_config(settings: Settings) -> None:
-    if not settings.bark_enabled:
+    has_key = bool(settings.bark_key)
+    has_url = bool(settings.bark_server_url)
+    if has_key and has_url:
+        return
+    if not has_key and not has_url:
         return
 
     missing = []
-    if not settings.bark_key:
+    if not has_key:
         missing.append("密钥")
-    if not settings.bark_server_url:
+    if not has_url:
         missing.append("服务器地址")
-    if missing:
-        raise SystemExit(f"Bark 已启用，但缺少 Bark {'和'.join(missing)}")
+    raise SystemExit(f"缺少 Bark {'和'.join(missing)}")
 
 
 def require_caldav_config(settings: Settings) -> None:

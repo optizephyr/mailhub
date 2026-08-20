@@ -17,7 +17,7 @@ CLI：拉取邮箱 → 筛选重要邮件 → 通过日程等方式提醒用户�
 准备一个同时支持 `VEVENT` 和 `VTODO` 的第三方 CalDAV 账户，例如 Radicale 或 Nextcloud。mailhub 不直连 iCloud，也不再通过本机 App / AppleScript 写入。
 
 1. 在账户中建一本日历和一个任务列表。
-2. 配置 `caldav_url`、`caldav_username`、`caldav_password`。
+2. 在 `.env` 填写 `CALDAV_URL`、`CALDAV_USERNAME`、`CALDAV_PASSWORD`。
 3. 分别把显示名称精确填入 `calendar_name` 与 `reminders_list`。
 4. 名称留空表示该渠道未启用；对应邮件会被消耗，不改道、以后也不补送。
 5. 在需要查看的设备上添加同一个 CalDAV 账户。
@@ -29,8 +29,8 @@ CLI：拉取邮箱 → 筛选重要邮件 → 通过日程等方式提醒用户�
 Bark 是可选的即时推送渠道，默认未启用。当前只有 `schedule_invite` 进入 Bark；已确认场次、改期、取消和开放窗口不会改道到 Bark。
 
 - 仅支持自建服务器和一个设备密钥，不使用官方默认地址
-- 在 `config.yaml` 设置 `bark_enabled: true` 时，必须同时填写 `bark_server_url` 与 `bark_key`
-- 启用后缺少任一项，`sync` 和 `sync --dry-run` 都会在拉信前失败
+- 环境变量同时提供 `BARK_SERVER_URL` 与 `BARK_KEY` 即启用；只填其中一项则 `sync` / `sync --dry-run` 在拉信前失败
+- 两项都空则为未启用
 - dry-run 只校验配置，不向 Bark 服务器发请求
 
 ## 安装
@@ -38,8 +38,9 @@ Bark 是可选的即时推送渠道，默认未启用。当前只有 `schedule_i
 ```bash
 cd /path/to/qiuzhao-mail2calendar
 uv sync --extra dev
-cp config.example.yaml config.yaml
-# 编辑 config.yaml 填入凭证
+cp .env.example .env
+# 编辑 .env 填入邮箱、授权码、CalDAV 等部署项
+# 行为旋钮在仓库内 config.yaml（可随版本修改）
 ```
 
 依赖由 `pyproject.toml` + `uv.lock` 管理；`uv sync` 会创建 `.venv` 并安装本包。
@@ -79,6 +80,25 @@ uv run mailhub sync --dry-run --json
 ```
 
 建议用 cron / systemd timer 每 15～30 分钟跑一次 `uv run mailhub sync`。同一邮箱实例任意时刻只运行一个写入方，并让它独占 `data/` 里的游标与幂等状态。
+
+## Docker Compose
+
+服务器上：
+
+```bash
+cp .env.example .env   # 已有 .env 勿覆盖
+# 编辑 .env
+docker compose up -d --build
+```
+
+默认每 15 分钟执行一次 `mailhub sync`；游标和日志在宿主机 `./data`。更新代码后同样 `docker compose up -d --build`，`.env` 不用动。
+
+一次性命令（不进循环）：
+
+```bash
+docker compose run --rm mailhub mailhub list-calendars
+docker compose run --rm mailhub mailhub sync --dry-run
+```
 ## 流水线
 
 ```text
@@ -145,4 +165,4 @@ mailhub/
 
 ## LLM 配置
 
-见 `config.example.yaml`。需同时配置 `llm_api_base` + `llm_api_key`。
+见 `.env.example`。需同时配置 `LLM_API_BASE` 与 `LLM_API_KEY`；模型名在 `config.yaml` 的 `llm_model`。

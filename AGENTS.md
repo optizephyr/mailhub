@@ -8,10 +8,10 @@ CLI「邮件处理中心」（包名 `mailhub`）：拉取邮箱 → 筛选重�
 
 ```bash
 uv sync --extra dev
-cp config.example.yaml config.yaml    # 已有 config.yaml 勿覆盖
+cp .env.example .env   # 已有 .env 勿覆盖
 ```
 
-依赖：`pyproject.toml` + `uv.lock`。pytest 在 optional `dev` extra。配置键见 `config.example.yaml`。启用 LLM 需同时有 `llm_api_base` + `llm_api_key`。
+依赖：`pyproject.toml` + `uv.lock`。pytest 在 optional `dev` extra。旋钮见 `config.yaml`，部署项见 `.env.example`。启用 LLM 需同时有 `LLM_API_BASE` + `LLM_API_KEY`。
 
 ## Commands
 
@@ -24,6 +24,8 @@ uv run mailhub sync --dry-run --json
 uv run mailhub sync
 uv run mailhub sync --full
 uv run pytest tests/ -q
+docker compose up -d --build
+docker compose run --rm mailhub mailhub sync --dry-run
 ```
 
 改解析 / 匹配 / 规则后：先跑相关单测，再 `run --dry-run` 核对；不要默认对真实日历执行正式 `run`。
@@ -60,14 +62,14 @@ uv run pytest tests/ -q
 ## Code conventions
 
 - Python 3.9+；`from __future__ import annotations`；dataclass 建模
-- 新增配置：同步改 `runtime.config.Settings`、`config.example.yaml`、必要时 README
+- 新增配置：旋钮同步改 `runtime.config.Settings`、`config.yaml`；部署项同步改 `_ENV_KEYS`、`.env.example`；必要时 README
 - QQ / 秋招名字只出现在 `mailhub/plugins/`（及对应测试）
 - 中文用户可见文案保持简洁准确
 - 改秋招规则：在 `tests/fixtures/email_corpus/` 补/改 `.eml`，并更新 `labels.json`
 
 ## Guardrails
 
-- **勿提交 / 勿打印** `config.yaml`、授权码、API key、真实邮件正文中的隐私
+- **勿提交 / 勿打印** `.env`、授权码、API key、真实邮件正文中的隐私
 - **勿提交** `data/`（sqlite、日志）；语料用脱敏样例
 - 正式 `sync` 会写 CalDAV 并推进游标；调试默认 `--dry-run`
 - CalDAV 失败时报告认证 / 权限 / 协议错误，勿打印密码或 Authorization

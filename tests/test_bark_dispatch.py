@@ -44,7 +44,6 @@ def test_schedule_invite_fixture_pushes_bark_once(
         calendar_name="秋招",
         reminders_list="秋招提醒",
         calendar_scan_days=0,
-        bark_enabled=True,
         bark_key="device-key",
         bark_server_url="https://bark.example.com",
     )
@@ -102,7 +101,6 @@ def test_schedule_invite_dry_run_previews_without_contacting_bark(
         data_dir=tmp_path,
         calendar_name="秋招",
         calendar_scan_days=0,
-        bark_enabled=True,
         bark_key="device-key",
         bark_server_url="https://bark.example.com",
     )
@@ -158,7 +156,6 @@ def test_other_resolved_mail_does_not_push_bark(
         calendar_name="秋招",
         reminders_list="秋招提醒",
         calendar_scan_days=0,
-        bark_enabled=True,
         bark_key="device-key",
         bark_server_url="https://bark.example.com",
     )
@@ -246,7 +243,6 @@ def test_default_appearance_time_uses_calendar_instead_of_bark(
         data_dir=tmp_path,
         calendar_name="秋招",
         calendar_scan_days=0,
-        bark_enabled=True,
         bark_key="device-key",
         bark_server_url="https://bark.example.com",
     )
@@ -288,7 +284,6 @@ def test_failed_bark_push_leaves_message_unprocessed(
     settings = Settings(
         data_dir=tmp_path,
         calendar_scan_days=0,
-        bark_enabled=True,
         bark_key="device-key",
         bark_server_url="https://bark.example.com",
     )

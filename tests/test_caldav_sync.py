@@ -457,7 +457,6 @@ def test_sync_runs_bark_only_without_caldav_account(
         data_dir=tmp_path,
         qq_email="a@qq.com",
         qq_auth_code="mail-secret",
-        bark_enabled=True,
         bark_key="device-key",
         bark_server_url="https://bark.example.com",
         calendar_name="",

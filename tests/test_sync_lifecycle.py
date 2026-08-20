@@ -119,18 +119,16 @@ def _run_sync(
 @pytest.mark.parametrize(
     ("dry_run", "settings_overrides", "error"),
     [
-        (False, {}, "密钥和服务器地址"),
-        (True, {}, "密钥和服务器地址"),
         (False, {"bark_server_url": "https://bark.example.com"}, "缺少 Bark 密钥$"),
         (True, {"bark_server_url": "https://bark.example.com"}, "缺少 Bark 密钥$"),
         (False, {"bark_key": "test-device-key"}, "缺少 Bark 服务器地址$"),
         (True, {"bark_key": "test-device-key"}, "缺少 Bark 服务器地址$"),
     ],
 )
-def test_sync_rejects_enabled_bark_without_delivery_config_before_fetch(
+def test_sync_rejects_partial_bark_config_before_fetch(
     tmp_path: Path, monkeypatch, dry_run, settings_overrides, error
 ):
-    settings = _settings(tmp_path, bark_enabled=True, **settings_overrides)
+    settings = _settings(tmp_path, **settings_overrides)
     monkeypatch.setattr(cli, "load_settings", lambda: settings)
     monkeypatch.setattr(cli, "require_mail_credentials", lambda _s: None)
     fetched = False
@@ -155,7 +153,6 @@ def test_sync_dry_run_with_bark_enabled_does_not_contact_server(
 ):
     settings = _settings(
         tmp_path,
-        bark_enabled=True,
         bark_key="test-device-key",
         bark_server_url="https://bark.example.com",
     )

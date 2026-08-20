@@ -1,5 +1,4 @@
 .env
-config.yaml
 .venv/
 venv/
 __pycache__/
