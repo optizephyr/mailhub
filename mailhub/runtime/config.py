@@ -23,6 +23,9 @@ class Settings:
     calendar_scan_days: int = 90
     source_id: str = "qq.default"
     apple_reminders_list: str = "提醒事项"
+    bark_enabled: bool = False
+    bark_key: str = ""
+    bark_server_url: str = ""
 
     @property
     def llm_enabled(self) -> bool:
@@ -40,6 +43,7 @@ class Settings:
 _INT_FIELDS = frozenset(
     {"lookback_days", "mail_limit", "reminder_minutes", "calendar_scan_days"}
 )
+_BOOL_FIELDS = frozenset({"bark_enabled"})
 
 # 空字符串回退到默认值的字符串字段
 _STRING_FALLBACKS = {
@@ -60,13 +64,21 @@ def _coerce(key: str, value: Any) -> Any:
             )
         return value
 
+    if key in _BOOL_FIELDS:
+        if not isinstance(value, bool):
+            raise ValueError(
+                f"{key} 必须是布尔值（true 或 false），"
+                f"当前得到 {value!r}（{type(value).__name__}）"
+            )
+        return value
+
     if not isinstance(value, str):
         raise ValueError(
             f"{key} 必须是字符串，当前得到 {value!r}（{type(value).__name__}）"
         )
 
     cleaned = value.strip()
-    if key == "llm_api_base":
+    if key in {"llm_api_base", "bark_server_url"}:
         # URL 末尾斜杠归一，避免与子路径拼接出现 //
         return cleaned.rstrip("/")
     if key in _STRING_FALLBACKS:
@@ -120,3 +132,16 @@ def require_mail_credentials(settings: Settings) -> None:
             "请先在 config.yaml 填写 qq_email 和 qq_auth_code"
             "（QQ邮箱授权码，不是登录密码）"
         )
+
+
+def require_bark_config(settings: Settings) -> None:
+    if not settings.bark_enabled:
+        return
+
+    missing = []
+    if not settings.bark_key:
+        missing.append("密钥")
+    if not settings.bark_server_url:
+        missing.append("服务器地址")
+    if missing:
+        raise SystemExit(f"Bark 已启用，但缺少 Bark {'和'.join(missing)}")

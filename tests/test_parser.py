@@ -3,6 +3,8 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import pytest
+
 from mailhub.runtime.config import Settings, load_settings
 from mailhub.plugins.policies.qiuzhao.types import MailItem
 from mailhub.plugins.policies.qiuzhao.types import CandidateEvent
@@ -205,6 +207,38 @@ def test_openai_compatible_llm_settings(tmp_path: Path):
     assert settings.llm_api_base == "https://api.example.com/v1"
     assert settings.llm_api_key == "test-key"
     assert settings.llm_model == "example-model"
+
+
+def test_bark_settings_require_boolean_and_normalize_server_url(tmp_path: Path):
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text(
+        "bark_enabled: true\n"
+        "bark_key: test-device-key\n"
+        "bark_server_url: https://bark.example.com/\n",
+        encoding="utf-8",
+    )
+
+    settings = load_settings(config_file)
+
+    assert settings.bark_enabled is True
+    assert settings.bark_key == "test-device-key"
+    assert settings.bark_server_url == "https://bark.example.com"
+
+
+def test_bark_enabled_rejects_non_boolean_value(tmp_path: Path):
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text('bark_enabled: "true"\n', encoding="utf-8")
+
+    with pytest.raises(ValueError, match="bark_enabled 必须是布尔值"):
+        load_settings(config_file)
+
+
+def test_settings_reject_unknown_key(tmp_path: Path):
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("bark_sever_url: https://typo.example.com\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="未知配置项.*bark_sever_url"):
+        load_settings(config_file)
 
 
 def test_parse_llm_json_accepts_markdown_fence():

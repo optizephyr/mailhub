@@ -2,7 +2,7 @@
 
 本地 CLI「邮件处理中心」（包名 `mailhub`）：拉取邮箱 → 筛选重要邮件 → 经日程等渠道提醒用户。
 
-当前插件：QQ IMAP、秋招策略、Apple 日历、Apple 提醒事项。面向 macOS。人读说明见 `README.md`。
+当前插件：QQ IMAP、秋招策略、Apple 日历、Apple 提醒事项、Bark。面向 macOS。人读说明见 `README.md`。
 
 ## Setup
 
@@ -45,6 +45,7 @@ uv run pytest tests/ -q
 | `mailhub/plugins/policies/qiuzhao/` | 秋招粗过滤 + 解析 |
 | `mailhub/plugins/dispatch/apple_calendar/` | Apple 日历 Planner/Handler |
 | `mailhub/plugins/dispatch/apple_reminders/` | Apple 提醒事项 Planner/Handler |
+| `mailhub/plugins/dispatch/bark/` | Bark Planner/Handler |
 | `mailhub/cli/` | argparse 与展示 |
 
 运行态在 `data/`（gitignore）。评测语料在 `tests/fixtures/email_corpus/`。

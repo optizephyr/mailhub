@@ -1,4 +1,4 @@
-from .config import Settings, load_settings, require_mail_credentials
+from .config import Settings, load_settings, require_bark_config, require_mail_credentials
 from .context import RunContext, RunResult
 
 __all__ = [
@@ -6,6 +6,7 @@ __all__ = [
     "RunResult",
     "Settings",
     "load_settings",
+    "require_bark_config",
     "require_mail_credentials",
     "run_once",
 ]

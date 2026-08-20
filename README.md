@@ -2,7 +2,7 @@
 
 本地 CLI：拉取邮箱 → 筛选重要邮件 → 通过日程等方式提醒用户。
 
-当前内置插件：QQ IMAP 取信、秋招重要性策略、Apple 日历 / 提醒事项分发。面向 macOS；日历与提醒事项经 AppleScript 操作。
+当前内置插件：QQ IMAP 取信、秋招重要性策略、Apple 日历 / 提醒事项及 Bark 分发。面向 macOS；日历与提醒事项经 AppleScript 操作。
 
 ## 准备
 
@@ -26,6 +26,15 @@
 1. 打开 macOS「提醒事项」App，看左侧列表名，填到 `apple_reminders_list`（常见：`提醒事项`）
 2. 首次写入时系统可能弹窗请求「自动化 / 提醒事项」权限
 3. `uv run mailhub list-reminders` 可核对列表名
+
+### 4. Bark
+
+Bark 是可选的即时推送渠道，默认未启用。目前只接入渠道，尚未决定哪些邮件进入 Bark，因此不会产生推送。
+
+- 仅支持自建服务器和一个设备密钥，不使用官方默认地址
+- 在 `config.yaml` 设置 `bark_enabled: true` 时，必须同时填写 `bark_server_url` 与 `bark_key`
+- 启用后缺少任一项，`sync` 和 `sync --dry-run` 都会在拉信前失败
+- dry-run 只校验配置，不向 Bark 服务器发请求
 
 ## 安装
 
@@ -74,7 +83,7 @@ Ingest（取信）→ Resolve（研判）→ Dispatch（分发）
 
 - **Ingest**：`plugins/sources/qq_imap.py`，返回 `IngestBatch`（messages + next_checkpoint）
 - **Resolve**：`plugins/policies/qiuzhao`，产出与渠道无关的 `ResolvedMail` / `IgnoredMail`
-- **Dispatch**：Planner 生成 `ActionRequest`，Handler 执行（Apple 日历 + 提醒事项）
+- **Dispatch**：Planner 生成 `ActionRequest`，Handler 执行（Apple 日历 + 提醒事项 + Bark）
 
 ## 行为说明
 
@@ -82,6 +91,7 @@ Ingest（取信）→ Resolve（研判）→ Dispatch（分发）
 
 - 解析后做只读匹配，判定将新建 / 更新 / 取消 / 跳过 / 失败
 - 不写库、不写日历、不推进游标
+- 校验已启用的 Bark 配置，但不请求 Bark 服务器
 - `--json` 每项为 `{apply, match_via, event}`
 
 ### 增量拉取
@@ -125,6 +135,7 @@ mailhub/
     policies/qiuzhao/
     dispatch/apple_calendar/
     dispatch/apple_reminders/
+    dispatch/bark/
   cli/
 ```
 

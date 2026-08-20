@@ -12,7 +12,11 @@ from mailhub.plugins.dispatch.apple_calendar import list_apple_calendars, list_a
 from mailhub.plugins.dispatch.apple_reminders import list_apple_reminder_lists
 from mailhub.plugins.policies.qiuzhao import QiuzhaoResolver
 from mailhub.plugins.sources.qq_imap import QqImapSource
-from mailhub.runtime.config import load_settings, require_mail_credentials
+from mailhub.runtime.config import (
+    load_settings,
+    require_bark_config,
+    require_mail_credentials,
+)
 
 import yaml
 from mailhub.runtime.context import RunContext
@@ -53,6 +57,7 @@ def cmd_scan_apple(args: argparse.Namespace) -> None:
 def cmd_sync(args: argparse.Namespace) -> None:
     settings = load_settings()
     require_mail_credentials(settings)
+    require_bark_config(settings)
     dry_run = bool(args.dry_run)
     full = bool(args.full)
 

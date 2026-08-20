@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 
 import mailhub.cli.main as cli
+import pytest
+import requests
 from mailhub.contracts.messages import IngestBatch, MailMessage, SourceRef
 from mailhub.plugins.policies.qiuzhao.types import CandidateEvent, MailItem
 from mailhub.runtime.config import Settings
@@ -111,6 +113,87 @@ def _run_sync(
         ):
             if hasattr(cli.cmd_sync, name):
                 delattr(cli.cmd_sync, name)
+
+
+@pytest.mark.parametrize(
+    ("dry_run", "settings_overrides", "error"),
+    [
+        (False, {}, "密钥和服务器地址"),
+        (True, {}, "密钥和服务器地址"),
+        (False, {"bark_server_url": "https://bark.example.com"}, "缺少 Bark 密钥$"),
+        (True, {"bark_server_url": "https://bark.example.com"}, "缺少 Bark 密钥$"),
+        (False, {"bark_key": "test-device-key"}, "缺少 Bark 服务器地址$"),
+        (True, {"bark_key": "test-device-key"}, "缺少 Bark 服务器地址$"),
+    ],
+)
+def test_sync_rejects_enabled_bark_without_delivery_config_before_fetch(
+    tmp_path: Path, monkeypatch, dry_run, settings_overrides, error
+):
+    settings = _settings(tmp_path, bark_enabled=True, **settings_overrides)
+    monkeypatch.setattr(cli, "load_settings", lambda: settings)
+    monkeypatch.setattr(cli, "require_mail_credentials", lambda _s: None)
+    fetched = False
+
+    def fetch(_checkpoint):
+        nonlocal fetched
+        fetched = True
+        return IngestBatch(messages=[], next_checkpoint=None)
+
+    cli.cmd_sync._test_fetch = fetch  # type: ignore[attr-defined]
+    try:
+        with pytest.raises(SystemExit, match=error):
+            cli.cmd_sync(argparse.Namespace(dry_run=dry_run, full=True, json=False))
+    finally:
+        delattr(cli.cmd_sync, "_test_fetch")
+
+    assert not fetched
+
+
+def test_sync_dry_run_with_bark_enabled_does_not_contact_server(
+    tmp_path: Path, monkeypatch
+):
+    settings = _settings(
+        tmp_path,
+        bark_enabled=True,
+        bark_key="test-device-key",
+        bark_server_url="https://bark.example.com",
+    )
+    monkeypatch.setattr(cli, "load_settings", lambda: settings)
+    monkeypatch.setattr(cli, "require_mail_credentials", lambda _s: None)
+    monkeypatch.setattr(
+        requests,
+        "post",
+        lambda *_a, **_k: pytest.fail("dry-run 不应请求 Bark 服务器"),
+    )
+    batch = IngestBatch(
+        messages=[_to_message(_interview_mail())],
+        next_checkpoint="99",
+    )
+    cli.cmd_sync._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
+    cli.cmd_sync._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
+    try:
+        cli.cmd_sync(argparse.Namespace(dry_run=True, full=True, json=False))
+    finally:
+        delattr(cli.cmd_sync, "_test_fetch")
+        delattr(cli.cmd_sync, "_test_list_apple_events")
+
+    records = _read_lifecycle(tmp_path)
+    assert records[0]["outcome"]["status"] == "dry_run"
+    apply = next(s for s in records[0]["stages"] if s["name"] == "apply")
+    assert apply["result"] == "would_create"
+
+
+@pytest.mark.parametrize(
+    ("dry_run", "expected_status"),
+    [(False, "applied"), (True, "dry_run")],
+)
+def test_sync_with_bark_disabled_needs_no_delivery_config(
+    tmp_path: Path, monkeypatch, dry_run, expected_status
+):
+    _run_sync(tmp_path, monkeypatch, mails=[_interview_mail()], dry_run=dry_run)
+
+    records = _read_lifecycle(tmp_path)
+    assert records[0]["outcome"]["status"] == expected_status
 
 
 def test_sync_dry_run_logs_apply_would_create(tmp_path: Path, monkeypatch):

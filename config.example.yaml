@@ -11,6 +11,11 @@ apple_calendar_name: 日历
 # 提醒事项列表名称（「提醒事项」App 左侧列表，常见：提醒事项）
 apple_reminders_list: 提醒事项
 
+# Bark 即时推送（默认未启用；仅支持自建服务器和一台设备）
+bark_enabled: false
+bark_server_url: https://bark.your-domain.example
+bark_key: your_device_key
+
 # 扫描范围
 lookback_days: 14
 mail_limit: 80

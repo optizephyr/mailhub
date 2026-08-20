@@ -29,6 +29,7 @@ from mailhub.plugins.dispatch.apple_reminders import (
     match_session as rem_match_session,
     session_event_from_candidate as rem_session_event_from_candidate,
 )
+from mailhub.plugins.dispatch.bark import ACTION_PUSH, BarkHandler, BarkPlanner
 from mailhub.plugins.policies.qiuzhao import resolved_to_candidate
 from mailhub.plugins.policies.qiuzhao.types import CandidateEvent
 from mailhub.runtime.context import RunContext, RunResult
@@ -56,6 +57,7 @@ def run_once(ctx: RunContext) -> RunResult:
     session: list[StoredEvent] = []
     handler = AppleCalendarHandler(store, settings)
     rem_handler = AppleRemindersHandler(store, settings)
+    bark_handler = BarkHandler()
     if "create_apple_event" in ctx.extras:
         handler.create_apple_event = ctx.extras["create_apple_event"]
     if "update_apple_event" in ctx.extras:
@@ -79,6 +81,7 @@ def run_once(ctx: RunContext) -> RunResult:
     rem_planner = AppleRemindersPlanner(
         store, settings, session, dry_run=dry_run, source_id=ctx.source_id
     )
+    bark_planner = BarkPlanner()
     handlers = {
         ACTION_CREATE: handler,
         ACTION_UPDATE: handler,
@@ -90,6 +93,7 @@ def run_once(ctx: RunContext) -> RunResult:
         REM_CANCEL: rem_handler,
         REM_SKIP: rem_handler,
         REM_FAIL: rem_handler,
+        ACTION_PUSH: bark_handler,
     }
     resolver = ctx.resolver
     run_meta = {"dry_run": dry_run, "full": ctx.full, "source_id": ctx.source_id}
@@ -129,7 +133,11 @@ def run_once(ctx: RunContext) -> RunResult:
         result.matched += 1
         result.events.append(event.to_dict())
 
-        requests = planner.plan(resolve_result) + rem_planner.plan(resolve_result)
+        requests = (
+            planner.plan(resolve_result)
+            + rem_planner.plan(resolve_result)
+            + bark_planner.plan(resolve_result)
+        )
         if not requests:
             result.ignored_count += 1
             continue
