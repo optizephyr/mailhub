@@ -81,9 +81,39 @@ uv run mailhub sync --dry-run --json
 
 建议用 cron / systemd timer 每 15～30 分钟跑一次 `uv run mailhub sync`。同一邮箱实例任意时刻只运行一个写入方，并让它独占 `data/` 里的游标与幂等状态。
 
-## Docker Compose
+## Docker
 
-服务器上：
+仓库根目录即可构建镜像。部署项用 `--env-file` / 环境变量传入，**不要**打进镜像。行为旋钮在 `config.yaml`：构建时复制进镜像；Compose 会把仓库里的文件只读挂进去，改旋钮不必重建。
+
+```bash
+docker build -t mailhub:local .
+mkdir -p data
+docker run --rm --env-file .env -e TZ=Asia/Shanghai \
+  -v "$PWD/data:/app/data" \
+  -v "$PWD/config.yaml:/app/config.yaml:ro" \
+  mailhub:local mailhub sync --dry-run
+```
+
+正式跑一次（会写 CalDAV、推进游标）：
+
+```bash
+docker run --rm --env-file .env -e TZ=Asia/Shanghai \
+  -v "$PWD/data:/app/data" \
+  -v "$PWD/config.yaml:/app/config.yaml:ro" \
+  mailhub:local
+```
+
+推送到 `master` 后，GitHub Actions 会把镜像发到 [ghcr.io/optizephyr/mailhub](https://github.com/optizephyr/mailhub/pkgs/container/mailhub)。服务器上可以只拉镜像、不克隆源码（仍需自备 `.env`、`config.yaml` 和 `data` 目录）：
+
+```bash
+docker pull ghcr.io/optizephyr/mailhub:latest
+```
+
+包默认私有时，先 `echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin`。
+
+### Compose（定时循环）
+
+服务器上若有本仓库：
 
 ```bash
 cp .env.example .env   # 已有 .env 勿覆盖
@@ -91,7 +121,9 @@ cp .env.example .env   # 已有 .env 勿覆盖
 docker compose up -d --build
 ```
 
-默认每 15 分钟执行一次 `mailhub sync`；游标和日志在宿主机 `./data`。更新代码后同样 `docker compose up -d --build`，`.env` 不用动。
+默认每 15 分钟执行一次 `mailhub sync`；游标和日志在宿主机 `./data`。只改代码时再 `--build`；只改 `config.yaml` 后 `docker compose up -d` 即可。`.env` 不用打进镜像。
+
+只拉已发布镜像、不本地构建时，用同一份 `compose.yaml`：`docker compose pull && docker compose up -d`。
 
 一次性命令（不进循环）：
 

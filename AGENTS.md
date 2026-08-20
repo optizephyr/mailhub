@@ -24,6 +24,7 @@ uv run mailhub sync --dry-run --json
 uv run mailhub sync
 uv run mailhub sync --full
 uv run pytest tests/ -q
+docker build -t mailhub:local .
 docker compose up -d --build
 docker compose run --rm mailhub mailhub sync --dry-run
 ```

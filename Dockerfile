@@ -21,4 +21,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # 可编辑安装：config.yaml / data 相对 /app（mailhub/runtime/config.py 的仓库根）
 RUN mkdir -p /app/data
 
+LABEL org.opencontainers.image.source="https://github.com/optizephyr/mailhub" \
+      org.opencontainers.image.description="邮件处理中心：拉取邮箱、筛选重要邮件，并通过日程等方式提醒"
+
 CMD ["mailhub", "sync"]
