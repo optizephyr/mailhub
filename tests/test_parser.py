@@ -129,6 +129,18 @@ def test_skip_schedule_invite_with_candidate_slots():
     assert heuristic_parse(mail) is None
 
 
+def test_schedule_invite_recognizes_bare_booking_link_text():
+    mail = _mail(
+        subject="【阿里巴巴校园招聘】业务面试邀约",
+        text="请在预约截止前处理：点此预约。",
+    )
+
+    event = heuristic_parse(mail)
+
+    assert event is not None
+    assert event.event_type == "schedule_invite"
+
+
 def test_confirmed_notice_after_invite_still_works():
     mail = MailItem(
         message_id="<notice@qq.com>",
@@ -301,7 +313,9 @@ def test_parse_mail_coarse_reject_skips_llm(tmp_path: Path, monkeypatch):
     assert "rejected_coarse" in log
 
 
-def test_parse_mail_model_reject_no_heuristic_fallback(tmp_path: Path, monkeypatch):
+def test_parse_mail_model_accepts_schedule_invite_without_heuristic(
+    tmp_path: Path, monkeypatch
+):
     settings = _settings(
         tmp_path,
         llm_api_base="https://api.example.com/v1",
@@ -310,10 +324,7 @@ def test_parse_mail_model_reject_no_heuristic_fallback(tmp_path: Path, monkeypat
     mail = _mail(
         message_id="<invite@qq.com>",
         subject="【美团】请选择面试时间",
-        text=(
-            "请点击链接选择面试时间。可选时段：2026年8月20日 10:00。"
-            "请于2026年8月19日 18:00前完成预约。"
-        ),
+        text="请点击链接选择面试时间。请于2026年8月19日 18:00前完成预约。",
     )
 
     class FakeResp:
@@ -327,9 +338,10 @@ def test_parse_mail_model_reject_no_heuristic_fallback(tmp_path: Path, monkeypat
                         "message": {
                             "content": json.dumps(
                                 {
-                                    "relevant": False,
+                                        "relevant": True,
                                     "stage": "schedule_invite",
                                     "action": "create",
+                                        "deadline": "2026-08-19T17:00:00",
                                 }
                             )
                         }
@@ -341,7 +353,7 @@ def test_parse_mail_model_reject_no_heuristic_fallback(tmp_path: Path, monkeypat
         "mailhub.plugins.policies.qiuzhao.parser.requests.post",
         lambda *a, **k: FakeResp(),
     )
-    # 若走启发式，这封信也会被 skip；用 spy 确认启发式未被调用
+    # stage=schedule_invite 是模型接受的已解析邮件，不应再走启发式。
     called = {"heuristic": 0}
     real_heuristic = heuristic_parse
 
@@ -350,7 +362,10 @@ def test_parse_mail_model_reject_no_heuristic_fallback(tmp_path: Path, monkeypat
         return real_heuristic(m)
 
     monkeypatch.setattr("mailhub.plugins.policies.qiuzhao.parser.heuristic_parse", wrapped)
-    assert parse_mail(mail, settings) is None
+    event = parse_mail(mail, settings)
+    assert event is not None
+    assert event.event_type == "schedule_invite"
+    assert event.deadline == "2026-08-19T17:00:00"
     assert called["heuristic"] == 0
 
     lifecycle = [
@@ -361,15 +376,15 @@ def test_parse_mail_model_reject_no_heuristic_fallback(tmp_path: Path, monkeypat
         if line.strip()
     ]
     assert len(lifecycle) == 1
-    assert lifecycle[0]["outcome"]["status"] == "rejected_parse"
-    assert lifecycle[0]["outcome"]["summary"] == "模型判定选时间邀约，不建日程"
-    assert lifecycle[0]["stages"][-1]["result"] == "reject_by_model"
-    assert lifecycle[0]["stages"][-1]["llm"] == {
-        "decision": "reject_by_model",
-        "latency_ms": lifecycle[0]["stages"][-1]["llm"]["latency_ms"],
+    assert lifecycle[0]["outcome"]["status"] == "dry_run"
+    parse_stage = next(s for s in lifecycle[0]["stages"] if s["name"] == "parse")
+    assert parse_stage["result"] == "accept"
+    assert parse_stage["llm"] == {
+        "decision": "accept",
+        "latency_ms": parse_stage["llm"]["latency_ms"],
         "model": "gpt-4o-mini",
     }
-    assert "reject_reason" not in lifecycle[0]["stages"][-1]["llm"]
+    assert "reject_reason" not in parse_stage["llm"]
 
     records = [
         json.loads(line)
@@ -379,11 +394,11 @@ def test_parse_mail_model_reject_no_heuristic_fallback(tmp_path: Path, monkeypat
         if line.strip()
     ]
     assert len(records) == 1
-    assert records[0]["decision"] == "reject_by_model"
+    assert records[0]["decision"] == "accept"
     assert records[0]["trace_id"] == lifecycle[0]["trace_id"]
     assert records[0]["input"]
     assert records[0]["output_raw"]
-    assert records[0]["output_parsed"]["relevant"] is False
+    assert records[0]["output_parsed"]["relevant"] is True
 
 
 def test_parse_mail_keeps_think_in_raw_but_not_as_separate_field(
@@ -493,6 +508,32 @@ def test_parse_mail_llm_error_falls_back_heuristic(tmp_path: Path, monkeypatch):
     assert record["decision"] == "error"
     assert "network down" in (record["error"] or "")
     assert record["trace_id"] == lifecycle["trace_id"]
+
+
+def test_parse_mail_llm_error_falls_back_to_schedule_invite(
+    tmp_path: Path, monkeypatch
+):
+    settings = _settings(
+        tmp_path,
+        llm_api_base="https://api.example.com/v1",
+        llm_api_key="k",
+    )
+    mail = _mail(
+        message_id="<booking@example.com>",
+        subject="【美团】请选择面试时间",
+        text="请点击链接预约面试时间。预约截止：2026年8月19日 18:00。",
+    )
+
+    monkeypatch.setattr(
+        "mailhub.plugins.policies.qiuzhao.parser.requests.post",
+        lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("network down")),
+    )
+
+    event = parse_mail(mail, settings)
+
+    assert event is not None
+    assert event.event_type == "schedule_invite"
+    assert event.deadline == "2026-08-19T18:00:00"
 
 
 def test_build_title_deterministic_format():

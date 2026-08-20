@@ -41,10 +41,11 @@ def candidate_to_resolved(event: CandidateEvent, message: MailMessage) -> Resolv
         if precision != "window":
             precision = "unknown"
     time = None
-    if event.start_at or event.end_at:
+    if event.start_at or event.end_at or event.deadline:
         time = TimeConstraint(
             start_at=event.start_at or None,
             end_at=event.end_at or None,
+            deadline=event.deadline or None,
             timezone="Asia/Shanghai",
             precision=precision,
         )
@@ -76,6 +77,7 @@ def candidate_to_resolved(event: CandidateEvent, message: MailMessage) -> Resolv
             "source_snippet": event.source_snippet,
             "candidate": event.to_dict(),
             "time_precision": event.time_precision,
+            "deadline": event.deadline,
         },
         confidence=event.confidence,
     )
@@ -95,6 +97,10 @@ def resolved_to_candidate(resolved: ResolvedMail) -> CandidateEvent:
         start_at=(resolved.time.start_at if resolved.time and resolved.time.start_at else "")
         or "",
         end_at=(resolved.time.end_at if resolved.time and resolved.time.end_at else "") or "",
+        deadline=(
+            resolved.time.deadline if resolved.time and resolved.time.deadline else ""
+        )
+        or str(resolved.attributes.get("deadline") or ""),
         location=resolved.location or "",
         company=str(resolved.attributes.get("company") or ""),
         description=str(resolved.attributes.get("description") or ""),

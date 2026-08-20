@@ -36,6 +36,14 @@ from mailhub.runtime.context import RunContext, RunResult
 from mailhub.store.sqlite import StoredEvent
 
 
+def _event_time_part(event: CandidateEvent) -> str:
+    if event.event_type == "schedule_invite":
+        return f"预约截止 {event.deadline}" if event.deadline else "(待预约)"
+    if event.action == "cancel":
+        return "(取消)"
+    return f"{event.start_at} → {event.end_at}"
+
+
 def run_once(ctx: RunContext) -> RunResult:
     """Ingest → Resolve → Dispatch one batch."""
     result = RunResult()
@@ -57,7 +65,7 @@ def run_once(ctx: RunContext) -> RunResult:
     session: list[StoredEvent] = []
     handler = AppleCalendarHandler(store, settings)
     rem_handler = AppleRemindersHandler(store, settings)
-    bark_handler = BarkHandler()
+    bark_handler = BarkHandler(store, settings)
     if "create_apple_event" in ctx.extras:
         handler.create_apple_event = ctx.extras["create_apple_event"]
     if "update_apple_event" in ctx.extras:
@@ -81,7 +89,12 @@ def run_once(ctx: RunContext) -> RunResult:
     rem_planner = AppleRemindersPlanner(
         store, settings, session, dry_run=dry_run, source_id=ctx.source_id
     )
-    bark_planner = BarkPlanner()
+    bark_planner = BarkPlanner(
+        store,
+        settings,
+        dry_run=dry_run,
+        source_id=ctx.source_id,
+    )
     handlers = {
         ACTION_CREATE: handler,
         ACTION_UPDATE: handler,
@@ -148,15 +161,25 @@ def run_once(ctx: RunContext) -> RunResult:
 
         if dry_run:
             _print_event_details(event)
+            if req.type == ACTION_PUSH:
+                print(f"  推送标题={payload.get('title')}")
+                print(f"  推送正文={payload.get('body')}")
+                if payload.get("url"):
+                    print(f"  点开={payload.get('url')}")
             _tally_dry_run(result, str(payload.get("result")), payload.get("summary"))
             planned = planned_event_brief(event)
-            result.dry_run_reports.append(
-                {
-                    "apply": payload.get("result"),
-                    "match_via": payload.get("match_via"),
-                    "event": event.to_dict(),
+            report = {
+                "apply": payload.get("result"),
+                "match_via": payload.get("match_via"),
+                "event": event.to_dict(),
+            }
+            if req.type == ACTION_PUSH:
+                report["push"] = {
+                    "title": payload.get("title"),
+                    "body": payload.get("body"),
+                    "url": payload.get("url"),
                 }
-            )
+            result.dry_run_reports.append(report)
             if payload.get("result") == "would_create":
                 if is_reminder:
                     session.append(rem_session_event_from_candidate(event))
@@ -185,11 +208,7 @@ def run_once(ctx: RunContext) -> RunResult:
             )
             continue
 
-        time_part = (
-            f"{event.start_at} → {event.end_at}"
-            if event.action != "cancel"
-            else "(取消)"
-        )
+        time_part = _event_time_part(event)
         print(
             f"\n• [{event.action}] {event.title}\n"
             f"  {time_part}\n"
@@ -292,6 +311,15 @@ def run_once(ctx: RunContext) -> RunResult:
                 event_row_id=tid,
                 sinks=target.get("sinks"),
             )
+        elif req.type == ACTION_PUSH:
+            print("  - 已通过 Bark 推送")
+            _finish_apply(
+                trace,
+                result="pushed",
+                status="applied",
+                summary=summary,
+                match_via="none",
+            )
 
     if not dry_run and batch.next_checkpoint:
         prev = store.get_checkpoint(ctx.source_id)
@@ -313,11 +341,7 @@ def run_once(ctx: RunContext) -> RunResult:
 
 
 def _print_event_details(event: CandidateEvent) -> None:
-    time_part = (
-        f"{event.start_at} → {event.end_at}"
-        if event.action != "cancel"
-        else "(取消)"
-    )
+    time_part = _event_time_part(event)
     desc = event.description or ""
     if len(desc) > 200:
         desc = desc[:200] + "…"
@@ -331,7 +355,10 @@ def _print_event_details(event: CandidateEvent) -> None:
     if getattr(event, "time_precision", "") == "window":
         lines.append("  渠道=提醒事项（窗口内完成）")
     if event.meeting_url:
-        lines.append(f"  会议={event.meeting_url}")
+        label = "预约" if event.event_type == "schedule_invite" else "会议"
+        lines.append(f"  {label}={event.meeting_url}")
+    if event.event_type == "schedule_invite":
+        lines.append("  渠道=Bark")
     if desc:
         lines.append(f"  描述={desc}")
     lines.append(f"  置信度={event.confidence:.2f}  主题={event.subject[:60]}")
@@ -351,6 +378,8 @@ def _tally_dry_run(
         result.skipped += 1
     elif plan_result == "would_fail":
         result.failed.append(str(summary or "取消失败"))
+    elif plan_result == "would_push":
+        result.action_count += 1
 
 
 def _finish_apply(

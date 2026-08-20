@@ -53,7 +53,7 @@ uv run pytest tests/ -q
 ## Domain invariants
 
 - **全局**：dry-run 不写渠道、不推游标；Ingest 不做重要性过滤；contracts 不依赖 plugins
-- **秋招 policy 局部**：标题格式、`schedule_invite` 不建日程、日历 create 需起止+地点、开放窗口走提醒事项
+- **秋招 policy 局部**：标题格式、`schedule_invite` 只走 Bark、日历 create 需起止+地点、开放窗口走提醒事项
 - 系统 Python 3.9 + LibreSSL：保持 `urllib3<2`（见 `pyproject.toml` 注释）
 
 ## Code conventions

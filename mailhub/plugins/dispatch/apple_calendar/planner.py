@@ -171,6 +171,8 @@ class AppleCalendarPlanner:
         self.source_id = source_id
 
     def plan(self, resolved: ResolvedMail) -> list[ActionRequest]:
+        if resolved.kind == "schedule_invite":
+            return []
         event = _resolved_to_candidate(resolved)
         if event.action != "cancel" and event.time_precision == "window":
             return []

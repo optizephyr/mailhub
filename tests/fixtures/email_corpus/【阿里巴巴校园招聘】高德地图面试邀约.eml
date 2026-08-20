@@ -1,0 +1,15 @@
+From: recruiting@example.com
+To: candidate@example.com
+Date: Fri, 10 Apr 2026 10:24:13 +0800
+Message-ID: <amap-schedule-invite@example.com>
+Subject: 【阿里巴巴校园招聘】高德地图面试邀约
+MIME-Version: 1.0
+Content-Type: text/html; charset="UTF-8"
+
+<html><body>
+<p>候选人你好，恭喜进入面试流程。</p>
+<p>面试部门：高德地图</p>
+<p>面试形式：视频面试</p>
+<p>面试预约截止时间：2026-04-13 19:00:00 (UTC+8)</p>
+<p><a href="https://schedule.example.com/amap">点此预约面试时间</a></p>
+</body></html>

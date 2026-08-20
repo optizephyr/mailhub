@@ -38,6 +38,7 @@ class CandidateEvent:
     action: str = "create"
     start_at: str = ""
     end_at: str = ""
+    deadline: str = ""
     location: str = ""
     company: str = ""
     description: str = ""

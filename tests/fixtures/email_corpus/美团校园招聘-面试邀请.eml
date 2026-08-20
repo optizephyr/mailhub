@@ -1,0 +1,14 @@
+From: campus@example.com
+To: candidate@example.com
+Date: Tue, 14 Apr 2026 20:21:09 +0800
+Message-ID: <meituan-schedule-invite@example.com>
+Subject: 美团校园招聘-面试邀请
+MIME-Version: 1.0
+Content-Type: text/html; charset="UTF-8"
+
+<html><body>
+<p>候选人你好，美团诚邀你参加校招面试，请先约定见面时间。</p>
+<p>面试形式：视频面试</p>
+<p><a href="https://schedule.example.com/meituan">点击进入面试时间选择</a></p>
+<p>截止时间：2026-04-16 20:21:09 GMT+8 中国北京</p>
+</body></html>

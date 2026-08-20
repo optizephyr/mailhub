@@ -43,8 +43,9 @@ def test_rules_corpus_case(case, mail):
         assert classify_stage(blob) == expect["stage"], case["id"]
     if expect["action"] is not None:
         assert detect_action(blob) == expect["action"], case["id"]
-    if expect["event_type"] is not None:
-        assert detect_event_type(blob) == expect["event_type"], case["id"]
+    detected_event_type = expect.get("detected_event_type", expect["event_type"])
+    if detected_event_type is not None:
+        assert detect_event_type(blob) == detected_event_type, case["id"]
 
     if expect["company_contains"]:
         company = guess_company(mail.subject, mail.body)
@@ -55,9 +56,14 @@ def test_rules_corpus_case(case, mail):
     event = heuristic_parse(mail)
     want_event = expect["should_create_event"]
     want_reminder = expect.get("should_create_reminder", False)
-    if want_event or want_reminder:
+    want_bark = expect.get("should_push_bark", False)
+    if want_event or want_reminder or want_bark:
         assert event is not None, f"{case['id']}: expected event"
-        if want_reminder:
+        if want_bark:
+            assert event.event_type == "schedule_invite", case["id"]
+            assert event.start_at == "", case["id"]
+            assert event.end_at == "", case["id"]
+        elif want_reminder:
             assert event.time_precision == "window", case["id"]
         else:
             assert event.time_precision != "window", case["id"]

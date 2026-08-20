@@ -41,6 +41,7 @@ def event_brief(event: Any) -> dict[str, Any]:
         "title": event.title,
         "start_at": event.start_at,
         "end_at": event.end_at,
+        "deadline": event.deadline,
         "location": event.location,
         "meeting_url": event.meeting_url,
         "confidence": event.confidence,

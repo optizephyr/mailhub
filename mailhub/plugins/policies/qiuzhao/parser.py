@@ -101,6 +101,7 @@ SCHEDULE_INVITE_SIGNALS = (
     "自行选择时间",
     "点击链接选择",
     "点击链接预约",
+    "点此预约",
     "预约面试时间",
     "面试时间选择",
     "选一个时间",
@@ -111,6 +112,14 @@ SCHEDULE_INVITE_SIGNALS = (
     "schedule your interview",
     "pick a time",
     "time slot",
+)
+
+DEFAULT_SLOT_SIGNALS = (
+    "逾期将安排",
+    "逾期默认安排",
+    "未选择将安排",
+    "未预约将安排",
+    "否则安排在",
 )
 
 # 「正式通知」：时间已确认，应当建日历
@@ -359,6 +368,14 @@ def parse_all_datetimes(text: str, now: Optional[datetime] = None) -> list[datet
     return [dt for _, dt in found]
 
 
+def _default_slot_datetime(text: str, now: datetime) -> Optional[datetime]:
+    positions = [text.find(signal) for signal in DEFAULT_SLOT_SIGNALS]
+    positions = [pos for pos in positions if pos >= 0]
+    if not positions:
+        return None
+    return parse_datetime(text[min(positions) :], now=now)
+
+
 def is_open_window(text: str, event_type: str, times: list[datetime]) -> bool:
     if event_type == "assessment":
         return True
@@ -434,6 +451,11 @@ def build_title(
     return f"[{label}] {name}".strip()[:200]
 
 
+def _schedule_invite_title(company: str, subject: str) -> str:
+    name = company.strip() or subject.strip()[:40] or "秋招"
+    return f"{name} 请预约"[:200]
+
+
 def extract_meeting_url(text: str) -> str:
     for url in URL_RE.findall(text):
         host = urlparse(url).netloc.lower()
@@ -460,6 +482,44 @@ def extract_meeting_url(text: str) -> str:
 def extract_location(text: str) -> str:
     m = LOCATION_RE.search(text)
     return m.group(1).strip() if m else ""
+
+
+def _extract_schedule_url(mail: MailItem) -> str:
+    if mail.html.strip():
+        from bs4 import BeautifulSoup
+
+        soup = BeautifulSoup(mail.html, "lxml")
+        for link in soup.find_all("a", href=True):
+            label = link.get_text(" ", strip=True).lower()
+            href = str(link.get("href") or "").strip()
+            if href.startswith(("http://", "https://")) and any(
+                signal in label for signal in ("预约", "选择", "时间", "book", "schedule")
+            ):
+                return href
+    return extract_meeting_url(mail.body)
+
+
+def _schedule_invite_event(
+    mail: MailItem, *, company: str = "", confidence: float = 0.85
+) -> CandidateEvent:
+    blob = f"{mail.subject}\n{mail.body}"
+    company = company or guess_company(mail.subject, mail.body)
+    times = parse_all_datetimes(blob, now=_anchor_now(mail))
+    deadline = _iso(times[-1]) if times else ""
+    return CandidateEvent(
+        message_id=mail.message_id,
+        subject=mail.subject,
+        title=_schedule_invite_title(company, mail.subject),
+        event_type="schedule_invite",
+        action="create",
+        deadline=deadline,
+        company=company,
+        meeting_url=_extract_schedule_url(mail),
+        time_precision="unknown",
+        confidence=confidence if company else min(confidence, 0.65),
+        source_snippet=mail.body[:300],
+        references=list(mail.references),
+    )
 
 
 THINK_BLOCK_RE = re.compile(r"<think\b[^>]*>([\s\S]*?)</think>", re.IGNORECASE)
@@ -561,12 +621,21 @@ def heuristic_parse(mail: MailItem) -> Optional[CandidateEvent]:
     if any(s in blob for s in NON_SCHEDULE_SIGNALS):
         return None
 
-    # 邀约选时间 ≠ 已确认场次：避免把候选时段写成日程
-    if should_skip_as_schedule_invite(blob):
-        return None
-
     now = _anchor_now(mail)
-    times = parse_all_datetimes(blob, now=now)
+    default_slot = _default_slot_datetime(blob, now)
+
+    # 无出场时刻的预约/选场进入 Bark，不写日历或提醒事项。
+    if should_skip_as_schedule_invite(blob):
+        if any(
+            signal in blob
+            for signal in ("可选时段", "可选时间", "以下时间中选择", "从下列时间")
+        ) and len(parse_all_datetimes(blob, now=_anchor_now(mail))) >= 2:
+            # 候选场次的多日程模型不在本轮 Bark 需求内，保持原有忽略行为。
+            return None
+        if default_slot is None:
+            return _schedule_invite_event(mail, company=company)
+
+    times = [default_slot] if default_slot else parse_all_datetimes(blob, now=now)
     meeting_url = extract_meeting_url(body)
     location = extract_location(body) or meeting_url
     title = build_title(event_type, company, action, mail.subject)
@@ -634,7 +703,11 @@ def normalize_event(event: CandidateEvent) -> CandidateEvent:
     action = event.action if event.action in ("create", "reschedule", "cancel") else "create"
     event_type = event.event_type or "other"
     company = (event.company or "").strip()[:40]
-    title = build_title(event_type, company, action, event.subject)
+    title = (
+        _schedule_invite_title(company, event.subject)
+        if event_type == "schedule_invite"
+        else build_title(event_type, company, action, event.subject)
+    )
 
     return CandidateEvent(
         message_id=event.message_id,
@@ -644,11 +717,16 @@ def normalize_event(event: CandidateEvent) -> CandidateEvent:
         action=action,
         start_at=str(event.start_at or ""),
         end_at=str(event.end_at or ""),
+        deadline=str(event.deadline or ""),
         location=str(event.location or "")[:200],
         company=company,
         description="",
         meeting_url=str(event.meeting_url or ""),
-        time_precision="window" if event.time_precision == "window" else "fixed",
+        time_precision=(
+            event.time_precision
+            if event.time_precision in ("fixed", "window", "unknown")
+            else "fixed"
+        ),
         confidence=float(event.confidence or 0.5),
         source_snippet=str(event.source_snippet or "")[:300],
         references=list(event.references or []),
@@ -658,10 +736,19 @@ def normalize_event(event: CandidateEvent) -> CandidateEvent:
 def _event_from_llm_data(mail: MailItem, data: dict[str, Any]) -> LlmParseResult:
     """把已解析的 JSON 转成 LlmParseResult（明确拒绝 vs 残缺）。"""
     if data.get("stage") == "schedule_invite":
-        return LlmParseResult(
-            decision="reject_by_model",
-            reject_reason="schedule_invite",
+        company = str(data.get("company") or "").strip()
+        event = _schedule_invite_event(
+            mail,
+            company=company,
+            confidence=float(data.get("confidence") or 0.8),
         )
+        model_deadline = str(data.get("deadline") or "").strip()
+        if model_deadline:
+            event.deadline = model_deadline
+        model_url = str(data.get("meeting_url") or "").strip()
+        if model_url:
+            event.meeting_url = model_url
+        return LlmParseResult(decision="accept", event=normalize_event(event))
     if not data.get("relevant"):
         return LlmParseResult(
             decision="reject_by_model",
@@ -712,6 +799,7 @@ def _event_from_llm_data(mail: MailItem, data: dict[str, Any]) -> LlmParseResult
         action=action,
         start_at=str(data.get("start_at") or ""),
         end_at=str(data.get("end_at") or ""),
+        deadline=str(data.get("deadline") or ""),
         location=str(data.get("location") or "")[:200],
         company=str(company)[:40],
         description="",
@@ -749,9 +837,9 @@ def llm_parse(
                 "字段: relevant(bool), action(create|reschedule|cancel), "
                 "stage(confirmed|schedule_invite|other), "
                 "event_type(interview|exam|assessment|other), "
-                "time_precision(fixed|window), "
+                "time_precision(fixed|window|unknown), "
                 "title, company, start_at(YYYY-MM-DDTHH:MM:SS, Asia/Shanghai), "
-                "end_at, location, meeting_url, confidence(0-1).\n"
+                "end_at, deadline, location, meeting_url, confidence(0-1).\n"
                 "规则:\n"
                 "- company 必填：填招聘方公司/机构简称（如 美团、字节跳动、快手）；"
                 "实在无法判断时填空串。\n"
@@ -763,8 +851,13 @@ def llm_parse(
                 "location 可空，链接放 meeting_url。\n"
                 "- 改期/时间变更为：action=reschedule，fixed 必须填新的时间和地点；"
                 "window 必须填新的截止或窗口。\n"
-                "- 若是让候选人「选择/预约/挑选」面试时间：stage=schedule_invite，relevant=false。\n"
-                "- 只有时间已确认的正式通知，或可完成的开放窗口，才 action=create 且 relevant=true。\n"
+                "- 若是让候选人「选择/预约/挑选」场次且没有可出场时刻："
+                "stage=schedule_invite，relevant=true，time_precision=unknown；"
+                "预约截止填 deadline，不填 start_at/end_at/location。\n"
+                "- 若信里给出逾期默认/保底出场时刻，则不是 schedule_invite；"
+                "按该时刻提取 fixed 日程。\n"
+                "- 时间已确认的正式通知、可完成的开放窗口、schedule_invite "
+                "都属于 relevant=true。\n"
                 "- 选时间的截止日不是面试开始时间。\n\n"
                 f"主题: {mail.subject}\n"
                 f"正文:\n{mail.body[:4000]}"
@@ -862,7 +955,7 @@ def parse_mail(
     """
     解析流水线：
       Stage A 规则粗过滤 → Stage C LLM（可选）→ Stage D 启发式兜底 → Stage E 规范化
-    模型明确拒绝（irrelevant / schedule_invite）不走启发式。
+    模型明确拒绝 irrelevant 时不走启发式；schedule_invite 是已解析邮件。
 
     若传入 trace，写入 coarse/parse 阶段；拒绝路径会 finish。
     成功产出事件时不 finish，留给 apply 侧补全。
@@ -918,11 +1011,7 @@ def parse_mail(
             return llm_result.event
 
         if llm_result.decision == "reject_by_model":
-            reason = llm_result.reject_reason or "irrelevant"
-            if reason == "schedule_invite":
-                summary = "模型判定选时间邀约，不建日程"
-            else:
-                summary = "模型判定无关邮件，不建日程"
+            summary = "模型判定无关邮件，不建日程"
             _add_parse_stage(
                 trace,
                 engine="llm",
