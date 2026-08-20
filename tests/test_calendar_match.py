@@ -1,16 +1,16 @@
 from pathlib import Path
 
-from mailhub.plugins.dispatch.apple_calendar import planner as planner_mod
-from mailhub.plugins.dispatch.apple_calendar.handler import AppleCalendarHandler
-from mailhub.plugins.dispatch.apple_calendar.match import (
+from mailhub.plugins.dispatch.calendar import planner as planner_mod
+from mailhub.plugins.dispatch.calendar.handler import CalendarHandler
+from mailhub.plugins.dispatch.calendar.match import (
     extract_marker_message_id,
     marker_line,
     match_calendar_event,
     split_title,
 )
-from mailhub.plugins.dispatch.apple_calendar.planner import find_target
+from mailhub.plugins.dispatch.calendar.planner import find_target
 from mailhub.plugins.policies.qiuzhao.types import CandidateEvent
-from mailhub.plugins.dispatch.apple_calendar.types import AppleEventRef
+from mailhub.plugins.dispatch.calendar.types import CalendarEventRef
 from mailhub.runtime.config import Settings
 from mailhub.store.sqlite import EventStore
 
@@ -19,7 +19,8 @@ def _settings(tmp_path: Path, **kwargs) -> Settings:
     base = dict(
         qq_email="a@qq.com",
         qq_auth_code="x",
-        apple_calendar_name="日历",
+        calendar_name="日历",
+        reminders_list="提醒事项",
         lookback_days=14,
         mail_limit=80,
         reminder_minutes=30,
@@ -49,7 +50,7 @@ def _event(**kwargs) -> CandidateEvent:
     return CandidateEvent(**base)
 
 
-def _ref(**kwargs) -> AppleEventRef:
+def _ref(**kwargs) -> CalendarEventRef:
     base = dict(
         uid="uid-1",
         summary="[面试] 美团",
@@ -57,7 +58,7 @@ def _ref(**kwargs) -> AppleEventRef:
         end_at="2026-08-21T15:00:00",
     )
     base.update(kwargs)
-    return AppleEventRef(**base)
+    return CalendarEventRef(**base)
 
 
 def test_marker_round_trip():
@@ -108,9 +109,9 @@ def test_find_target_adopts_existing_calendar_event(tmp_path: Path, monkeypatch)
     settings = _settings(tmp_path)
     monkeypatch.setattr(
         planner_mod,
-        "list_apple_events",
+        "list_calendar_events",
         lambda *_args, **_kw: [
-            _ref(uid="uid-apple-9", start_at="2026-08-21T14:00:00"),
+            _ref(uid="uid-calendar-9", start_at="2026-08-21T14:00:00"),
             _ref(
                 uid="uid-other",
                 summary="[面试] 京东",
@@ -122,12 +123,12 @@ def test_find_target_adopts_existing_calendar_event(tmp_path: Path, monkeypatch)
     target, via = find_target(store, _event(), settings)
     assert target is not None
     assert via == "calendar_adopt"
-    assert target.sinks["apple"] == "uid-apple-9"
+    assert target.sinks["calendar"] == "uid-calendar-9"
     assert target.start_at == "2026-08-21T14:00:00"
 
     monkeypatch.setattr(
         planner_mod,
-        "list_apple_events",
+        "list_calendar_events",
         lambda *_a, **_k: (_ for _ in ()).throw(AssertionError),
     )
     again, via2 = find_target(store, _event(), settings)
@@ -140,7 +141,7 @@ def test_find_target_skips_calendar_when_disabled(tmp_path: Path, monkeypatch):
     store = EventStore(tmp_path / "t.sqlite")
     monkeypatch.setattr(
         planner_mod,
-        "list_apple_events",
+        "list_calendar_events",
         lambda *_a, **_k: (_ for _ in ()).throw(AssertionError),
     )
 
@@ -152,18 +153,18 @@ def test_find_target_skips_calendar_when_disabled(tmp_path: Path, monkeypatch):
     store.close()
 
 
-def test_adopted_event_updates_existing_apple_uid(tmp_path: Path, monkeypatch):
+def test_adopted_event_updates_existing_calendar_resource(tmp_path: Path, monkeypatch):
     store = EventStore(tmp_path / "t.sqlite")
     settings = _settings(tmp_path)
     monkeypatch.setattr(
-        planner_mod, "list_apple_events", lambda *_a, **_k: [_ref(uid="uid-apple-9")]
+        planner_mod, "list_calendar_events", lambda *_a, **_k: [_ref(uid="uid-calendar-9")]
     )
     calls: list[tuple[str, str]] = []
-    handler = AppleCalendarHandler(store, settings)
-    handler.update_apple_event = lambda uid, event, cal: calls.append(
+    handler = CalendarHandler(store, settings)
+    handler.update_calendar_event = lambda uid, event: calls.append(
         (uid, event.start_at)
     )
-    handler.create_apple_event = lambda *_a, **_k: (_ for _ in ()).throw(
+    handler.create_calendar_event = lambda *_a, **_k: (_ for _ in ()).throw(
         AssertionError("应更新而非新建")
     )
 
@@ -173,7 +174,7 @@ def test_adopted_event_updates_existing_apple_uid(tmp_path: Path, monkeypatch):
     assert via == "calendar_adopt"
     handler._apply_update(target, event)
 
-    assert calls == [("uid-apple-9", "2026-08-26T10:00:00")]
+    assert calls == [("uid-calendar-9", "2026-08-26T10:00:00")]
     refreshed = store.get_event(target.id)
     assert refreshed is not None and refreshed.start_at == "2026-08-26T10:00:00"
     store.close()

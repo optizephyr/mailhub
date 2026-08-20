@@ -19,7 +19,8 @@ def _settings(tmp_path: Path, **kwargs) -> Settings:
     base = dict(
         qq_email="a@qq.com",
         qq_auth_code="x",
-        apple_calendar_name="日历",
+        calendar_name="日历",
+        reminders_list="提醒事项",
         lookback_days=14,
         mail_limit=80,
         reminder_minutes=30,
@@ -78,7 +79,7 @@ def _run_sync(
     *,
     mails: list[MailItem],
     dry_run: bool = False,
-    create_uid: str = "uid-apple-1",
+    create_uid: str = "uid-calendar-1",
 ) -> None:
     settings = _settings(tmp_path)
     monkeypatch.setattr(cli, "load_settings", lambda: settings)
@@ -89,13 +90,13 @@ def _run_sync(
         next_checkpoint="99",
     )
     cli.cmd_sync._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
-    cli.cmd_sync._test_create_apple_event = lambda *_a, **_k: create_uid  # type: ignore[attr-defined]
-    cli.cmd_sync._test_update_apple_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
-    cli.cmd_sync._test_delete_apple_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
-    cli.cmd_sync._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
-    cli.cmd_sync._test_create_apple_reminder = lambda *_a, **_k: "rem-1"  # type: ignore[attr-defined]
-    cli.cmd_sync._test_update_apple_reminder = lambda *_a, **_k: None  # type: ignore[attr-defined]
-    cli.cmd_sync._test_delete_apple_reminder = lambda *_a, **_k: None  # type: ignore[attr-defined]
+    cli.cmd_sync._test_create_calendar_event = lambda *_a, **_k: create_uid  # type: ignore[attr-defined]
+    cli.cmd_sync._test_update_calendar_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
+    cli.cmd_sync._test_delete_calendar_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
+    cli.cmd_sync._test_list_calendar_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
+    cli.cmd_sync._test_create_reminder = lambda *_a, **_k: "rem-1"  # type: ignore[attr-defined]
+    cli.cmd_sync._test_update_reminder = lambda *_a, **_k: None  # type: ignore[attr-defined]
+    cli.cmd_sync._test_delete_reminder = lambda *_a, **_k: None  # type: ignore[attr-defined]
 
     try:
         args = argparse.Namespace(dry_run=dry_run, full=True, json=False)
@@ -103,13 +104,13 @@ def _run_sync(
     finally:
         for name in (
             "_test_fetch",
-            "_test_create_apple_event",
-            "_test_update_apple_event",
-            "_test_delete_apple_event",
-            "_test_list_apple_events",
-            "_test_create_apple_reminder",
-            "_test_update_apple_reminder",
-            "_test_delete_apple_reminder",
+            "_test_create_calendar_event",
+            "_test_update_calendar_event",
+            "_test_delete_calendar_event",
+            "_test_list_calendar_events",
+            "_test_create_reminder",
+            "_test_update_reminder",
+            "_test_delete_reminder",
         ):
             if hasattr(cli.cmd_sync, name):
                 delattr(cli.cmd_sync, name)
@@ -170,12 +171,12 @@ def test_sync_dry_run_with_bark_enabled_does_not_contact_server(
         next_checkpoint="99",
     )
     cli.cmd_sync._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
-    cli.cmd_sync._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
+    cli.cmd_sync._test_list_calendar_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
     try:
         cli.cmd_sync(argparse.Namespace(dry_run=True, full=True, json=False))
     finally:
         delattr(cli.cmd_sync, "_test_fetch")
-        delattr(cli.cmd_sync, "_test_list_apple_events")
+        delattr(cli.cmd_sync, "_test_list_calendar_events")
 
     records = _read_lifecycle(tmp_path)
     assert records[0]["outcome"]["status"] == "dry_run"
@@ -234,7 +235,7 @@ def test_sync_dry_run_logs_would_skip_same(tmp_path: Path, monkeypatch):
         start_at="2026-08-25T10:00:00",
         end_at="2026-08-25T11:00:00",
         source_message_id="<older@qq.com>",
-        sinks={"apple": "uid-existing"},
+        sinks={"calendar": "uid-existing"},
     )
     store.close()
 
@@ -245,12 +246,12 @@ def test_sync_dry_run_logs_would_skip_same(tmp_path: Path, monkeypatch):
         next_checkpoint="5",
     )
     cli.cmd_sync._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
-    cli.cmd_sync._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
+    cli.cmd_sync._test_list_calendar_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
     try:
         cli.cmd_sync(argparse.Namespace(dry_run=True, full=True, json=False))
     finally:
         delattr(cli.cmd_sync, "_test_fetch")
-        delattr(cli.cmd_sync, "_test_list_apple_events")
+        delattr(cli.cmd_sync, "_test_list_calendar_events")
 
     records = _read_lifecycle(tmp_path)
     assert records[-1]["outcome"]["status"] == "dry_run"
@@ -267,7 +268,7 @@ def test_sync_create_logs_applied(tmp_path: Path, monkeypatch):
     assert records[0]["outcome"]["status"] == "applied"
     apply = next(s for s in records[0]["stages"] if s["name"] == "apply")
     assert apply["result"] == "created"
-    assert apply["sinks"]["apple"] == "uid-apple-1"
+    assert apply["sinks"]["calendar"] == "uid-calendar-1"
     assert apply["event_row_id"] == 1
 
 
@@ -292,7 +293,7 @@ def test_sync_same_time_logs_skipped_same(tmp_path: Path, monkeypatch):
         start_at="2026-08-25T10:00:00",
         end_at="2026-08-25T11:00:00",
         source_message_id="<older@qq.com>",
-        sinks={"apple": "uid-existing"},
+        sinks={"calendar": "uid-existing"},
     )
     store.close()
 
@@ -303,14 +304,14 @@ def test_sync_same_time_logs_skipped_same(tmp_path: Path, monkeypatch):
         next_checkpoint="5",
     )
     cli.cmd_sync._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
-    cli.cmd_sync._test_create_apple_event = lambda *_a, **_k: (_ for _ in ()).throw(  # type: ignore[attr-defined]
+    cli.cmd_sync._test_create_calendar_event = lambda *_a, **_k: (_ for _ in ()).throw(  # type: ignore[attr-defined]
         AssertionError("不应新建")
     )
-    cli.cmd_sync._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
+    cli.cmd_sync._test_list_calendar_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
     try:
         cli.cmd_sync(argparse.Namespace(dry_run=False, full=True, json=False))
     finally:
-        for name in ("_test_fetch", "_test_create_apple_event", "_test_list_apple_events"):
+        for name in ("_test_fetch", "_test_create_calendar_event", "_test_list_calendar_events"):
             if hasattr(cli.cmd_sync, name):
                 delattr(cli.cmd_sync, name)
 
@@ -328,14 +329,14 @@ def test_sync_create_failure_logs_failed(tmp_path: Path, monkeypatch):
         next_checkpoint="1",
     )
     cli.cmd_sync._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
-    cli.cmd_sync._test_create_apple_event = lambda *_a, **_k: (_ for _ in ()).throw(  # type: ignore[attr-defined]
-        RuntimeError("apple down")
+    cli.cmd_sync._test_create_calendar_event = lambda *_a, **_k: (_ for _ in ()).throw(  # type: ignore[attr-defined]
+        RuntimeError("caldav down")
     )
-    cli.cmd_sync._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
+    cli.cmd_sync._test_list_calendar_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
     try:
         cli.cmd_sync(argparse.Namespace(dry_run=False, full=True, json=False))
     finally:
-        for name in ("_test_fetch", "_test_create_apple_event", "_test_list_apple_events"):
+        for name in ("_test_fetch", "_test_create_calendar_event", "_test_list_calendar_events"):
             if hasattr(cli.cmd_sync, name):
                 delattr(cli.cmd_sync, name)
 
@@ -343,7 +344,7 @@ def test_sync_create_failure_logs_failed(tmp_path: Path, monkeypatch):
     assert records[-1]["outcome"]["status"] == "failed"
     apply = next(s for s in records[-1]["stages"] if s["name"] == "apply")
     assert apply["result"] == "failed"
-    assert "apple down" in apply["error"]
+    assert "caldav down" in apply["error"]
 
 
 def _pdd_exam_mail(**kwargs) -> MailItem:
@@ -372,7 +373,7 @@ def test_store_finds_fuzzy_company(tmp_path: Path):
         start_at="2026-08-16T19:00:00",
         end_at="2026-08-16T21:00:00",
         source_message_id="<old@nowcoder.net>",
-        sinks={"apple": "uid-1"},
+        sinks={"calendar": "uid-1"},
     )
     found = store.find_active_event(company="拼多多", event_type="exam")
     assert found is not None and found.id == eid
@@ -532,19 +533,19 @@ def test_sync_merges_fuzzy_company_across_runs(tmp_path: Path, monkeypatch):
             next_checkpoint=uid,
         )
         cli.cmd_sync._test_fetch = lambda _cp: batch  # type: ignore[attr-defined]
-        cli.cmd_sync._test_create_apple_event = track_create  # type: ignore[attr-defined]
-        cli.cmd_sync._test_update_apple_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
-        cli.cmd_sync._test_delete_apple_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
-        cli.cmd_sync._test_list_apple_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
+        cli.cmd_sync._test_create_calendar_event = track_create  # type: ignore[attr-defined]
+        cli.cmd_sync._test_update_calendar_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
+        cli.cmd_sync._test_delete_calendar_event = lambda *_a, **_k: None  # type: ignore[attr-defined]
+        cli.cmd_sync._test_list_calendar_events = lambda *_a, **_k: []  # type: ignore[attr-defined]
         try:
             cli.cmd_sync(argparse.Namespace(dry_run=False, full=True, json=False))
         finally:
             for name in (
                 "_test_fetch",
-                "_test_create_apple_event",
-                "_test_update_apple_event",
-                "_test_delete_apple_event",
-                "_test_list_apple_events",
+                "_test_create_calendar_event",
+                "_test_update_calendar_event",
+                "_test_delete_calendar_event",
+                "_test_list_calendar_events",
             ):
                 if hasattr(cli.cmd_sync, name):
                     delattr(cli.cmd_sync, name)

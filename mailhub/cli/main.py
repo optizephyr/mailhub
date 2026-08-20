@@ -8,13 +8,19 @@ from typing import Optional
 
 from mailhub.contracts.messages import IngestBatch, MailMessage, SourceRef
 from mailhub.logging.lifecycle import new_trace_id
-from mailhub.plugins.dispatch.apple_calendar import list_apple_calendars, list_apple_events
-from mailhub.plugins.dispatch.apple_reminders import list_apple_reminder_lists
+from mailhub.plugins.caldav import CalDavClient
+from mailhub.plugins.dispatch.calendar.calendar_io import (
+    list_calendar_events,
+    list_calendars,
+)
+from mailhub.plugins.dispatch.reminders.reminder_io import list_reminder_lists
 from mailhub.plugins.policies.qiuzhao import QiuzhaoResolver
 from mailhub.plugins.sources.qq_imap import QqImapSource
 from mailhub.runtime.config import (
     load_settings,
     require_bark_config,
+    require_caldav_account,
+    require_caldav_config,
     require_mail_credentials,
 )
 
@@ -24,9 +30,11 @@ from mailhub.runtime.engine import run_once
 from mailhub.store.sqlite import EventStore
 
 
-def cmd_list_apple(_: argparse.Namespace) -> None:
-    names = list_apple_calendars()
-    print("本机 Apple 日历：")
+def cmd_list_calendars(_: argparse.Namespace) -> None:
+    settings = load_settings()
+    require_caldav_account(settings)
+    names = list_calendars(settings)
+    print("CalDAV 日历：")
     for name in names:
         print(f"  - {name}")
 
@@ -37,18 +45,23 @@ def _scan_window(days: int) -> tuple[datetime, datetime]:
 
 
 def cmd_list_reminders(_: argparse.Namespace) -> None:
-    names = list_apple_reminder_lists()
-    print("本机提醒事项列表：")
+    settings = load_settings()
+    require_caldav_account(settings)
+    names = list_reminder_lists(settings)
+    print("CalDAV 提醒事项列表：")
     for name in names:
         print(f"  - {name}")
 
 
-def cmd_scan_apple(args: argparse.Namespace) -> None:
+def cmd_scan_calendar(args: argparse.Namespace) -> None:
     settings = load_settings()
+    require_caldav_config(settings)
+    if not settings.calendar_name:
+        raise SystemExit("日历未启用，请先配置 calendar_name")
     days = args.days or settings.calendar_scan_days or 90
     start, end = _scan_window(days)
-    events = list_apple_events(settings.apple_calendar_name, start, end)
-    print(f"日历「{settings.apple_calendar_name}」未来 {days} 天内 {len(events)} 条日程：")
+    events = list_calendar_events(settings, start, end)
+    print(f"日历「{settings.calendar_name}」未来 {days} 天内 {len(events)} 条日程：")
     for ev in events:
         marker = f"  来源={ev.marker_message_id}" if ev.marker_message_id else ""
         print(f"  - {ev.start_at}  {ev.summary}  uid={ev.uid}{marker}")
@@ -58,6 +71,22 @@ def cmd_sync(args: argparse.Namespace) -> None:
     settings = load_settings()
     require_mail_credentials(settings)
     require_bark_config(settings)
+    test_io = any(
+        hasattr(cmd_sync, name)
+        for name in (
+            "_test_create_calendar_event",
+            "_test_create_reminder",
+            "_test_list_calendar_events",
+        )
+    )
+    caldav_client = None
+    if not test_io:
+        require_caldav_config(settings)
+        caldav_client = CalDavClient(settings)
+        if settings.calendar_name:
+            caldav_client.collection(settings.calendar_name, "VEVENT")
+        if settings.reminders_list:
+            caldav_client.collection(settings.reminders_list, "VTODO")
     dry_run = bool(args.dry_run)
     full = bool(args.full)
 
@@ -87,15 +116,17 @@ def cmd_sync(args: argparse.Namespace) -> None:
     extras = {
         "settings": settings,
     }
+    if caldav_client is not None:
+        extras["caldav_client"] = caldav_client
     # Test hooks
     for key in (
-        "create_apple_event",
-        "update_apple_event",
-        "delete_apple_event",
-        "list_apple_events",
-        "create_apple_reminder",
-        "update_apple_reminder",
-        "delete_apple_reminder",
+        "create_calendar_event",
+        "update_calendar_event",
+        "delete_calendar_event",
+        "list_calendar_events",
+        "create_reminder",
+        "update_reminder",
+        "delete_reminder",
     ):
         fn = getattr(cmd_sync, f"_test_{key}", None)
         if fn is not None:
@@ -172,17 +203,17 @@ def build_parser() -> argparse.ArgumentParser:
     sync.add_argument("--json", action="store_true", help="输出解析结果 JSON")
     sync.set_defaults(func=cmd_sync)
 
-    apple = sub.add_parser("list-apple", help="列出本机 Apple 日历名称")
-    apple.set_defaults(func=cmd_list_apple)
+    calendars = sub.add_parser("list-calendars", help="列出 CalDAV 日历名称")
+    calendars.set_defaults(func=cmd_list_calendars)
 
-    reminders = sub.add_parser("list-reminders", help="列出本机提醒事项列表名称")
+    reminders = sub.add_parser("list-reminders", help="列出 CalDAV 提醒事项列表名称")
     reminders.set_defaults(func=cmd_list_reminders)
 
-    scan = sub.add_parser("scan-apple", help="列出目标日历里已有的日程")
+    scan = sub.add_parser("scan-calendar", help="列出目标日历里已有的日程")
     scan.add_argument(
         "--days", type=int, default=0, help="往后看多少天，默认取 CALENDAR_SCAN_DAYS"
     )
-    scan.set_defaults(func=cmd_scan_apple)
+    scan.set_defaults(func=cmd_scan_calendar)
 
     return parser
 
@@ -200,6 +231,9 @@ def main(argv: list[str] | None = None) -> None:
         # 配置格式错或类型错：报错不带 traceback
         print(f"配置文件解析失败：{e}", file=sys.stderr)
         sys.exit(2)
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

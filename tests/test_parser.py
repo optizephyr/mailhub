@@ -26,7 +26,8 @@ def _settings(tmp_path: Path, **kwargs) -> Settings:
     base = dict(
         qq_email="a@qq.com",
         qq_auth_code="x",
-        apple_calendar_name="日历",
+        calendar_name="日历",
+        reminders_list="提醒事项",
         lookback_days=14,
         mail_limit=80,
         reminder_minutes=30,
@@ -661,7 +662,7 @@ def test_store_cursor_and_active_event(tmp_path: Path):
         start_at="2026-08-21T14:00:00",
         end_at="2026-08-21T15:00:00",
         source_message_id="<notice@qq.com>",
-        sinks={"apple": "uid-1"},
+        sinks={"calendar": "uid-1"},
     )
     found = store.find_active_event(company="美团", event_type="interview")
     assert found is not None and found.id == eid

@@ -1,8 +1,8 @@
 # AGENTS.md
 
-本地 CLI「邮件处理中心」（包名 `mailhub`）：拉取邮箱 → 筛选重要邮件 → 经日程等渠道提醒用户。
+CLI「邮件处理中心」（包名 `mailhub`）：拉取邮箱 → 筛选重要邮件 → 经日程等渠道提醒用户。
 
-当前插件：QQ IMAP、秋招策略、Apple 日历、Apple 提醒事项、Bark。面向 macOS。人读说明见 `README.md`。
+当前插件：QQ IMAP、秋招策略、CalDAV 日历、CalDAV 提醒事项、Bark。支持无头 Linux / 容器。人读说明见 `README.md`。
 
 ## Setup
 
@@ -16,9 +16,9 @@ cp config.example.yaml config.yaml    # 已有 config.yaml 勿覆盖
 ## Commands
 
 ```bash
-uv run mailhub list-apple
+uv run mailhub list-calendars
 uv run mailhub list-reminders
-uv run mailhub scan-apple --days 60
+uv run mailhub scan-calendar --days 60
 uv run mailhub sync --dry-run
 uv run mailhub sync --dry-run --json
 uv run mailhub sync
@@ -43,8 +43,9 @@ uv run pytest tests/ -q
 | `mailhub/logging/` | lifecycle / llm_io JSONL |
 | `mailhub/plugins/sources/qq_imap.py` | QQ IMAP |
 | `mailhub/plugins/policies/qiuzhao/` | 秋招粗过滤 + 解析 |
-| `mailhub/plugins/dispatch/apple_calendar/` | Apple 日历 Planner/Handler |
-| `mailhub/plugins/dispatch/apple_reminders/` | Apple 提醒事项 Planner/Handler |
+| `mailhub/plugins/caldav.py` | CalDAV 协议、发现与 iCalendar 资源 |
+| `mailhub/plugins/dispatch/calendar/` | 日历 Planner/Handler |
+| `mailhub/plugins/dispatch/reminders/` | 提醒事项 Planner/Handler |
 | `mailhub/plugins/dispatch/bark/` | Bark Planner/Handler |
 | `mailhub/cli/` | argparse 与展示 |
 
@@ -60,7 +61,7 @@ uv run pytest tests/ -q
 
 - Python 3.9+；`from __future__ import annotations`；dataclass 建模
 - 新增配置：同步改 `runtime.config.Settings`、`config.example.yaml`、必要时 README
-- QQ / 秋招 / Apple 名字只出现在 `mailhub/plugins/`（及对应测试）
+- QQ / 秋招名字只出现在 `mailhub/plugins/`（及对应测试）
 - 中文用户可见文案保持简洁准确
 - 改秋招规则：在 `tests/fixtures/email_corpus/` 补/改 `.eml`，并更新 `labels.json`
 
@@ -68,8 +69,9 @@ uv run pytest tests/ -q
 
 - **勿提交 / 勿打印** `config.yaml`、授权码、API key、真实邮件正文中的隐私
 - **勿提交** `data/`（sqlite、日志）；语料用脱敏样例
-- 正式 `run` 会改本机日历并推进游标；调试默认 `--dry-run`
-- AppleScript / 日历或提醒事项权限失败时，引导查系统设置「自动化 / 日历 / 提醒事项」，勿伪造成功写入
+- 正式 `sync` 会写 CalDAV 并推进游标；调试默认 `--dry-run`
+- CalDAV 失败时报告认证 / 权限 / 协议错误，勿打印密码或 Authorization
+- 同一邮箱实例任意时刻只允许一个写入方，勿让 Mac 和服务器同时运行
 - 不要把核心改成绑死单一日历后端；新渠道以 Planner + Handler 插件形式加入
 
 ## Agent 技能

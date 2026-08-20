@@ -5,11 +5,14 @@ qq_auth_code: your_qq_auth_code
 # 邮箱实例 id（多邮箱时区分 checkpoint）
 source_id: qq.default
 
-# Apple 日历名称（「日历」App 左侧列表里的名字，常见：日历 / Home / 工作）
-apple_calendar_name: 日历
+# 第三方 CalDAV 账户（日历与提醒事项共用）
+caldav_url: https://dav.example.com/
+caldav_username: your_username
+caldav_password: your_app_password
 
-# 提醒事项列表名称（「提醒事项」App 左侧列表，常见：提醒事项）
-apple_reminders_list: 提醒事项
+# 精确匹配 CalDAV collection 的显示名称；留空即未启用该渠道
+calendar_name: 秋招
+reminders_list: 秋招提醒
 
 # Bark 即时推送（默认未启用；仅支持自建服务器和一台设备）
 bark_enabled: false

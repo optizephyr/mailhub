@@ -1,11 +1,11 @@
 from .calendar_io import (
-    create_apple_event,
-    delete_apple_event,
-    list_apple_calendars,
-    list_apple_events,
-    update_apple_event,
+    create_calendar_event,
+    delete_calendar_event,
+    list_calendar_events,
+    list_calendars,
+    update_calendar_event,
 )
-from .handler import AppleCalendarHandler
+from .handler import CalendarHandler
 from .match import companies_match, match_calendar_event
 from .planner import (
     ACTION_CANCEL,
@@ -13,12 +13,12 @@ from .planner import (
     ACTION_FAIL,
     ACTION_SKIP,
     ACTION_UPDATE,
-    AppleCalendarPlanner,
+    CalendarPlanner,
     find_target,
     match_session,
     session_event_from_candidate,
 )
-from .types import AppleEventRef
+from .types import CalendarEventRef
 
 __all__ = [
     "ACTION_CANCEL",
@@ -26,17 +26,17 @@ __all__ = [
     "ACTION_FAIL",
     "ACTION_SKIP",
     "ACTION_UPDATE",
-    "AppleCalendarHandler",
-    "AppleCalendarPlanner",
-    "AppleEventRef",
+    "CalendarEventRef",
+    "CalendarHandler",
+    "CalendarPlanner",
     "companies_match",
-    "create_apple_event",
-    "delete_apple_event",
+    "create_calendar_event",
+    "delete_calendar_event",
     "find_target",
-    "list_apple_calendars",
-    "list_apple_events",
+    "list_calendar_events",
+    "list_calendars",
     "match_calendar_event",
     "match_session",
     "session_event_from_candidate",
-    "update_apple_event",
+    "update_calendar_event",
 ]

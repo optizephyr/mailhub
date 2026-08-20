@@ -10,16 +10,16 @@ from mailhub.plugins.policies.qiuzhao.types import CandidateEvent
 from mailhub.runtime.config import Settings
 from mailhub.store.sqlite import EventStore, StoredEvent
 
-from .calendar_io import list_apple_events
+from .calendar_io import list_calendar_events
 from .match import companies_match, match_calendar_event
-from .types import AppleEventRef
+from .types import CalendarEventRef
 
 
 SINK_REMINDERS = "reminders"
 
 
 def _is_reminders_only(row: StoredEvent) -> bool:
-    return bool(row.sinks.get(SINK_REMINDERS)) and not row.sinks.get("apple")
+    return bool(row.sinks.get(SINK_REMINDERS)) and not row.sinks.get("calendar")
 
 
 def _resolved_to_candidate(resolved: ResolvedMail) -> CandidateEvent:
@@ -27,11 +27,11 @@ def _resolved_to_candidate(resolved: ResolvedMail) -> CandidateEvent:
 
     return resolved_to_candidate(resolved)
 
-ACTION_CREATE = "apple_calendar.create"
-ACTION_UPDATE = "apple_calendar.update"
-ACTION_CANCEL = "apple_calendar.cancel"
-ACTION_SKIP = "apple_calendar.skip"
-ACTION_FAIL = "apple_calendar.fail"
+ACTION_CREATE = "calendar.create"
+ACTION_UPDATE = "calendar.update"
+ACTION_CANCEL = "calendar.cancel"
+ACTION_SKIP = "calendar.skip"
+ACTION_FAIL = "calendar.fail"
 
 
 def _session_event_from_candidate(event: CandidateEvent) -> StoredEvent:
@@ -73,12 +73,12 @@ def _scan_window(days: int) -> tuple[datetime, datetime]:
 
 def _peek_calendar_match(
     event: CandidateEvent, settings: Settings
-) -> Optional[AppleEventRef]:
+) -> Optional[CalendarEventRef]:
     if settings.calendar_scan_days <= 0:
         return None
     start, end = _scan_window(settings.calendar_scan_days)
     try:
-        existing = list_apple_events(settings.apple_calendar_name, start, end)
+        existing = list_calendar_events(settings, start, end)
     except RuntimeError:
         return None
     return match_calendar_event(event, existing)
@@ -99,12 +99,14 @@ def _adopt_from_calendar(
         start_at=matched.start_at,
         end_at=matched.end_at,
         source_message_id=matched.marker_message_id or event.message_id,
-        sinks={"apple": matched.uid},
+        sinks={"calendar": matched.uid},
     )
     return store.get_event(row_id)
 
 
-def _virtual_from_calendar(matched: AppleEventRef, event: CandidateEvent) -> StoredEvent:
+def _virtual_from_calendar(
+    matched: CalendarEventRef, event: CandidateEvent
+) -> StoredEvent:
     return StoredEvent(
         id=0,
         company=event.company,
@@ -114,7 +116,7 @@ def _virtual_from_calendar(matched: AppleEventRef, event: CandidateEvent) -> Sto
         end_at=matched.end_at,
         status="active",
         source_message_id=matched.marker_message_id or event.message_id,
-        sinks={"apple": matched.uid},
+        sinks={"calendar": matched.uid},
     )
 
 
@@ -154,7 +156,7 @@ def find_target(
     return None, "none"
 
 
-class AppleCalendarPlanner:
+class CalendarPlanner:
     def __init__(
         self,
         store: EventStore,
@@ -177,6 +179,19 @@ class AppleCalendarPlanner:
         if event.action != "cancel" and event.time_precision == "window":
             return []
         mid = event.message_id
+
+        if not self.settings.calendar_name:
+            return [
+                self._req(
+                    ACTION_SKIP,
+                    event,
+                    result="would_skip_disabled"
+                    if self.dry_run
+                    else "skipped_disabled",
+                    summary="日历未启用，本邮件不送达",
+                    match_via="none",
+                )
+            ]
 
         if self.store.already_processed(mid, self.source_id):
             return [

@@ -244,7 +244,7 @@ class EventStore:
         )
         self._conn.commit()
 
-    # --- calendar rows (apple plugin) ---
+    # --- calendar and reminders rows ---
 
     def _load_sinks(self, event_row_id: int) -> dict[str, str]:
         rows = self._conn.execute(

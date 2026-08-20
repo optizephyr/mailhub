@@ -1,10 +1,10 @@
 from pathlib import Path
 
 from mailhub.contracts.messages import MailMessage, SourceRef
-from mailhub.plugins.dispatch.apple_calendar.planner import AppleCalendarPlanner
-from mailhub.plugins.dispatch.apple_reminders.planner import (
+from mailhub.plugins.dispatch.calendar.planner import CalendarPlanner
+from mailhub.plugins.dispatch.reminders.planner import (
     ACTION_CREATE,
-    AppleRemindersPlanner,
+    RemindersPlanner,
 )
 from mailhub.plugins.policies.qiuzhao import candidate_to_resolved
 from mailhub.plugins.policies.qiuzhao.types import CandidateEvent
@@ -16,7 +16,8 @@ def _settings(tmp_path: Path) -> Settings:
     return Settings(
         qq_email="a@qq.com",
         qq_auth_code="x",
-        apple_calendar_name="日历",
+        calendar_name="日历",
+        reminders_list="提醒事项",
         lookback_days=14,
         mail_limit=80,
         reminder_minutes=30,
@@ -55,8 +56,8 @@ def test_window_task_goes_to_reminders_not_calendar(tmp_path: Path):
         time_precision="window",
     )
     resolved = _resolved(event)
-    cal = AppleCalendarPlanner(store, settings, session, dry_run=True, source_id="qq.default")
-    rem = AppleRemindersPlanner(store, settings, session, dry_run=True, source_id="qq.default")
+    cal = CalendarPlanner(store, settings, session, dry_run=True, source_id="qq.default")
+    rem = RemindersPlanner(store, settings, session, dry_run=True, source_id="qq.default")
     assert cal.plan(resolved) == []
     reqs = rem.plan(resolved)
     assert len(reqs) == 1
@@ -82,6 +83,6 @@ def test_fixed_slot_skips_reminders_planner(tmp_path: Path):
         time_precision="fixed",
     )
     resolved = _resolved(event)
-    rem = AppleRemindersPlanner(store, settings, session, dry_run=True, source_id="qq.default")
+    rem = RemindersPlanner(store, settings, session, dry_run=True, source_id="qq.default")
     assert rem.plan(resolved) == []
     store.close()

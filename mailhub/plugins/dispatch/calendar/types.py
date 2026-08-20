@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class AppleEventRef:
+class CalendarEventRef:
     uid: str
     summary: str
     start_at: str = ""

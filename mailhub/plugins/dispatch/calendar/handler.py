@@ -3,28 +3,42 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from mailhub.contracts.actions import ActionReceipt, ActionRequest
+from mailhub.plugins.caldav import CalDavClient
 from mailhub.plugins.policies.qiuzhao.types import CandidateEvent
 from mailhub.runtime.config import Settings
 from mailhub.store.sqlite import EventStore, StoredEvent
 
-from . import reminder_io
+from . import calendar_io
 from .planner import (
     ACTION_CANCEL,
     ACTION_CREATE,
     ACTION_FAIL,
     ACTION_SKIP,
     ACTION_UPDATE,
-    SINK_REMINDERS,
 )
 
 
-class AppleRemindersHandler:
-    def __init__(self, store: EventStore, settings: Settings) -> None:
+class CalendarHandler:
+    def __init__(
+        self,
+        store: EventStore,
+        settings: Settings,
+        client: Optional[CalDavClient] = None,
+    ) -> None:
         self.store = store
-        self.settings = settings
-        self.create_apple_reminder = reminder_io.create_apple_reminder
-        self.update_apple_reminder = reminder_io.update_apple_reminder
-        self.delete_apple_reminder = reminder_io.delete_apple_reminder
+        client = client or CalDavClient(settings)
+        # allow tests to patch these
+        self.create_calendar_event = (
+            lambda event: calendar_io.create_calendar_event(event, settings, client)
+        )
+        self.update_calendar_event = (
+            lambda uid, event: calendar_io.update_calendar_event(
+                uid, event, settings, client
+            )
+        )
+        self.delete_calendar_event = (
+            lambda uid: calendar_io.delete_calendar_event(uid, settings, client)
+        )
 
     def handle(self, request: ActionRequest) -> ActionReceipt:
         payload = request.payload
@@ -70,11 +84,10 @@ class AppleRemindersHandler:
 
         event = CandidateEvent(**payload["candidate"])
         target = self._target_from_payload(payload.get("target"))
-        list_name = self.settings.apple_reminders_list
 
         try:
             if request.type == ACTION_CREATE:
-                row_id = self._apply_create(event, list_name)
+                row_id = self._apply_create(event)
                 self.store.mark_processed(
                     event.message_id, event.action, row_id, source_id=source_id
                 )
@@ -83,7 +96,7 @@ class AppleRemindersHandler:
                 )
             elif request.type == ACTION_UPDATE:
                 assert target is not None
-                self._apply_update(target, event, list_name)
+                self._apply_update(target, event)
                 self.store.mark_processed(
                     event.message_id, event.action, target.id, source_id=source_id
                 )
@@ -121,6 +134,7 @@ class AppleRemindersHandler:
             external_id=receipt.external_id,
             error=receipt.error,
         )
+        # stash extras for engine logging via payload mutation
         payload["_receipt_meta"] = {
             "result": self._result_label(request.type, receipt),
             "event_row_id": int(receipt.external_id)
@@ -163,8 +177,8 @@ class AppleRemindersHandler:
             sinks=dict(raw.get("sinks") or {}),
         )
 
-    def _apply_create(self, event: CandidateEvent, list_name: str) -> int:
-        reminder_id = self.create_apple_reminder(event, list_name)
+    def _apply_create(self, event: CandidateEvent) -> int:
+        calendar_event_id = self.create_calendar_event(event)
         return self.store.create_event(
             company=event.company,
             event_type=event.event_type,
@@ -172,18 +186,16 @@ class AppleRemindersHandler:
             start_at=event.start_at,
             end_at=event.end_at,
             source_message_id=event.message_id,
-            sinks={SINK_REMINDERS: reminder_id},
+            sinks={"calendar": calendar_event_id},
         )
 
-    def _apply_update(
-        self, target: StoredEvent, event: CandidateEvent, list_name: str
-    ) -> None:
+    def _apply_update(self, target: StoredEvent, event: CandidateEvent) -> None:
         sink_ids = dict(target.sinks)
-        external_id = sink_ids.get(SINK_REMINDERS)
+        external_id = sink_ids.get("calendar")
         if external_id:
-            self.update_apple_reminder(external_id, event, list_name)
+            self.update_calendar_event(external_id, event)
         else:
-            sink_ids[SINK_REMINDERS] = self.create_apple_reminder(event, list_name)
+            sink_ids["calendar"] = self.create_calendar_event(event)
         self.store.update_event(
             target.id,
             title=event.title,
@@ -194,7 +206,7 @@ class AppleRemindersHandler:
         )
 
     def _apply_cancel(self, target: StoredEvent, event: CandidateEvent) -> None:
-        external_id = target.sinks.get(SINK_REMINDERS)
+        external_id = target.sinks.get("calendar")
         if external_id:
-            self.delete_apple_reminder(external_id)
+            self.delete_calendar_event(external_id)
         self.store.cancel_event(target.id, event.message_id)

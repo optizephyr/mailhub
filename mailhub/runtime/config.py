@@ -13,7 +13,11 @@ class Settings:
     data_dir: Path
     qq_email: str = ""
     qq_auth_code: str = ""
-    apple_calendar_name: str = "日历"
+    caldav_url: str = ""
+    caldav_username: str = ""
+    caldav_password: str = ""
+    calendar_name: str = ""
+    reminders_list: str = ""
     lookback_days: int = 14
     mail_limit: int = 80
     reminder_minutes: int = 30
@@ -22,7 +26,6 @@ class Settings:
     llm_model: str = "gpt-4o-mini"
     calendar_scan_days: int = 90
     source_id: str = "qq.default"
-    apple_reminders_list: str = "提醒事项"
     bark_enabled: bool = False
     bark_key: str = ""
     bark_server_url: str = ""
@@ -47,10 +50,8 @@ _BOOL_FIELDS = frozenset({"bark_enabled"})
 
 # 空字符串回退到默认值的字符串字段
 _STRING_FALLBACKS = {
-    "apple_calendar_name": "日历",
     "llm_model": "gpt-4o-mini",
     "source_id": "qq.default",
-    "apple_reminders_list": "提醒事项",
 }
 
 
@@ -78,7 +79,7 @@ def _coerce(key: str, value: Any) -> Any:
         )
 
     cleaned = value.strip()
-    if key in {"llm_api_base", "bark_server_url"}:
+    if key in {"llm_api_base", "bark_server_url", "caldav_url"}:
         # URL 末尾斜杠归一，避免与子路径拼接出现 //
         return cleaned.rstrip("/")
     if key in _STRING_FALLBACKS:
@@ -145,3 +146,21 @@ def require_bark_config(settings: Settings) -> None:
         missing.append("服务器地址")
     if missing:
         raise SystemExit(f"Bark 已启用，但缺少 Bark {'和'.join(missing)}")
+
+
+def require_caldav_config(settings: Settings) -> None:
+    if not settings.calendar_name and not settings.reminders_list:
+        return
+    require_caldav_account(settings)
+
+
+def require_caldav_account(settings: Settings) -> None:
+    missing = []
+    if not settings.caldav_url:
+        missing.append("服务器地址")
+    if not settings.caldav_username:
+        missing.append("用户名")
+    if not settings.caldav_password:
+        missing.append("密码")
+    if missing:
+        raise SystemExit(f"缺少 CalDAV {'、'.join(missing)}")

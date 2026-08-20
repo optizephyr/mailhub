@@ -5,18 +5,18 @@ from typing import Optional
 
 from mailhub.contracts.actions import ActionRequest
 from mailhub.contracts.resolve import ResolvedMail
-from mailhub.plugins.dispatch.apple_calendar.match import companies_match
+from mailhub.plugins.dispatch.calendar.match import companies_match
 from mailhub.plugins.policies.qiuzhao.types import CandidateEvent
 from mailhub.runtime.config import Settings
 from mailhub.store.sqlite import EventStore, StoredEvent
 
 SINK_REMINDERS = "reminders"
 
-ACTION_CREATE = "apple_reminders.create"
-ACTION_UPDATE = "apple_reminders.update"
-ACTION_CANCEL = "apple_reminders.cancel"
-ACTION_SKIP = "apple_reminders.skip"
-ACTION_FAIL = "apple_reminders.fail"
+ACTION_CREATE = "reminders.create"
+ACTION_UPDATE = "reminders.update"
+ACTION_CANCEL = "reminders.cancel"
+ACTION_SKIP = "reminders.skip"
+ACTION_FAIL = "reminders.fail"
 
 
 def _resolved_to_candidate(resolved: ResolvedMail) -> CandidateEvent:
@@ -91,7 +91,7 @@ def _same_window(event: CandidateEvent, target: StoredEvent) -> bool:
     return True
 
 
-class AppleRemindersPlanner:
+class RemindersPlanner:
     def __init__(
         self,
         store: EventStore,
@@ -113,6 +113,19 @@ class AppleRemindersPlanner:
         event = _resolved_to_candidate(resolved)
         if event.action != "cancel" and event.time_precision != "window":
             return []
+
+        if not self.settings.reminders_list:
+            return [
+                self._req(
+                    ACTION_SKIP,
+                    event,
+                    result="would_skip_disabled"
+                    if self.dry_run
+                    else "skipped_disabled",
+                    summary="提醒事项未启用，本邮件不送达",
+                    match_via="none",
+                )
+            ]
 
         if self.store.already_processed(event.message_id, self.source_id):
             return [

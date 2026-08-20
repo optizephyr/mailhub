@@ -7,7 +7,7 @@ from typing import Iterable, Optional
 
 from mailhub.plugins.policies.qiuzhao.types import CandidateEvent
 
-from .types import AppleEventRef
+from .types import CalendarEventRef
 
 MARKER_PREFIX = "[mailhub]"
 # 旧前缀保留读取，兼容此前写入的日程描述。
@@ -58,14 +58,14 @@ def _type_conflicts(label: str, event_type: str) -> bool:
     return label_type != event_type
 
 
-def _latest(items: list[AppleEventRef]) -> AppleEventRef:
+def _latest(items: list[CalendarEventRef]) -> CalendarEventRef:
     return max(items, key=lambda c: (c.start_at, c.uid))
 
 
 def match_calendar_event(
     event: CandidateEvent,
-    candidates: Iterable[AppleEventRef],
-) -> Optional[AppleEventRef]:
+    candidates: Iterable[CalendarEventRef],
+) -> Optional[CalendarEventRef]:
     """在日历已有日程里找本封邮件该改动的那条；找不到返回 None。
 
     优先回复链（描述里埋的 message-id），其次同公司 + 同学段里开始时间最晚的一场。

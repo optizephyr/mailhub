@@ -5,27 +5,28 @@ from typing import Optional
 from mailhub.contracts.messages import IngestBatch
 from mailhub.contracts.resolve import IgnoredMail, ResolveFailure, ResolvedMail
 from mailhub.logging.lifecycle import MailTrace, planned_event_brief
-from mailhub.plugins.dispatch.apple_calendar import (
+from mailhub.plugins.caldav import CalDavClient
+from mailhub.plugins.dispatch.calendar import (
     ACTION_CANCEL,
     ACTION_CREATE,
     ACTION_FAIL,
     ACTION_SKIP,
     ACTION_UPDATE,
-    AppleCalendarHandler,
-    AppleCalendarPlanner,
+    CalendarHandler,
+    CalendarPlanner,
     match_session,
     session_event_from_candidate,
 )
-from mailhub.plugins.dispatch.apple_reminders import (
+from mailhub.plugins.dispatch.reminders import (
     ACTION_CANCEL as REM_CANCEL,
     ACTION_CREATE as REM_CREATE,
     ACTION_FAIL as REM_FAIL,
     ACTION_SKIP as REM_SKIP,
     ACTION_UPDATE as REM_UPDATE,
-    AppleRemindersHandler,
-    AppleRemindersPlanner,
+    RemindersHandler,
+    RemindersPlanner,
 )
-from mailhub.plugins.dispatch.apple_reminders import (
+from mailhub.plugins.dispatch.reminders import (
     match_session as rem_match_session,
     session_event_from_candidate as rem_session_event_from_candidate,
 )
@@ -63,30 +64,31 @@ def run_once(ctx: RunContext) -> RunResult:
     FAIL_TYPES = {ACTION_FAIL, REM_FAIL}
 
     session: list[StoredEvent] = []
-    handler = AppleCalendarHandler(store, settings)
-    rem_handler = AppleRemindersHandler(store, settings)
+    caldav_client = ctx.extras.get("caldav_client") or CalDavClient(settings)
+    handler = CalendarHandler(store, settings, caldav_client)
+    rem_handler = RemindersHandler(store, settings, caldav_client)
     bark_handler = BarkHandler(store, settings)
-    if "create_apple_event" in ctx.extras:
-        handler.create_apple_event = ctx.extras["create_apple_event"]
-    if "update_apple_event" in ctx.extras:
-        handler.update_apple_event = ctx.extras["update_apple_event"]
-    if "delete_apple_event" in ctx.extras:
-        handler.delete_apple_event = ctx.extras["delete_apple_event"]
-    if ctx.extras.get("list_apple_events") is not None:
-        import mailhub.plugins.dispatch.apple_calendar.planner as planner_mod
+    if "create_calendar_event" in ctx.extras:
+        handler.create_calendar_event = ctx.extras["create_calendar_event"]
+    if "update_calendar_event" in ctx.extras:
+        handler.update_calendar_event = ctx.extras["update_calendar_event"]
+    if "delete_calendar_event" in ctx.extras:
+        handler.delete_calendar_event = ctx.extras["delete_calendar_event"]
+    if ctx.extras.get("list_calendar_events") is not None:
+        import mailhub.plugins.dispatch.calendar.planner as planner_mod
 
-        planner_mod.list_apple_events = ctx.extras["list_apple_events"]
-    if "create_apple_reminder" in ctx.extras:
-        rem_handler.create_apple_reminder = ctx.extras["create_apple_reminder"]
-    if "update_apple_reminder" in ctx.extras:
-        rem_handler.update_apple_reminder = ctx.extras["update_apple_reminder"]
-    if "delete_apple_reminder" in ctx.extras:
-        rem_handler.delete_apple_reminder = ctx.extras["delete_apple_reminder"]
+        planner_mod.list_calendar_events = ctx.extras["list_calendar_events"]
+    if "create_reminder" in ctx.extras:
+        rem_handler.create_reminder = ctx.extras["create_reminder"]
+    if "update_reminder" in ctx.extras:
+        rem_handler.update_reminder = ctx.extras["update_reminder"]
+    if "delete_reminder" in ctx.extras:
+        rem_handler.delete_reminder = ctx.extras["delete_reminder"]
 
-    planner = AppleCalendarPlanner(
+    planner = CalendarPlanner(
         store, settings, session, dry_run=dry_run, source_id=ctx.source_id
     )
-    rem_planner = AppleRemindersPlanner(
+    rem_planner = RemindersPlanner(
         store, settings, session, dry_run=dry_run, source_id=ctx.source_id
     )
     bark_planner = BarkPlanner(
@@ -156,7 +158,7 @@ def run_once(ctx: RunContext) -> RunResult:
             continue
         req = requests[0]
         payload = req.payload
-        is_reminder = req.type.startswith("apple_reminders.")
+        is_reminder = req.type.startswith("reminders.")
         noun = "提醒事项" if is_reminder else "日程"
 
         if dry_run:
@@ -244,7 +246,11 @@ def run_once(ctx: RunContext) -> RunResult:
             status = (
                 "skipped_duplicate"
                 if payload.get("result") == "skipped_duplicate"
-                else "skipped_same"
+                else (
+                    "skipped_disabled"
+                    if payload.get("result") == "skipped_disabled"
+                    else "skipped_same"
+                )
             )
             target_sinks = (payload.get("target") or {}).get("sinks")
             _finish_apply(
@@ -321,7 +327,7 @@ def run_once(ctx: RunContext) -> RunResult:
                 match_via="none",
             )
 
-    if not dry_run and batch.next_checkpoint:
+    if not dry_run and batch.next_checkpoint and result.failed_count == 0:
         prev = store.get_checkpoint(ctx.source_id)
         try:
             new_uid = int(batch.next_checkpoint)
@@ -374,7 +380,11 @@ def _tally_dry_run(
         result.updated += 1
     elif plan_result == "would_cancel":
         result.cancelled += 1
-    elif plan_result in ("would_skip_duplicate", "would_skip_same"):
+    elif plan_result in (
+        "would_skip_duplicate",
+        "would_skip_same",
+        "would_skip_disabled",
+    ):
         result.skipped += 1
     elif plan_result == "would_fail":
         result.failed.append(str(summary or "取消失败"))
