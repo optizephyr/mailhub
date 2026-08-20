@@ -103,13 +103,23 @@ docker run --rm --env-file .env -e TZ=Asia/Shanghai \
   mailhub:local
 ```
 
-推送到 `master` 后，GitHub Actions 会把镜像发到 [ghcr.io/optizephyr/mailhub](https://github.com/optizephyr/mailhub/pkgs/container/mailhub)。服务器上可以只拉镜像、不克隆源码（仍需自备 `.env`、`config.yaml` 和 `data` 目录）：
+推送到 `master` 后，GitHub Actions 会把镜像发到 [ghcr.io/optizephyr/mailhub](https://github.com/optizephyr/mailhub/pkgs/container/mailhub)。能访问 GitHub 的机器可以只拉镜像、不克隆源码（仍需自备 `.env`、`config.yaml` 和 `data` 目录）：
 
 ```bash
 docker pull ghcr.io/optizephyr/mailhub:latest
 ```
 
 包默认私有时，先 `echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin`。
+
+国内服务器直连 `ghcr.io` 往往超时。可在阿里云 ACR 个人版绑定本仓库、开「海外机器构建」和「代码变更自动构建」，镜像进 ACR 后只拉国内地址。Compose 用 `.env` 里的 `MAILHUB_IMAGE` 覆盖默认 GHCR（地域、命名空间以控制台为准）：
+
+```bash
+docker login registry.cn-hangzhou.aliyuncs.com
+# .env: MAILHUB_IMAGE=registry.cn-hangzhou.aliyuncs.com/<命名空间>/mailhub:latest
+docker compose pull && docker compose up -d
+```
+
+登录用控制台「访问凭证」，不是 GitHub token。
 
 ### Compose（定时循环）
 
@@ -118,12 +128,17 @@ docker pull ghcr.io/optizephyr/mailhub:latest
 ```bash
 cp .env.example .env   # 已有 .env 勿覆盖
 # 编辑 .env
-docker compose up -d --build
 ```
 
-默认每 15 分钟执行一次 `mailhub sync`；游标和日志在宿主机 `./data`。只改代码时再 `--build`；只改 `config.yaml` 后 `docker compose up -d` 即可。`.env` 不用打进镜像。
+能访问 GitHub、要在本机构建时：`docker compose up -d --build`。
 
-只拉已发布镜像、不本地构建时，用同一份 `compose.yaml`：`docker compose pull && docker compose up -d`。
+只拉已发布镜像（GHCR 或 ACR）时不要加 `--build`，否则会按 `Dockerfile` 在本机构建并访问 `ghcr.io`：
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+默认每 15 分钟执行一次 `mailhub sync`；游标和日志在宿主机 `./data`。只改代码且在本机构建时再 `--build`；只改 `config.yaml` 后 `docker compose up -d` 即可。`.env` 不用打进镜像。
 
 一次性命令（不进循环）：
 

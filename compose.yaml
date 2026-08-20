@@ -1,8 +1,9 @@
 # 部署项来自同目录 .env；旋钮挂仓库内 config.yaml（构建时也会打进镜像）。
 # 同一 source_id 任意时刻只跑一个写入方。
+# MAILHUB_IMAGE 只给 Compose 选镜像用（国内可改 ACR）；应用本身不读这项。
 services:
   mailhub:
-    image: ghcr.io/optizephyr/mailhub:latest
+    image: ${MAILHUB_IMAGE:-ghcr.io/optizephyr/mailhub:latest}
     build: .
     env_file: .env
     environment:
