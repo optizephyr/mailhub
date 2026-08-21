@@ -35,6 +35,9 @@ class CandidateEvent:
     subject: str
     title: str
     event_type: str
+    source_id: str = ""
+    source_key: str = ""
+    item_uid: str = ""
     action: str = "create"
     start_at: str = ""
     end_at: str = ""

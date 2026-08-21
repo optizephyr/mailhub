@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import uuid
 from typing import Any, Optional
 
 from mailhub.contracts.actions import ActionReceipt, ActionRequest
+from mailhub.contracts.messages import SourceRef
 from mailhub.plugins.caldav import CalDavClient
 from mailhub.plugins.policies.qiuzhao.types import CandidateEvent
 from mailhub.runtime.config import Settings
@@ -87,6 +89,7 @@ class RemindersHandler:
         try:
             if request.type == ACTION_CREATE:
                 row_id = self._apply_create(event)
+                self._link_message(row_id, source_id, event)
                 self.store.mark_processed(
                     event.message_id, event.action, row_id, source_id=source_id
                 )
@@ -96,6 +99,7 @@ class RemindersHandler:
             elif request.type == ACTION_UPDATE:
                 assert target is not None
                 self._apply_update(target, event)
+                self._link_message(target.id, source_id, event)
                 self.store.mark_processed(
                     event.message_id, event.action, target.id, source_id=source_id
                 )
@@ -107,6 +111,7 @@ class RemindersHandler:
             elif request.type == ACTION_CANCEL:
                 assert target is not None
                 self._apply_cancel(target, event)
+                self._link_message(target.id, source_id, event)
                 self.store.mark_processed(
                     event.message_id, "cancel", target.id, source_id=source_id
                 )
@@ -174,9 +179,11 @@ class RemindersHandler:
             source_message_id=str(raw.get("source_message_id") or ""),
             sinks=dict(raw.get("sinks") or {}),
             last_mail_sent_at=str(raw.get("last_mail_sent_at") or ""),
+            item_uid=str(raw.get("item_uid") or ""),
         )
 
     def _apply_create(self, event: CandidateEvent) -> int:
+        event.item_uid = event.item_uid or str(uuid.uuid4())
         reminder_id = self.create_reminder(event)
         return self.store.create_event(
             company=event.company,
@@ -187,9 +194,11 @@ class RemindersHandler:
             source_message_id=event.message_id,
             sinks={SINK_REMINDERS: reminder_id},
             last_mail_sent_at=event.sent_at,
+            item_uid=event.item_uid,
         )
 
     def _apply_update(self, target: StoredEvent, event: CandidateEvent) -> None:
+        event.item_uid = target.item_uid
         sink_ids = dict(target.sinks)
         external_id = sink_ids.get(SINK_REMINDERS)
         if external_id:
@@ -212,4 +221,17 @@ class RemindersHandler:
             self.delete_reminder(external_id)
         self.store.cancel_event(
             target.id, event.message_id, last_mail_sent_at=event.sent_at
+        )
+
+    def _link_message(
+        self, event_row_id: int, source_id: str, event: CandidateEvent
+    ) -> None:
+        self.store.link_event_message(
+            event_row_id,
+            SourceRef(
+                source_id=source_id or event.source_id,
+                message_id=event.message_id,
+                source_key=event.source_key,
+            ),
+            relation=event.action,
         )

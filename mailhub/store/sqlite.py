@@ -5,6 +5,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from mailhub.contracts.messages import SourceRef
+
 
 def _companies_match(company: str, title_company: str) -> bool:
     left, right = company.strip(), title_company.strip()
@@ -28,6 +30,7 @@ class StoredEvent:
         source_message_id: str,
         sinks: Optional[dict[str, str]] = None,
         last_mail_sent_at: str = "",
+        item_uid: str = "",
     ) -> None:
         self.id = id
         self.company = company
@@ -39,6 +42,7 @@ class StoredEvent:
         self.source_message_id = source_message_id
         self.sinks = sinks or {}
         self.last_mail_sent_at = last_mail_sent_at or ""
+        self.item_uid = item_uid or ""
 
 
 class EventStore:
@@ -66,11 +70,12 @@ class EventStore:
             );
 
             CREATE TABLE IF NOT EXISTS processed_messages (
-                message_id TEXT PRIMARY KEY,
+                message_id TEXT NOT NULL,
                 action TEXT,
                 event_row_id INTEGER,
                 processed_at TEXT,
-                source_id TEXT NOT NULL DEFAULT ''
+                source_id TEXT NOT NULL DEFAULT '',
+                PRIMARY KEY (source_id, message_id)
             );
 
             CREATE TABLE IF NOT EXISTS action_executions (
@@ -84,6 +89,7 @@ class EventStore:
 
             CREATE TABLE IF NOT EXISTS calendar_events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                item_uid TEXT NOT NULL DEFAULT '',
                 company TEXT NOT NULL DEFAULT '',
                 event_type TEXT NOT NULL DEFAULT 'other',
                 title TEXT,
@@ -102,11 +108,39 @@ class EventStore:
                 external_id TEXT NOT NULL,
                 PRIMARY KEY (event_row_id, sink)
             );
+
+            CREATE TABLE IF NOT EXISTS event_messages (
+                event_row_id INTEGER NOT NULL,
+                source_id TEXT NOT NULL,
+                message_id TEXT NOT NULL,
+                source_key TEXT NOT NULL DEFAULT '',
+                relation TEXT NOT NULL DEFAULT 'observed',
+                linked_at TEXT,
+                PRIMARY KEY (event_row_id, source_id, message_id)
+            );
             """
         )
+        self._migrate_calendar_event_item_uid()
         self._migrate_processed_source_id()
+        self._migrate_processed_composite_key()
         self._migrate_last_mail_sent_at()
+        self._conn.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_calendar_events_item_uid
+            ON calendar_events(item_uid) WHERE item_uid <> ''
+            """
+        )
         self._conn.commit()
+
+    def _migrate_calendar_event_item_uid(self) -> None:
+        cols = {
+            r["name"]
+            for r in self._conn.execute("PRAGMA table_info(calendar_events)").fetchall()
+        }
+        if "item_uid" not in cols:
+            self._conn.execute(
+                "ALTER TABLE calendar_events ADD COLUMN item_uid TEXT NOT NULL DEFAULT ''"
+            )
 
     def _migrate_processed_source_id(self) -> None:
         cols = {
@@ -117,6 +151,36 @@ class EventStore:
             self._conn.execute(
                 "ALTER TABLE processed_messages ADD COLUMN source_id TEXT NOT NULL DEFAULT ''"
             )
+
+    def _migrate_processed_composite_key(self) -> None:
+        info = self._conn.execute(
+            "PRAGMA table_info(processed_messages)"
+        ).fetchall()
+        pk_cols = [
+            row["name"]
+            for row in sorted(info, key=lambda row: int(row["pk"]))
+            if int(row["pk"]) > 0
+        ]
+        if pk_cols == ["source_id", "message_id"]:
+            return
+        self._conn.executescript(
+            """
+            CREATE TABLE processed_messages_v2 (
+                source_id TEXT NOT NULL DEFAULT '',
+                message_id TEXT NOT NULL,
+                action TEXT,
+                event_row_id INTEGER,
+                processed_at TEXT,
+                PRIMARY KEY (source_id, message_id)
+            );
+            INSERT OR REPLACE INTO processed_messages_v2
+                (source_id, message_id, action, event_row_id, processed_at)
+            SELECT source_id, message_id, action, event_row_id, processed_at
+            FROM processed_messages;
+            DROP TABLE processed_messages;
+            ALTER TABLE processed_messages_v2 RENAME TO processed_messages;
+            """
+        )
 
     def _migrate_last_mail_sent_at(self) -> None:
         cols = {
@@ -279,6 +343,7 @@ class EventStore:
             source_message_id=row["source_message_id"] or "",
             sinks=self._load_sinks(row["id"]),
             last_mail_sent_at=row["last_mail_sent_at"] if "last_mail_sent_at" in row.keys() else "",
+            item_uid=row["item_uid"] if "item_uid" in row.keys() else "",
         )
 
     def get_event(self, event_row_id: int) -> Optional[StoredEvent]:
@@ -299,6 +364,22 @@ class EventStore:
             ORDER BY event.id
             """,
             (sink,),
+        ).fetchall()
+        return [self._row_to_event(row) for row in rows]
+
+    def list_events_with_sinks(self) -> list[StoredEvent]:
+        rows = self._conn.execute(
+            """
+            SELECT *
+            FROM calendar_events
+            WHERE status = 'active'
+              AND EXISTS (
+                SELECT 1 FROM calendar_sinks
+                WHERE calendar_sinks.event_row_id = calendar_events.id
+                  AND calendar_sinks.external_id <> ''
+            )
+            ORDER BY id
+            """
         ).fetchall()
         return [self._row_to_event(row) for row in rows]
 
@@ -351,16 +432,18 @@ class EventStore:
         source_message_id: str,
         sinks: Optional[dict[str, str]] = None,
         last_mail_sent_at: str = "",
+        item_uid: str = "",
     ) -> int:
         now = datetime.utcnow().isoformat(timespec="seconds")
         cur = self._conn.execute(
             """
             INSERT INTO calendar_events
-            (company, event_type, title, start_at, end_at, status,
+            (item_uid, company, event_type, title, start_at, end_at, status,
              source_message_id, last_mail_sent_at, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)
             """,
             (
+                item_uid,
                 company,
                 event_type,
                 title,
@@ -383,6 +466,68 @@ class EventStore:
             )
         self._conn.commit()
         return event_row_id
+
+    def set_event_item_uid(self, event_row_id: int, item_uid: str) -> None:
+        now = datetime.utcnow().isoformat(timespec="seconds")
+        self._conn.execute(
+            """
+            UPDATE calendar_events
+            SET item_uid=?, updated_at=?
+            WHERE id=?
+            """,
+            (item_uid, now, event_row_id),
+        )
+        self._conn.commit()
+
+    def link_event_message(
+        self,
+        event_row_id: int,
+        source: SourceRef,
+        *,
+        relation: str,
+    ) -> None:
+        self._conn.execute(
+            """
+            INSERT INTO event_messages
+                (event_row_id, source_id, message_id, source_key, relation, linked_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(event_row_id, source_id, message_id) DO UPDATE SET
+                source_key = CASE
+                    WHEN excluded.source_key <> '' THEN excluded.source_key
+                    ELSE event_messages.source_key
+                END,
+                relation = excluded.relation,
+                linked_at = excluded.linked_at
+            """,
+            (
+                event_row_id,
+                source.source_id,
+                source.message_id,
+                source.source_key,
+                relation,
+                datetime.utcnow().isoformat(timespec="seconds"),
+            ),
+        )
+        self._conn.commit()
+
+    def list_event_messages(self, event_row_id: int) -> list[SourceRef]:
+        rows = self._conn.execute(
+            """
+            SELECT source_id, message_id, source_key
+            FROM event_messages
+            WHERE event_row_id = ?
+            ORDER BY linked_at DESC
+            """,
+            (event_row_id,),
+        ).fetchall()
+        return [
+            SourceRef(
+                source_id=str(row["source_id"]),
+                message_id=str(row["message_id"]),
+                source_key=str(row["source_key"] or ""),
+            )
+            for row in rows
+        ]
 
     def update_event(
         self,

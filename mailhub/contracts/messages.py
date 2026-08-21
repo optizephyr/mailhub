@@ -10,6 +10,9 @@ from bs4 import BeautifulSoup
 class SourceRef:
     source_id: str
     message_id: str
+    # Adapter-owned stable locator. Callers persist and return it unchanged;
+    # only the source adapter interprets its contents.
+    source_key: str = ""
 
 
 @dataclass

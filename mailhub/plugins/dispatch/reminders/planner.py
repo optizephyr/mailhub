@@ -275,6 +275,7 @@ class RemindersPlanner:
                 "start_at": target.start_at,
                 "end_at": target.end_at,
                 "status": target.status,
+                "item_uid": target.item_uid,
                 "source_message_id": target.source_message_id,
                 "last_mail_sent_at": target.last_mail_sent_at,
                 "sinks": dict(target.sinks),

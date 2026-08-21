@@ -25,7 +25,7 @@ def create_calendar_event(
 ) -> str:
     client = client or CalDavClient(settings)
     collection = client.collection(settings.calendar_name, "VEVENT")
-    uid = str(uuid.uuid4())
+    uid = event.item_uid or str(uuid.uuid4())
     return client.put_new(
         collection, build_event_ical(event, uid, settings.reminder_minutes)
     )
@@ -74,6 +74,7 @@ def list_calendar_events(
                 start_at=start_at,
                 end_at=end_at,
                 marker_message_id=extract_marker_message_id(description),
+                item_uid=component_text(item, "UID"),
             )
         )
     return events

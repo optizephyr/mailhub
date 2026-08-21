@@ -22,7 +22,8 @@ def create_reminder(
 ) -> str:
     client = client or CalDavClient(settings)
     collection = client.collection(settings.reminders_list, "VTODO")
-    return client.put_new(collection, build_todo_ical(event, str(uuid.uuid4())))
+    uid = event.item_uid or str(uuid.uuid4())
+    return client.put_new(collection, build_todo_ical(event, uid))
 
 
 def update_reminder(

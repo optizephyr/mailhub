@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from mailhub.contracts.messages import SourceRef
 from mailhub.plugins.sources.qq_imap import QqImapSource
 
 
@@ -20,6 +21,7 @@ class _Mailbox:
     def __init__(self, messages: dict[str, _Message]) -> None:
         self.messages = messages
         self.fetch_calls: list[dict[str, object]] = []
+        self.folder = _Folder()
 
     def login(self, *_args, **_kwargs):
         return self
@@ -33,6 +35,14 @@ class _Mailbox:
     def fetch(self, criteria, **kwargs):
         self.fetch_calls.append({"criteria": criteria, **kwargs})
         raw = str(criteria)
+        if "SINCE" in raw:
+            return list(self.messages.values())
+        if "UID" in raw:
+            return [
+                message
+                for message in self.messages.values()
+                if str(message.uid) in raw
+            ]
         return (
             [message]
             if (message := next(
@@ -41,6 +51,14 @@ class _Mailbox:
             ))
             else []
         )
+
+
+class _Folder:
+    def get(self):
+        return "INBOX"
+
+    def status(self, *_args):
+        return {"UIDVALIDITY": 99}
 
 
 def test_fetch_by_message_ids_fetches_exact_unseen_messages(monkeypatch):
@@ -58,4 +76,26 @@ def test_fetch_by_message_ids_fetches_exact_unseen_messages(monkeypatch):
     assert [message.source.message_id for message in messages] == ["<wanted@qq.com>"]
     assert len(mailbox.fetch_calls) == 1
     assert mailbox.fetch_calls[0]["mark_seen"] is False
-    assert mailbox.fetch_calls[0]["limit"] == 1
+    assert messages[0].source.source_key == "imap:INBOX:99:42"
+
+
+def test_fetch_by_source_refs_uses_uid_and_verifies_message_id(monkeypatch):
+    mailbox = _Mailbox({"wanted@qq.com": _Message("<wanted@qq.com>")})
+    monkeypatch.setattr(
+        "mailhub.plugins.sources.qq_imap.MailBox",
+        lambda _host: mailbox,
+    )
+    source = QqImapSource("a@qq.com", "secret")
+
+    messages = source.fetch_by_source_refs(
+        [
+            SourceRef(
+                source_id="qq.default",
+                message_id="<wanted@qq.com>",
+                source_key="imap:INBOX:99:42",
+            )
+        ]
+    )
+
+    assert [message.source.message_id for message in messages] == ["<wanted@qq.com>"]
+    assert "UID" in str(mailbox.fetch_calls[0]["criteria"])

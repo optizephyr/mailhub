@@ -103,6 +103,7 @@ def _adopt_from_calendar(
         source_message_id=matched.marker_message_id or event.message_id,
         sinks={"calendar": matched.uid},
         last_mail_sent_at=event.sent_at,
+        item_uid=matched.item_uid,
     )
     return store.get_event(row_id)
 
@@ -121,6 +122,7 @@ def _virtual_from_calendar(
         source_message_id=matched.marker_message_id or event.message_id,
         sinks={"calendar": matched.uid},
         last_mail_sent_at=event.sent_at,
+        item_uid=matched.item_uid,
     )
 
 
@@ -349,6 +351,7 @@ class CalendarPlanner:
                 "start_at": target.start_at,
                 "end_at": target.end_at,
                 "status": target.status,
+                "item_uid": target.item_uid,
                 "source_message_id": target.source_message_id,
                 "last_mail_sent_at": target.last_mail_sent_at,
                 "sinks": dict(target.sinks),

@@ -56,6 +56,8 @@ def candidate_to_resolved(event: CandidateEvent, message: MailMessage) -> Resolv
         )
     links = [event.meeting_url] if event.meeting_url else []
     candidate = event.to_dict()
+    candidate["source_id"] = message.source.source_id
+    candidate["source_key"] = message.source.source_key
     if message.sent_at:
         candidate["sent_at"] = message.sent_at
     return ResolvedMail(
@@ -96,6 +98,8 @@ def resolved_to_candidate(resolved: ResolvedMail) -> CandidateEvent:
         subject=str(resolved.attributes.get("subject") or resolved.summary),
         title=resolved.title,
         event_type=resolved.kind,
+        source_id=resolved.source.source_id,
+        source_key=resolved.source.source_key,
         action=action_map.get(resolved.change, "create"),
         start_at=(resolved.time.start_at if resolved.time and resolved.time.start_at else "")
         or "",

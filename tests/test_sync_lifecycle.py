@@ -125,6 +125,15 @@ def test_migrate_reminder_titles_command_supports_dry_run():
     assert args.dry_run is True
 
 
+def test_migrate_identities_command_supports_dry_run():
+    args = cli.build_parser().parse_args(
+        ["migrate-identities", "--dry-run"]
+    )
+
+    assert args.func is cli.cmd_migrate_identities
+    assert args.dry_run is True
+
+
 @pytest.mark.parametrize(
     ("dry_run", "settings_overrides", "error"),
     [

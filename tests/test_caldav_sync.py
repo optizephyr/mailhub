@@ -240,6 +240,20 @@ def test_sync_creates_event_in_configured_caldav_calendar(
     assert "DTSTART:20260825T100000" in resource
     assert "DTEND:20260825T110000" in resource
     assert "BEGIN:VALARM" in resource
+    assert "X-MAILHUB-ITEM-ID:" in resource
+    assert "X-MAILHUB-MESSAGE-ID:" in resource
+
+    from mailhub.plugins.caldav import component_text, parse_component
+    from mailhub.store.sqlite import EventStore
+
+    uid = component_text(parse_component(resource, "VEVENT"), "UID")
+    store = EventStore(tmp_path / "synced.sqlite")
+    row = store.get_event(1)
+    assert row is not None and row.item_uid == uid
+    assert [ref.message_id for ref in store.list_event_messages(1)] == [
+        _interview_mail().message_id
+    ]
+    store.close()
 
 
 def test_sync_creates_todo_in_configured_caldav_list(
@@ -538,14 +552,17 @@ def test_migrate_reminder_titles_refetches_original_mail_for_duration(
         )
     )
 
+    missing_ids: list[str] = []
     missing = migrate_reminder_titles(
         store,
         settings,
         dry_run=True,
         client=client,
         message_fetcher=lambda _ids: [],
+        missing_message_ids=missing_ids,
     )
     assert missing == []
+    assert missing_ids == [event.message_id]
 
     changes = migrate_reminder_titles(
         store,
@@ -558,6 +575,73 @@ def test_migrate_reminder_titles_refetches_original_mail_for_duration(
     assert changes[0].new_title == "[笔试·2小时] 文远知行 5月17日 08:00-21:00"
     assert "SUMMARY:[笔试·2小时] 文远知行 5月17日 08:00-21:00" in state.resources[
         resource_path
+    ]
+    store.close()
+
+
+def test_identity_migration_reuses_caldav_uid_and_links_legacy_mail(
+    tmp_path: Path, caldav_server
+) -> None:
+    from mailhub.plugins.caldav import CalDavClient
+    from mailhub.plugins.dispatch.reminders.reminder_io import create_reminder
+    from mailhub.runtime.identity_migrate import migrate_identities
+    from mailhub.store.sqlite import EventStore
+
+    url, state = caldav_server
+    settings = Settings(
+        data_dir=tmp_path,
+        caldav_url=url,
+        caldav_username="user",
+        caldav_password="secret",
+        reminders_list="秋招提醒",
+        source_id="qq.default",
+    )
+    client = CalDavClient(settings)
+    event = CandidateEvent(
+        message_id="<identity@qq.com>",
+        source_id="qq.default",
+        source_key="imap:INBOX:99:42",
+        item_uid="stable-item-uid",
+        subject="测评通知",
+        title="[测评] 京东",
+        event_type="assessment",
+        end_at="2026-08-21T18:00:00",
+        company="京东",
+        time_precision="window",
+    )
+    href = create_reminder(event, settings, client)
+    resource = next(iter(state.resources.values()))
+    assert "UID:stable-item-uid" in resource
+    assert "X-MAILHUB-ITEM-ID:stable-item-uid" in resource
+    assert "X-MAILHUB-SOURCE-ID:qq.default" in resource
+    assert "X-MAILHUB-MESSAGE-ID:<identity@qq.com>" in resource
+    assert "X-MAILHUB-SOURCE-KEY:imap:INBOX:99:42" in resource
+
+    store = EventStore(tmp_path / "synced.sqlite")
+    row_id = store.create_event(
+        company=event.company,
+        event_type=event.event_type,
+        title=event.title,
+        start_at=event.start_at,
+        end_at=event.end_at,
+        source_message_id=event.message_id,
+        sinks={"reminders": href},
+    )
+
+    preview = migrate_identities(
+        store, client, source_id=settings.source_id, dry_run=True
+    )
+    assert preview.changes[0].item_uid == "stable-item-uid"
+    assert store.get_event(row_id).item_uid == ""
+
+    result = migrate_identities(
+        store, client, source_id=settings.source_id, dry_run=False
+    )
+    assert result.errors == []
+    assert store.get_event(row_id).item_uid == "stable-item-uid"
+    refs = store.list_event_messages(row_id)
+    assert [(ref.source_id, ref.message_id) for ref in refs] == [
+        ("qq.default", "<identity@qq.com>")
     ]
     store.close()
 

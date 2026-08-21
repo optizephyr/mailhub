@@ -4,9 +4,9 @@ import re
 from datetime import date, timedelta
 from email.header import decode_header, make_header
 from typing import Iterable, Optional
+from urllib.parse import quote, unquote
 
 from imap_tools import AND, MailBox, MailMessage as ImapMailMessage, U
-from imap_tools.query import Header
 
 from mailhub.contracts.messages import IngestBatch, MailMessage, SourceRef
 
@@ -59,12 +59,54 @@ def _message_id_of(msg: ImapMailMessage) -> str:
     return f"local-{msg.uid}-{slug}"
 
 
-def _to_mail_message(msg: ImapMailMessage, source_id: str) -> MailMessage:
+def _source_key(folder: str, uidvalidity: int, uid: str) -> str:
+    if not folder or uidvalidity <= 0 or not uid:
+        return ""
+    return f"imap:{quote(folder, safe='')}:{uidvalidity}:{uid}"
+
+
+def _parse_source_key(value: str) -> Optional[tuple[str, int, str]]:
+    parts = (value or "").split(":", 3)
+    if len(parts) != 4 or parts[0] != "imap":
+        return None
+    try:
+        uidvalidity = int(parts[2])
+    except ValueError:
+        return None
+    folder, uid = unquote(parts[1]), parts[3]
+    if not folder or uidvalidity <= 0 or not uid:
+        return None
+    return folder, uidvalidity, uid
+
+
+def _mailbox_identity(mailbox) -> tuple[str, int]:
+    folder_manager = getattr(mailbox, "folder", None)
+    if folder_manager is None:
+        return "INBOX", 0
+    folder = folder_manager.get() or "INBOX"
+    try:
+        status = folder_manager.status(folder, ("UIDVALIDITY",))
+    except Exception:
+        return folder, 0
+    return folder, int(status.get("UIDVALIDITY") or 0)
+
+
+def _to_mail_message(
+    msg: ImapMailMessage,
+    source_id: str,
+    *,
+    folder: str = "",
+    uidvalidity: int = 0,
+) -> MailMessage:
     refs = _header_values(
         msg, "In-Reply-To", "References", "in-reply-to", "references"
     )
     return MailMessage(
-        source=SourceRef(source_id=source_id, message_id=_message_id_of(msg)),
+        source=SourceRef(
+            source_id=source_id,
+            message_id=_message_id_of(msg),
+            source_key=_source_key(folder, uidvalidity, str(msg.uid or "")),
+        ),
         subject=_decode(msg.subject),
         sender=_decode(msg.from_) if msg.from_ else "",
         sent_at=msg.date.isoformat() if msg.date else None,
@@ -111,6 +153,7 @@ class QqImapSource:
         with MailBox(self.host).login(
             self.email_addr, self.auth_code, initial_folder="INBOX"
         ) as mailbox:
+            folder, uidvalidity = _mailbox_identity(mailbox)
             if use_incremental:
                 # IMAP UID <n>:* always includes the mailbox's last message,
                 # even when that UID is below n. Filter those out below.
@@ -139,30 +182,98 @@ class QqImapSource:
                 if use_incremental and since_uid is not None and uid <= since_uid:
                     continue
 
-                messages_out.append(_to_mail_message(msg, self.source_id))
+                messages_out.append(
+                    _to_mail_message(
+                        msg,
+                        self.source_id,
+                        folder=folder,
+                        uidvalidity=uidvalidity,
+                    )
+                )
 
         next_checkpoint = str(max_uid) if max_uid else checkpoint
         return IngestBatch(messages=messages_out, next_checkpoint=next_checkpoint)
 
     def fetch_by_message_ids(self, message_ids: Iterable[str]) -> list[MailMessage]:
-        """Fetch exact original messages without changing flags or checkpoints."""
+        """Fetch originals by client-side Message-ID matching.
+
+        QQ IMAP accepts ``SEARCH HEADER Message-ID`` but may return unrelated
+        recent messages. Scan a bounded date window and compare the actual
+        header locally instead.
+        """
         found: list[MailMessage] = []
-        seen: set[str] = set()
+        wanted = {
+            message_id.strip()
+            for message_id in message_ids
+            if message_id.strip()
+            and not message_id.strip().startswith("local-")
+        }
+        if not wanted:
+            return found
         with MailBox(self.host).login(
             self.email_addr, self.auth_code, initial_folder="INBOX"
         ) as mailbox:
-            for message_id in message_ids:
-                message_id = message_id.strip()
-                if not message_id or message_id in seen or message_id.startswith("local-"):
+            folder, uidvalidity = _mailbox_identity(mailbox)
+            since = date.today() - timedelta(days=max(self.lookback_days, 365))
+            messages = mailbox.fetch(
+                AND(date_gte=since),
+                reverse=True,
+                mark_seen=False,
+            )
+            for msg in messages:
+                if _message_id_of(msg) not in wanted:
                     continue
-                seen.add(message_id)
-                messages = mailbox.fetch(
-                    AND(header=Header("Message-ID", message_id)),
-                    reverse=True,
-                    limit=1,
-                    mark_seen=False,
+                found.append(
+                    _to_mail_message(
+                        msg,
+                        self.source_id,
+                        folder=folder,
+                        uidvalidity=uidvalidity,
+                    )
                 )
-                for msg in messages:
-                    found.append(_to_mail_message(msg, self.source_id))
+                if len(found) == len(wanted):
                     break
         return found
+
+    def fetch_by_source_refs(self, refs: Iterable[SourceRef]) -> list[MailMessage]:
+        """Fetch originals by native IMAP identity, with Message-ID fallback."""
+        pending = [ref for ref in refs if ref.source_id == self.source_id]
+        if not pending:
+            return []
+        found: dict[tuple[str, str], MailMessage] = {}
+        with MailBox(self.host).login(
+            self.email_addr, self.auth_code, initial_folder="INBOX"
+        ) as mailbox:
+            current_folder, current_uidvalidity = _mailbox_identity(mailbox)
+            for ref in pending:
+                parsed = _parse_source_key(ref.source_key)
+                if parsed is None:
+                    continue
+                folder, uidvalidity, uid = parsed
+                if folder != current_folder or uidvalidity != current_uidvalidity:
+                    continue
+                for msg in mailbox.fetch(
+                    AND(uid=U(uid)),
+                    reverse=False,
+                    limit=1,
+                    mark_seen=False,
+                ):
+                    if _message_id_of(msg) != ref.message_id:
+                        break
+                    message = _to_mail_message(
+                        msg,
+                        self.source_id,
+                        folder=current_folder,
+                        uidvalidity=current_uidvalidity,
+                    )
+                    found[(ref.source_id, ref.message_id)] = message
+                    break
+
+        missing_ids = [
+            ref.message_id
+            for ref in pending
+            if (ref.source_id, ref.message_id) not in found
+        ]
+        for message in self.fetch_by_message_ids(missing_ids):
+            found[(message.source.source_id, message.source.message_id)] = message
+        return list(found.values())

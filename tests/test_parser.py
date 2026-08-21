@@ -1,10 +1,12 @@
 import json
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
 
+from mailhub.contracts.messages import SourceRef
 from mailhub.runtime.config import Settings, load_settings
 from mailhub.plugins.policies.qiuzhao.types import CandidateEvent, LlmParseResult, MailItem
 from mailhub.plugins.policies.qiuzhao.parser import (
@@ -936,6 +938,7 @@ def test_store_cursor_and_active_event(tmp_path: Path):
     assert store.get_last_uid() == 42
 
     eid = store.create_event(
+        item_uid="item-1",
         company="美团",
         event_type="interview",
         title="[interview] 美团",
@@ -946,9 +949,94 @@ def test_store_cursor_and_active_event(tmp_path: Path):
     )
     found = store.find_active_event(company="美团", event_type="interview")
     assert found is not None and found.id == eid
+    assert found.item_uid == "item-1"
     found2 = store.find_active_event(references=["<notice@qq.com>"])
     assert found2 is not None and found2.id == eid
 
+    source = SourceRef(
+        source_id="qq.default",
+        message_id="<notice@qq.com>",
+        source_key="imap:INBOX:99:42",
+    )
+    store.link_event_message(eid, source, relation="create")
+    update_source = SourceRef(
+        source_id="qq.default",
+        message_id="<reschedule@qq.com>",
+        source_key="imap:INBOX:99:43",
+    )
+    store.link_event_message(eid, update_source, relation="reschedule")
+    assert set(store.list_event_messages(eid)) == {source, update_source}
+
+    second = store.create_event(
+        item_uid="item-2",
+        company="京东",
+        event_type="interview",
+        title="[interview] 京东候选场次",
+        start_at="2026-08-22T14:00:00",
+        end_at="2026-08-22T15:00:00",
+        source_message_id=source.message_id,
+    )
+    store.link_event_message(second, source, relation="create")
+    assert store.list_event_messages(second) == [source]
+
+    store.mark_processed("<same@example.com>", "create", source_id="mailbox-a")
+    store.mark_processed("<same@example.com>", "create", source_id="mailbox-b")
+    assert store.already_processed("<same@example.com>", "mailbox-a")
+    assert store.already_processed("<same@example.com>", "mailbox-b")
+
     store.cancel_event(eid, "<cancel@qq.com>")
     assert store.find_active_event(company="美团") is None
+    store.close()
+
+
+def test_store_migrates_legacy_identity_schema(tmp_path: Path):
+    path = tmp_path / "legacy.sqlite"
+    conn = sqlite3.connect(path)
+    conn.executescript(
+        """
+        CREATE TABLE processed_messages (
+            message_id TEXT PRIMARY KEY,
+            action TEXT,
+            event_row_id INTEGER,
+            processed_at TEXT,
+            source_id TEXT NOT NULL DEFAULT ''
+        );
+        INSERT INTO processed_messages
+            (message_id, action, event_row_id, processed_at, source_id)
+        VALUES ('<legacy@example.com>', 'create', 1, '2026-08-21', 'qq.default');
+
+        CREATE TABLE calendar_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company TEXT NOT NULL DEFAULT '',
+            event_type TEXT NOT NULL DEFAULT 'other',
+            title TEXT,
+            start_at TEXT,
+            end_at TEXT,
+            status TEXT NOT NULL DEFAULT 'active',
+            source_message_id TEXT,
+            last_mail_sent_at TEXT NOT NULL DEFAULT '',
+            created_at TEXT,
+            updated_at TEXT
+        );
+        """
+    )
+    conn.commit()
+    conn.close()
+
+    store = EventStore(path)
+    assert store.already_processed("<legacy@example.com>", "qq.default")
+    store.mark_processed(
+        "<legacy@example.com>", "create", source_id="another-mailbox"
+    )
+    assert store.already_processed("<legacy@example.com>", "another-mailbox")
+    row_id = store.create_event(
+        item_uid="migrated-item",
+        company="京东",
+        event_type="assessment",
+        title="[测评] 京东",
+        start_at="",
+        end_at="2026-08-22T12:00:00",
+        source_message_id="<legacy@example.com>",
+    )
+    assert store.get_event(row_id).item_uid == "migrated-item"
     store.close()

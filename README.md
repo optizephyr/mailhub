@@ -64,8 +64,13 @@ uv run mailhub list-reminders
 # 列出目标日历里已有的日程（核对匹配用）
 uv run mailhub scan-calendar --days 60
 
+# 首次升级身份模型时，从现有 CalDAV UID 回填本地事项身份
+uv run mailhub migrate-identities --dry-run
+uv run mailhub migrate-identities
+
 # 从 IMAP 重拉原邮件，预览并迁移已有提醒事项的窗口和预计耗时标题
-# 覆盖同一条，不会新建；找不到原邮件时保持原标题
+# 新邮件按 IMAP 原生定位键精确取回，旧记录按 Message-ID 本地匹配
+# 覆盖同一条，不会新建；输出会区分更新与原邮件未找到
 uv run mailhub migrate-reminder-titles --dry-run
 uv run mailhub migrate-reminder-titles
 
@@ -85,6 +90,8 @@ uv run mailhub sync --dry-run --json
 ```
 
 建议用 cron / systemd timer 每 15～30 分钟跑一次 `uv run mailhub sync`。同一邮箱实例任意时刻只运行一个写入方，并让它独占 `data/` 里的游标与幂等状态。
+
+mailhub 分开保存两类身份：iCalendar UID 标识可跨改期延续的事项；邮箱来源、Message-ID 与 IMAP 原生定位键标识具体邮件。CalDAV href 只是远端资源地址。事项与邮件是多对多关联，不能互相替代。
 
 ## Docker
 

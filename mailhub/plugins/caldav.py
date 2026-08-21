@@ -79,6 +79,12 @@ def build_event_ical(
     item.add("summary", event.title)
     item.add("location", event.location)
     item.add("description", f"[mailhub] mid={event.message_id}")
+    item.add("x-mailhub-item-id", uid)
+    if event.source_id:
+        item.add("x-mailhub-source-id", event.source_id)
+    item.add("x-mailhub-message-id", event.message_id)
+    if event.source_key:
+        item.add("x-mailhub-source-key", event.source_key)
     if event.meeting_url:
         item.add("url", event.meeting_url)
     alarm = Alarm()
@@ -104,6 +110,12 @@ def build_todo_ical(
     item.add("dtstamp", datetime.now(timezone.utc))
     item.add("summary", event.title)
     item.add("description", event.meeting_url or "")
+    item.add("x-mailhub-item-id", uid)
+    if event.source_id:
+        item.add("x-mailhub-source-id", event.source_id)
+    item.add("x-mailhub-message-id", event.message_id)
+    if event.source_key:
+        item.add("x-mailhub-source-key", event.source_key)
     existing_status = component_text(existing, "STATUS") if existing is not None else ""
     if existing_status.upper() == "COMPLETED":
         item.add("status", "COMPLETED")

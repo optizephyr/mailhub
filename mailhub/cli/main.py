@@ -28,6 +28,7 @@ from mailhub.runtime.config import (
 import yaml
 from mailhub.runtime.context import RunContext
 from mailhub.runtime.engine import run_once
+from mailhub.runtime.identity_migrate import migrate_identities
 from mailhub.store.sqlite import EventStore
 
 
@@ -83,13 +84,15 @@ def cmd_migrate_reminder_titles(args: argparse.Namespace) -> None:
     )
 
     store = EventStore(settings.data_dir / "synced.sqlite")
+    missing_message_ids: list[str] = []
     try:
         changes = migrate_reminder_titles(
             store,
             settings,
             dry_run=bool(args.dry_run),
             client=client,
-            message_fetcher=source.fetch_by_message_ids,
+            source_ref_fetcher=source.fetch_by_source_refs,
+            missing_message_ids=missing_message_ids,
         )
     finally:
         store.close()
@@ -99,10 +102,49 @@ def cmd_migrate_reminder_titles(args: argparse.Namespace) -> None:
             f"  - #{change.event_row_id} "
             f"{change.old_title} → {change.new_title}"
         )
+    if missing_message_ids:
+        print(f"跳过 {len(missing_message_ids)} 条：原邮件未找到")
     if args.dry_run:
-        print(f"预览完成：将更新 {len(changes)} 条提醒事项标题")
+        print(
+            f"预览完成：将更新 {len(changes)} 条提醒事项标题，"
+            f"跳过 {len(missing_message_ids)} 条"
+        )
     else:
-        print(f"迁移完成：已更新 {len(changes)} 条提醒事项标题")
+        print(
+            f"迁移完成：已更新 {len(changes)} 条提醒事项标题，"
+            f"跳过 {len(missing_message_ids)} 条"
+        )
+
+
+def cmd_migrate_identities(args: argparse.Namespace) -> None:
+    settings = load_settings()
+    require_caldav_account(settings)
+    client = CalDavClient(settings)
+    store = EventStore(settings.data_dir / "synced.sqlite")
+    try:
+        result = migrate_identities(
+            store,
+            client,
+            source_id=settings.source_id,
+            dry_run=bool(args.dry_run),
+        )
+    finally:
+        store.close()
+
+    for change in result.changes:
+        print(f"  - #{change.event_row_id} item_uid={change.item_uid}")
+    for missing in result.missing_resources:
+        print(f"  - 资源无 UID：{missing}")
+    for error in result.errors:
+        print(f"  - 失败：{error}")
+    verb = "将回填" if args.dry_run else "已回填"
+    print(
+        f"身份迁移完成：{verb} {len(result.changes)} 条 item_uid，"
+        f"{result.linked_messages} 条邮件关联；"
+        f"资源缺失 {len(result.missing_resources)}，失败 {len(result.errors)}"
+    )
+    if result.errors:
+        raise SystemExit(1)
 
 
 def cmd_sync(args: argparse.Namespace) -> None:
@@ -257,6 +299,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="只展示将修改的标题，不写入 CalDAV 或本地数据库",
     )
     migrate.set_defaults(func=cmd_migrate_reminder_titles)
+
+    identities = sub.add_parser(
+        "migrate-identities",
+        help="从现有 CalDAV UID 回填事项身份与邮件关联",
+    )
+    identities.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="只展示将回填的身份，不写入本地数据库",
+    )
+    identities.set_defaults(func=cmd_migrate_identities)
 
     scan = sub.add_parser("scan-calendar", help="列出目标日历里已有的日程")
     scan.add_argument(
