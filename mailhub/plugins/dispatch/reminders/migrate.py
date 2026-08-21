@@ -1,10 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Callable, Iterable, Optional
 
+from mailhub.contracts.messages import MailMessage
 from mailhub.plugins.caldav import CalDavClient
-from mailhub.plugins.policies.qiuzhao.parser import build_reminder_title
+from mailhub.plugins.policies.qiuzhao import mail_message_to_item
+from mailhub.plugins.policies.qiuzhao.parser import (
+    build_reminder_title,
+    extract_task_duration_minutes,
+    llm_parse,
+)
 from mailhub.runtime.config import Settings
 from mailhub.store.sqlite import EventStore
 
@@ -25,9 +31,33 @@ def migrate_reminder_titles(
     *,
     dry_run: bool,
     client: Optional[CalDavClient] = None,
+    message_fetcher: Optional[
+        Callable[[Iterable[str]], list[MailMessage]]
+    ] = None,
 ) -> list[ReminderTitleChange]:
     changes: list[ReminderTitleChange] = []
-    for row in store.list_active_events_for_sink(SINK_REMINDERS):
+    rows = store.list_active_events_for_sink(SINK_REMINDERS)
+    messages: dict[str, MailMessage] = {}
+    if message_fetcher is not None:
+        fetched = message_fetcher(row.source_message_id for row in rows)
+        messages = {message.source.message_id: message for message in fetched}
+
+    for row in rows:
+        task_duration_minutes = None
+        if message_fetcher is not None:
+            message = messages.get(row.source_message_id)
+            if message is None:
+                continue
+            item = mail_message_to_item(message)
+            task_duration_minutes = extract_task_duration_minutes(
+                f"{item.subject}\n{item.body}"
+            )
+            if task_duration_minutes is None and settings.llm_enabled:
+                llm_result = llm_parse(item, settings)
+                if llm_result.event is not None:
+                    task_duration_minutes = (
+                        llm_result.event.task_duration_minutes
+                    )
         new_title = build_reminder_title(
             row.event_type,
             row.company,
@@ -35,6 +65,7 @@ def migrate_reminder_titles(
             row.start_at,
             row.end_at,
             row.title,
+            task_duration_minutes,
         )
         if new_title == row.title:
             continue

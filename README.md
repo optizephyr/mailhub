@@ -64,7 +64,8 @@ uv run mailhub list-reminders
 # 列出目标日历里已有的日程（核对匹配用）
 uv run mailhub scan-calendar --days 60
 
-# 预览并迁移已有提醒事项的窗口标题（覆盖同一条，不会新建）
+# 从 IMAP 重拉原邮件，预览并迁移已有提醒事项的窗口和预计耗时标题
+# 覆盖同一条，不会新建；找不到原邮件时保持原标题
 uv run mailhub migrate-reminder-titles --dry-run
 uv run mailhub migrate-reminder-titles
 

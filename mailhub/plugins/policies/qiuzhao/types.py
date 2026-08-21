@@ -44,6 +44,7 @@ class CandidateEvent:
     description: str = ""
     meeting_url: str = ""
     time_precision: str = "fixed"  # fixed | window
+    task_duration_minutes: Optional[int] = None
     confidence: float = 0.5
     source_snippet: str = ""
     references: list[str] = field(default_factory=list)

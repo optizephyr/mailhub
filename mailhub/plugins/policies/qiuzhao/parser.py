@@ -176,6 +176,35 @@ WINDOW_SIGNALS = (
 RELATIVE_HOURS_RE = re.compile(r"(\d+)\s*小时内")
 RELATIVE_WORKDAYS_RE = re.compile(r"(\d+)\s*个工作日")
 
+_DURATION_NUMBER = (
+    r"(?:\d+(?:\.\d+)?|[一二两三四五六七八九十]+个半|"
+    r"[一二两三四五六七八九十]+半|[一二两三四五六七八九十]+)"
+)
+_DURATION_PATTERNS = (
+    re.compile(
+        rf"(?:预计(?:耗时|用时|时长)?|耗时|用时|时长|大约|约|不超过|最多)"
+        rf"[^\d一二两三四五六七八九十]{{0,6}}"
+        rf"(?P<first>{_DURATION_NUMBER})"
+        rf"(?:\s*[-—~～至到]\s*(?P<second>{_DURATION_NUMBER}))?"
+        rf"\s*个?\s*(?P<unit>小时|分钟)(?!\s*内)"
+    ),
+    re.compile(
+        rf"任选\s*(?P<first>{_DURATION_NUMBER})"
+        rf"(?:\s*[-—~～至到]\s*(?P<second>{_DURATION_NUMBER}))?"
+        rf"\s*个?\s*(?P<unit>小时|分钟)(?!\s*内).{{0,12}}完成"
+    ),
+    re.compile(
+        rf"(?P<first>{_DURATION_NUMBER})"
+        rf"(?:\s*[-—~～至到]\s*(?P<second>{_DURATION_NUMBER}))?"
+        rf"\s*个?\s*(?P<unit>小时|分钟)(?!\s*内).{{0,6}}"
+        rf"(?:完成|做完|答完)(?:笔试|测评|考试|测试)?"
+    ),
+)
+_ENGLISH_WINDOW_DURATION_RE = re.compile(
+    r"\b(?:within|in)\s+(\d+(?:\.\d+)?)\s*(hours?|minutes?)\b",
+    re.IGNORECASE,
+)
+
 # 选时间截止日里的“时间”，不是面试开始时间
 DEADLINE_CONTEXT_RE = re.compile(
     r"(?:前完成|前选择|前预约|前确认|截止|之前选|之前完成).{0,8}"
@@ -400,6 +429,77 @@ def relative_deadline(text: str, now: datetime) -> Optional[datetime]:
     return None
 
 
+def _duration_number(value: str) -> Optional[float]:
+    value = value.strip()
+    try:
+        return float(value)
+    except ValueError:
+        pass
+
+    half = 0.0
+    if value.endswith("个半"):
+        value = value[:-2]
+        half = 0.5
+    elif value.endswith("半"):
+        value = value[:-1]
+        half = 0.5
+    digits = {
+        "一": 1,
+        "二": 2,
+        "两": 2,
+        "三": 3,
+        "四": 4,
+        "五": 5,
+        "六": 6,
+        "七": 7,
+        "八": 8,
+        "九": 9,
+    }
+    if value == "十":
+        number = 10
+    elif "十" in value:
+        tens, ones = value.split("十", 1)
+        number = (digits.get(tens, 1) * 10) + digits.get(ones, 0)
+    else:
+        number = digits.get(value)
+    if number is None:
+        return None
+    return float(number) + half
+
+
+def extract_task_duration_minutes(text: str) -> Optional[int]:
+    """Conservatively extract task effort from Chinese duration phrases.
+
+    Deadline windows such as “48 小时内完成” and English phrases are
+    intentionally excluded; the LLM may supply those cases.
+    """
+    for pattern in _DURATION_PATTERNS:
+        match = pattern.search(text)
+        if not match:
+            continue
+        raw = match.group("second") or match.group("first")
+        amount = _duration_number(raw)
+        if amount is None or amount <= 0:
+            continue
+        minutes = amount * (60 if match.group("unit") == "小时" else 1)
+        return max(1, int(round(minutes)))
+    return None
+
+
+def _duration_matches_window_claim(text: str, minutes: Optional[int]) -> bool:
+    if minutes is None:
+        return False
+    for match in RELATIVE_HOURS_RE.finditer(text):
+        if int(match.group(1)) * 60 == minutes:
+            return True
+    for match in _ENGLISH_WINDOW_DURATION_RE.finditer(text):
+        amount = float(match.group(1))
+        claimed = amount * (60 if match.group(2).lower().startswith("hour") else 1)
+        if int(round(claimed)) == minutes:
+            return True
+    return False
+
+
 def _anchor_now(mail: MailItem) -> datetime:
     if mail.date:
         try:
@@ -486,12 +586,15 @@ def _window_title_suffix(start_at: str, end_at: str) -> str:
     if start.date() != end.date():
         return f"{start_date}-{end_date}"
 
-    visible_times = [
-        f"{value:%H:%M}" for value in (start, end) if not _is_day_boundary(value)
-    ]
-    if not visible_times:
-        return start_date
-    return f"{start_date} {'-'.join(visible_times)}"
+    start_visible = not _is_day_boundary(start)
+    end_visible = not _is_day_boundary(end)
+    if start_visible and end_visible:
+        return f"{start_date} {start:%H:%M}-{end:%H:%M}"
+    if start_visible:
+        return f"{start_date} {start:%H:%M}开始"
+    if end_visible:
+        return f"{start_date} 截止{end:%H:%M}"
+    return start_date
 
 
 def build_reminder_title(
@@ -501,10 +604,17 @@ def build_reminder_title(
     start_at: str,
     end_at: str,
     subject: str = "",
+    task_duration_minutes: Optional[int] = None,
 ) -> str:
     title = build_title(event_type, company, action, subject)
     if action == "cancel":
         return title
+    if task_duration_minutes and task_duration_minutes > 0:
+        if task_duration_minutes % 60 == 0:
+            duration = f"{task_duration_minutes // 60}小时"
+        else:
+            duration = f"{task_duration_minutes}分钟"
+        title = title.replace("]", f"·{duration}]", 1)
     suffix = _window_title_suffix(start_at, end_at)
     return f"{title} {suffix}".strip()[:200]
 
@@ -757,6 +867,7 @@ def heuristic_parse(mail: MailItem) -> Optional[CandidateEvent]:
             description="",
             meeting_url=meeting_url,
             time_precision="window",
+            task_duration_minutes=extract_task_duration_minutes(blob),
             confidence=min(confidence, 0.95),
             source_snippet=body[:300],
             references=list(mail.references),
@@ -805,6 +916,12 @@ def normalize_event(event: CandidateEvent) -> CandidateEvent:
     if time_precision == "window":
         deadline = deadline or end_at
         end_at = end_at or deadline
+    raw_duration = event.task_duration_minutes
+    task_duration_minutes = (
+        int(raw_duration)
+        if isinstance(raw_duration, (int, float)) and raw_duration > 0
+        else None
+    )
     company = normalize_company_name(event.company)[:40]
     location = prefer_place(str(event.location or ""), str(event.meeting_url or ""))
     if event_type == "schedule_invite":
@@ -817,6 +934,7 @@ def normalize_event(event: CandidateEvent) -> CandidateEvent:
             str(event.start_at or ""),
             end_at,
             event.subject,
+            task_duration_minutes,
         )
     else:
         title = build_title(event_type, company, action, event.subject)
@@ -835,6 +953,7 @@ def normalize_event(event: CandidateEvent) -> CandidateEvent:
         description="",
         meeting_url=str(event.meeting_url or ""),
         time_precision=time_precision,
+        task_duration_minutes=task_duration_minutes,
         confidence=float(event.confidence or 0.5),
         source_snippet=str(event.source_snippet or "")[:300],
         references=list(event.references or []),
@@ -857,6 +976,7 @@ def merge_llm_with_heuristic(
     heur_location = heuristic.location if heuristic else ""
     heur_type = heuristic.event_type if heuristic else ""
     heur_precision = heuristic.time_precision if heuristic else ""
+    heur_duration = heuristic.task_duration_minutes if heuristic else None
 
     start_at = fill(llm_event.start_at, heur_start)
     end_at = fill(llm_event.end_at, heur_end)
@@ -900,6 +1020,7 @@ def merge_llm_with_heuristic(
         description="",
         meeting_url=meeting_url,
         time_precision=precision,
+        task_duration_minutes=heur_duration or llm_event.task_duration_minutes,
         confidence=confidence,
         source_snippet=llm_event.source_snippet,
         references=list(llm_event.references or []),
@@ -959,6 +1080,17 @@ def _event_from_llm_data(mail: MailItem, data: dict[str, Any]) -> LlmParseResult
     company = str(data.get("company") or "").strip() or guess_company(
         mail.subject, mail.body
     )
+    model_duration = (
+        int(data["task_duration_minutes"])
+        if isinstance(data.get("task_duration_minutes"), (int, float))
+        and not isinstance(data.get("task_duration_minutes"), bool)
+        and data["task_duration_minutes"] > 0
+        else None
+    )
+    if _duration_matches_window_claim(
+        f"{mail.subject}\n{mail.body}", model_duration
+    ):
+        model_duration = None
 
     event = CandidateEvent(
         message_id=mail.message_id,
@@ -974,6 +1106,7 @@ def _event_from_llm_data(mail: MailItem, data: dict[str, Any]) -> LlmParseResult
         description="",
         meeting_url=str(data.get("meeting_url") or ""),
         time_precision=precision,
+        task_duration_minutes=model_duration,
         confidence=float(data.get("confidence") or 0.8),
         source_snippet=mail.body[:300],
         references=list(mail.references),
@@ -1013,7 +1146,8 @@ def llm_parse(
                 "event_type(interview|exam|assessment|other), "
                 "time_precision(fixed|window|unknown), "
                 "title, company, start_at(YYYY-MM-DDTHH:MM:SS, Asia/Shanghai), "
-                "end_at, deadline, location, meeting_url, confidence(0-1).\n"
+                "end_at, deadline, location, meeting_url, "
+                "task_duration_minutes(正整数或null), confidence(0-1).\n"
                 "规则:\n"
                 "- company 必填：填招聘方公司/机构简称（如 美团、字节跳动、快手）；"
                 "实在无法判断时填空串。\n"
@@ -1023,6 +1157,9 @@ def llm_parse(
                 "- 开放窗口（测评、任选时段完成的笔试、N 小时/工作日内完成）："
                 "time_precision=window，end_at 填截止，start_at 填窗口开始（可空），"
                 "location 可空，链接放 meeting_url。\n"
+                "- task_duration_minutes 只填完成任务本身预计需要的分钟数；"
+                "区间或上限取上限。仅有「N小时内完成/within N hours」时必须填 null，"
+                "因为那是完成窗口而非任务耗时。\n"
                 "- 不按时间跨度判断 fixed/window：跨度很长但要求全程按时参加仍是 fixed；"
                 "窗口很短但可任选时间完成仍是 window。\n"
                 "- 改期/时间变更为：action=reschedule，fixed 必须填新的时间和地点；"
@@ -1173,6 +1310,17 @@ def parse_mail(
         llm_meta = _llm_stage_meta(settings, llm_result)
 
         if llm_result.decision == "accept" and llm_result.event:
+            source_text = f"{mail.subject}\n{mail.body}"
+            heuristic_duration = extract_task_duration_minutes(
+                source_text
+            )
+            if heuristic_duration is not None:
+                llm_result.event.task_duration_minutes = heuristic_duration
+            elif _duration_matches_window_claim(
+                source_text, llm_result.event.task_duration_minutes
+            ):
+                llm_result.event.task_duration_minutes = None
+            llm_result.event = normalize_event(llm_result.event)
             _add_parse_stage(
                 trace,
                 engine="llm",

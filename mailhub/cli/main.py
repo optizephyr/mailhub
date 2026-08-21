@@ -72,9 +72,15 @@ def cmd_migrate_reminder_titles(args: argparse.Namespace) -> None:
     settings = load_settings()
     if not settings.reminders_list:
         raise SystemExit("提醒事项未启用，请先配置 reminders_list")
+    require_mail_credentials(settings)
     require_caldav_account(settings)
     client = CalDavClient(settings)
     client.collection(settings.reminders_list, "VTODO")
+    source = QqImapSource(
+        settings.qq_email,
+        settings.qq_auth_code,
+        source_id=settings.source_id,
+    )
 
     store = EventStore(settings.data_dir / "synced.sqlite")
     try:
@@ -83,6 +89,7 @@ def cmd_migrate_reminder_titles(args: argparse.Namespace) -> None:
             settings,
             dry_run=bool(args.dry_run),
             client=client,
+            message_fetcher=source.fetch_by_message_ids,
         )
     finally:
         store.close()
@@ -242,7 +249,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     migrate = sub.add_parser(
         "migrate-reminder-titles",
-        help="为已有提醒事项补上窗口时间",
+        help="从原邮件为已有提醒事项补上窗口时间和预计耗时",
     )
     migrate.add_argument(
         "--dry-run",

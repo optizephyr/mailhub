@@ -6,12 +6,12 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from mailhub.runtime.config import Settings, load_settings
-from mailhub.plugins.policies.qiuzhao.types import MailItem
-from mailhub.plugins.policies.qiuzhao.types import CandidateEvent
+from mailhub.plugins.policies.qiuzhao.types import CandidateEvent, LlmParseResult, MailItem
 from mailhub.plugins.policies.qiuzhao.parser import (
     build_title,
     classify_stage,
     detect_action,
+    extract_task_duration_minutes,
     heuristic_parse,
     normalize_event,
     parse_datetime,
@@ -112,6 +112,25 @@ def test_heuristic_exam_open_window_uses_span():
     assert event.start_at.startswith("2026-05-17T08:00")
     assert event.end_at.startswith("2026-05-17T21:00")
     assert event.deadline == event.end_at
+    assert event.task_duration_minutes == 120
+    assert normalize_event(event).title == "[笔试·2小时] 文远知行 5月17日 08:00-21:00"
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("本次测评预计耗时90分钟，请在截止前完成。", 90),
+        ("测评时长约30-40分钟。", 40),
+        ("本次笔试不超过两个小时。", 120),
+        ("请任选一个半小时完成测评。", 90),
+        ("建议您在48小时内完成测评。", None),
+        ("Please complete the assessment within 48 hours; it lasts 90 minutes.", None),
+    ],
+)
+def test_extract_task_duration_minutes_uses_conservative_chinese_patterns(
+    text: str, expected
+):
+    assert extract_task_duration_minutes(text) == expected
 
 
 def test_heuristic_long_exam_without_window_signal_stays_fixed():
@@ -363,6 +382,48 @@ def test_parse_mail_coarse_reject_skips_llm(tmp_path: Path, monkeypatch):
     log = (tmp_path / "logs" / "mail_lifecycle.jsonl").read_text(encoding="utf-8")
     assert "no_recruit_signal" in log
     assert "rejected_coarse" in log
+
+
+@pytest.mark.parametrize(
+    ("body", "model_minutes", "expected_minutes"),
+    [
+        ("The assessment lasts 75 minutes.", 75, 75),
+        ("请在窗口内任选两小时完成笔试。", 2880, 120),
+        ("Please complete the assessment within 48 hours.", 2880, None),
+    ],
+)
+def test_parse_mail_uses_llm_duration_only_when_heuristic_is_empty(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    body: str,
+    model_minutes: int,
+    expected_minutes,
+):
+    settings = _settings(
+        tmp_path,
+        llm_api_base="https://api.example.com/v1",
+        llm_api_key="k",
+    )
+    mail = _mail(subject="【京东校招】测评通知", text=body)
+    model_event = CandidateEvent(
+        message_id=mail.message_id,
+        subject=mail.subject,
+        title="测评通知",
+        event_type="assessment",
+        end_at="2026-08-21T18:00:00",
+        company="京东",
+        time_precision="window",
+        task_duration_minutes=model_minutes,
+    )
+    monkeypatch.setattr(
+        "mailhub.plugins.policies.qiuzhao.parser.llm_parse",
+        lambda *_args, **_kwargs: LlmParseResult(decision="accept", event=model_event),
+    )
+
+    event = parse_mail(mail, settings)
+
+    assert event is not None
+    assert event.task_duration_minutes == expected_minutes
 
 
 def test_parse_mail_model_accepts_schedule_invite_without_heuristic(
@@ -730,8 +791,23 @@ def test_normalize_window_title_hides_day_boundary_times():
         }
     )
 
-    assert normalize_event(base).title == "[测评] 京东 8月7日 18:00"
+    assert normalize_event(base).title == "[测评] 京东 8月7日 截止18:00"
     assert normalize_event(all_day).title == "[测评] 京东 8月7日"
+
+
+def test_normalize_window_title_same_day_open_until_day_end():
+    event = CandidateEvent(
+        message_id="<window@qq.com>",
+        subject="测评通知",
+        title="测评通知",
+        event_type="assessment",
+        start_at="2026-08-22T08:00:00",
+        end_at="2026-08-22T23:59:59",
+        company="京东",
+        time_precision="window",
+    )
+
+    assert normalize_event(event).title == "[测评] 京东 8月22日 08:00开始"
 
 
 def test_normalize_window_title_uses_shanghai_time_and_cancel_has_no_time():
@@ -747,7 +823,7 @@ def test_normalize_window_title_uses_shanghai_time_and_cancel_has_no_time():
     )
     cancelled = CandidateEvent(**{**event.to_dict(), "action": "cancel"})
 
-    assert normalize_event(event).title == "[测评] 京东 8月7日 18:00"
+    assert normalize_event(event).title == "[测评] 京东 8月7日 截止18:00"
     assert normalize_event(cancelled).title == "[取消] 京东"
 
 

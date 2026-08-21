@@ -488,6 +488,80 @@ def test_migrate_reminder_titles_updates_existing_resource_without_duplicate(
     store.close()
 
 
+def test_migrate_reminder_titles_refetches_original_mail_for_duration(
+    tmp_path: Path, caldav_server
+) -> None:
+    from mailhub.plugins.caldav import CalDavClient
+    from mailhub.plugins.dispatch.reminders.migrate import migrate_reminder_titles
+    from mailhub.plugins.dispatch.reminders.reminder_io import create_reminder
+    from mailhub.store.sqlite import EventStore
+
+    url, state = caldav_server
+    settings = Settings(
+        data_dir=tmp_path,
+        caldav_url=url,
+        caldav_username="user",
+        caldav_password="secret",
+        reminders_list="秋招提醒",
+    )
+    client = CalDavClient(settings)
+    event = CandidateEvent(
+        message_id="<exam-window@qq.com>",
+        subject="笔试通知",
+        title="[笔试] 文远知行",
+        event_type="exam",
+        start_at="2026-05-17T08:00:00",
+        end_at="2026-05-17T21:00:00",
+        company="文远知行",
+        time_precision="window",
+    )
+    href = create_reminder(event, settings, client)
+    resource_path = next(path for path in state.resources if path.endswith(".ics"))
+    store = EventStore(tmp_path / "synced.sqlite")
+    store.create_event(
+        company=event.company,
+        event_type=event.event_type,
+        title=event.title,
+        start_at=event.start_at,
+        end_at=event.end_at,
+        source_message_id=event.message_id,
+        sinks={"reminders": href},
+    )
+    original = _to_message(
+        MailItem(
+            message_id=event.message_id,
+            subject=event.subject,
+            from_="campus@example.com",
+            date=None,
+            text="请在开放时间范围内任选两小时完成笔试。",
+            html="",
+        )
+    )
+
+    missing = migrate_reminder_titles(
+        store,
+        settings,
+        dry_run=True,
+        client=client,
+        message_fetcher=lambda _ids: [],
+    )
+    assert missing == []
+
+    changes = migrate_reminder_titles(
+        store,
+        settings,
+        dry_run=False,
+        client=client,
+        message_fetcher=lambda _ids: [original],
+    )
+
+    assert changes[0].new_title == "[笔试·2小时] 文远知行 5月17日 08:00-21:00"
+    assert "SUMMARY:[笔试·2小时] 文远知行 5月17日 08:00-21:00" in state.resources[
+        resource_path
+    ]
+    store.close()
+
+
 def test_disabled_calendar_consumes_mail_without_later_backfill(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caldav_server
 ) -> None:

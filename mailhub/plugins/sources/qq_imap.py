@@ -6,6 +6,7 @@ from email.header import decode_header, make_header
 from typing import Iterable, Optional
 
 from imap_tools import AND, MailBox, MailMessage as ImapMailMessage, U
+from imap_tools.query import Header
 
 from mailhub.contracts.messages import IngestBatch, MailMessage, SourceRef
 
@@ -56,6 +57,21 @@ def _message_id_of(msg: ImapMailMessage) -> str:
     subject = _decode(msg.subject)
     slug = re.sub(r"\s+", "", subject)[:40]
     return f"local-{msg.uid}-{slug}"
+
+
+def _to_mail_message(msg: ImapMailMessage, source_id: str) -> MailMessage:
+    refs = _header_values(
+        msg, "In-Reply-To", "References", "in-reply-to", "references"
+    )
+    return MailMessage(
+        source=SourceRef(source_id=source_id, message_id=_message_id_of(msg)),
+        subject=_decode(msg.subject),
+        sender=_decode(msg.from_) if msg.from_ else "",
+        sent_at=msg.date.isoformat() if msg.date else None,
+        text=msg.text or "",
+        html=msg.html or "",
+        references=refs,
+    )
 
 
 class QqImapSource:
@@ -123,24 +139,30 @@ class QqImapSource:
                 if use_incremental and since_uid is not None and uid <= since_uid:
                     continue
 
-                subject = _decode(msg.subject)
-                text = msg.text or ""
-                html = msg.html or ""
-                refs = _header_values(
-                    msg, "In-Reply-To", "References", "in-reply-to", "references"
-                )
-                mid = _message_id_of(msg)
-                messages_out.append(
-                    MailMessage(
-                        source=SourceRef(source_id=self.source_id, message_id=mid),
-                        subject=subject,
-                        sender=_decode(msg.from_) if msg.from_ else "",
-                        sent_at=msg.date.isoformat() if msg.date else None,
-                        text=text,
-                        html=html,
-                        references=refs,
-                    )
-                )
+                messages_out.append(_to_mail_message(msg, self.source_id))
 
         next_checkpoint = str(max_uid) if max_uid else checkpoint
         return IngestBatch(messages=messages_out, next_checkpoint=next_checkpoint)
+
+    def fetch_by_message_ids(self, message_ids: Iterable[str]) -> list[MailMessage]:
+        """Fetch exact original messages without changing flags or checkpoints."""
+        found: list[MailMessage] = []
+        seen: set[str] = set()
+        with MailBox(self.host).login(
+            self.email_addr, self.auth_code, initial_folder="INBOX"
+        ) as mailbox:
+            for message_id in message_ids:
+                message_id = message_id.strip()
+                if not message_id or message_id in seen or message_id.startswith("local-"):
+                    continue
+                seen.add(message_id)
+                messages = mailbox.fetch(
+                    AND(header=Header("Message-ID", message_id)),
+                    reverse=True,
+                    limit=1,
+                    mark_seen=False,
+                )
+                for msg in messages:
+                    found.append(_to_mail_message(msg, self.source_id))
+                    break
+        return found
