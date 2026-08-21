@@ -287,6 +287,21 @@ class EventStore:
         ).fetchone()
         return self._row_to_event(row) if row else None
 
+    def list_active_events_for_sink(self, sink: str) -> list[StoredEvent]:
+        rows = self._conn.execute(
+            """
+            SELECT event.*
+            FROM calendar_events AS event
+            JOIN calendar_sinks AS sink_row ON sink_row.event_row_id = event.id
+            WHERE event.status = 'active'
+              AND sink_row.sink = ?
+              AND sink_row.external_id <> ''
+            ORDER BY event.id
+            """,
+            (sink,),
+        ).fetchall()
+        return [self._row_to_event(row) for row in rows]
+
     def find_active_event(
         self,
         *,
@@ -406,6 +421,18 @@ class EventStore:
                 """,
                 (event_row_id, sink, external_id),
             )
+        self._conn.commit()
+
+    def update_event_title(self, event_row_id: int, title: str) -> None:
+        now = datetime.utcnow().isoformat(timespec="seconds")
+        self._conn.execute(
+            """
+            UPDATE calendar_events
+            SET title=?, updated_at=?
+            WHERE id=?
+            """,
+            (title, now, event_row_id),
+        )
         self._conn.commit()
 
     def cancel_event(

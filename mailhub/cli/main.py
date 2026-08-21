@@ -13,6 +13,7 @@ from mailhub.plugins.dispatch.calendar.calendar_io import (
     list_calendar_events,
     list_calendars,
 )
+from mailhub.plugins.dispatch.reminders.migrate import migrate_reminder_titles
 from mailhub.plugins.dispatch.reminders.reminder_io import list_reminder_lists
 from mailhub.plugins.policies.qiuzhao import QiuzhaoResolver
 from mailhub.plugins.sources.qq_imap import QqImapSource
@@ -65,6 +66,36 @@ def cmd_scan_calendar(args: argparse.Namespace) -> None:
     for ev in events:
         marker = f"  来源={ev.marker_message_id}" if ev.marker_message_id else ""
         print(f"  - {ev.start_at}  {ev.summary}  uid={ev.uid}{marker}")
+
+
+def cmd_migrate_reminder_titles(args: argparse.Namespace) -> None:
+    settings = load_settings()
+    if not settings.reminders_list:
+        raise SystemExit("提醒事项未启用，请先配置 reminders_list")
+    require_caldav_account(settings)
+    client = CalDavClient(settings)
+    client.collection(settings.reminders_list, "VTODO")
+
+    store = EventStore(settings.data_dir / "synced.sqlite")
+    try:
+        changes = migrate_reminder_titles(
+            store,
+            settings,
+            dry_run=bool(args.dry_run),
+            client=client,
+        )
+    finally:
+        store.close()
+
+    for change in changes:
+        print(
+            f"  - #{change.event_row_id} "
+            f"{change.old_title} → {change.new_title}"
+        )
+    if args.dry_run:
+        print(f"预览完成：将更新 {len(changes)} 条提醒事项标题")
+    else:
+        print(f"迁移完成：已更新 {len(changes)} 条提醒事项标题")
 
 
 def cmd_sync(args: argparse.Namespace) -> None:
@@ -208,6 +239,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     reminders = sub.add_parser("list-reminders", help="列出 CalDAV 提醒事项列表名称")
     reminders.set_defaults(func=cmd_list_reminders)
+
+    migrate = sub.add_parser(
+        "migrate-reminder-titles",
+        help="为已有提醒事项补上窗口时间",
+    )
+    migrate.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="只展示将修改的标题，不写入 CalDAV 或本地数据库",
+    )
+    migrate.set_defaults(func=cmd_migrate_reminder_titles)
 
     scan = sub.add_parser("scan-calendar", help="列出目标日历里已有的日程")
     scan.add_argument(

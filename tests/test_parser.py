@@ -656,7 +656,7 @@ def test_build_title_deterministic_format():
     assert build_title("exam", "字节", "create") == "[笔试] 字节"
     assert build_title("assessment", "腾讯", "create") == "[测评] 腾讯"
     assert build_title("other", "某机构", "create") == "[其他] 某机构"
-    # reschedule 保留学段类型
+    # reschedule 保留类型
     assert build_title("interview", "美团", "reschedule") == "[面试] 美团"
     # cancel → [取消]
     assert build_title("interview", "美团", "cancel") == "[取消] 美团"
@@ -680,6 +680,96 @@ def test_normalize_rewrites_subject_like_title():
     )
     out = normalize_event(event)
     assert out.title == "[笔试] 快手"
+
+
+def test_normalize_window_title_includes_cross_day_range():
+    event = CandidateEvent(
+        message_id="<window@qq.com>",
+        subject="测评通知",
+        title="测评通知",
+        event_type="assessment",
+        start_at="2026-08-01T09:00:00",
+        end_at="2026-08-07T18:00:00",
+        company="京东",
+        time_precision="window",
+    )
+
+    assert normalize_event(event).title == "[测评] 京东 8月1日-8月7日"
+
+
+def test_normalize_window_title_includes_same_day_times():
+    event = CandidateEvent(
+        message_id="<window@qq.com>",
+        subject="笔试通知",
+        title="笔试通知",
+        event_type="exam",
+        start_at="2026-08-07T09:00:00",
+        end_at="2026-08-07T18:00:00",
+        company="字节",
+        time_precision="window",
+    )
+
+    assert normalize_event(event).title == "[笔试] 字节 8月7日 09:00-18:00"
+
+
+def test_normalize_window_title_hides_day_boundary_times():
+    base = CandidateEvent(
+        message_id="<window@qq.com>",
+        subject="测评通知",
+        title="测评通知",
+        event_type="assessment",
+        start_at="2026-08-07T00:00:00",
+        end_at="2026-08-07T18:00:00",
+        company="京东",
+        time_precision="window",
+    )
+    all_day = CandidateEvent(
+        **{
+            **base.to_dict(),
+            "end_at": "2026-08-07T23:59:59",
+        }
+    )
+
+    assert normalize_event(base).title == "[测评] 京东 8月7日 18:00"
+    assert normalize_event(all_day).title == "[测评] 京东 8月7日"
+
+
+def test_normalize_window_title_uses_shanghai_time_and_cancel_has_no_time():
+    event = CandidateEvent(
+        message_id="<window@qq.com>",
+        subject="测评通知",
+        title="测评通知",
+        event_type="assessment",
+        start_at="2026-08-06T16:00:00+00:00",
+        end_at="2026-08-07T10:00:00+00:00",
+        company="京东",
+        time_precision="window",
+    )
+    cancelled = CandidateEvent(**{**event.to_dict(), "action": "cancel"})
+
+    assert normalize_event(event).title == "[测评] 京东 8月7日 18:00"
+    assert normalize_event(cancelled).title == "[取消] 京东"
+
+
+def test_normalize_window_title_with_deadline_only():
+    date_only = CandidateEvent(
+        message_id="<window@qq.com>",
+        subject="测评通知",
+        title="测评通知",
+        event_type="assessment",
+        end_at="2026-08-07T23:59:00",
+        company="京东",
+        time_precision="window",
+    )
+    timed = CandidateEvent(
+        **{
+            **date_only.to_dict(),
+            "end_at": "2026-08-07T18:00:00",
+        }
+    )
+
+    assert normalize_event(date_only).title == "[测评] 京东 截止8月7日"
+    assert normalize_event(timed).title == "[测评] 京东 截止8月7日 18:00"
 
 
 def test_normalize_reschedule_keeps_stage_label():

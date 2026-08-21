@@ -68,7 +68,7 @@ def match_calendar_event(
 ) -> Optional[CalendarEventRef]:
     """在日历已有日程里找本封邮件该改动的那条；找不到返回 None。
 
-    优先回复链（描述里埋的 message-id），其次同公司 + 同学段里开始时间最晚的一场。
+    优先回复链（描述里埋的 message-id），其次同公司 + 同类型里开始时间最晚的一场。
     """
     items = [c for c in candidates if c.uid]
     refs = {r for r in (event.references or []) if r}

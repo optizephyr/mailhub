@@ -432,6 +432,62 @@ def test_update_reminder_preserves_user_completion_state(
     assert "PERCENT-COMPLETE:100" in resource
 
 
+def test_migrate_reminder_titles_updates_existing_resource_without_duplicate(
+    tmp_path: Path, caldav_server
+) -> None:
+    from mailhub.plugins.caldav import CalDavClient
+    from mailhub.plugins.dispatch.reminders.migrate import migrate_reminder_titles
+    from mailhub.plugins.dispatch.reminders.reminder_io import create_reminder
+    from mailhub.store.sqlite import EventStore
+
+    url, state = caldav_server
+    settings = Settings(
+        data_dir=tmp_path,
+        caldav_url=url,
+        caldav_username="user",
+        caldav_password="secret",
+        reminders_list="秋招提醒",
+    )
+    client = CalDavClient(settings)
+    event = CandidateEvent(
+        message_id="<old-window@qq.com>",
+        subject="测评通知",
+        title="[测评] 京东",
+        event_type="assessment",
+        end_at="2026-08-21T18:00:00",
+        company="京东",
+        meeting_url="https://example.com/a",
+        time_precision="window",
+    )
+    href = create_reminder(event, settings, client)
+    resource_path = next(path for path in state.resources if path.endswith(".ics"))
+    store = EventStore(tmp_path / "synced.sqlite")
+    row_id = store.create_event(
+        company=event.company,
+        event_type=event.event_type,
+        title=event.title,
+        start_at=event.start_at,
+        end_at=event.end_at,
+        source_message_id=event.message_id,
+        sinks={"reminders": href},
+    )
+
+    preview = migrate_reminder_titles(store, settings, dry_run=True, client=client)
+    assert preview[0].new_title == "[测评] 京东 截止8月21日 18:00"
+    assert "SUMMARY:[测评] 京东\r\n" in state.resources[resource_path]
+
+    changes = migrate_reminder_titles(store, settings, dry_run=False, client=client)
+
+    assert changes == preview
+    assert len(state.resources) == 1
+    resource = state.resources[resource_path]
+    assert "SUMMARY:[测评] 京东 截止8月21日 18:00" in resource
+    assert "DUE:20260821T180000" in resource
+    assert "URL:https://example.com/a" in resource
+    assert store.get_event(row_id).title == "[测评] 京东 截止8月21日 18:00"
+    store.close()
+
+
 def test_disabled_calendar_consumes_mail_without_later_backfill(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caldav_server
 ) -> None:

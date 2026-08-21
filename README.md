@@ -64,6 +64,10 @@ uv run mailhub list-reminders
 # 列出目标日历里已有的日程（核对匹配用）
 uv run mailhub scan-calendar --days 60
 
+# 预览并迁移已有提醒事项的窗口标题（覆盖同一条，不会新建）
+uv run mailhub migrate-reminder-titles --dry-run
+uv run mailhub migrate-reminder-titles
+
 # 先干跑：只读匹配，展示最终动作与日程，不写入
 uv run mailhub sync --dry-run
 

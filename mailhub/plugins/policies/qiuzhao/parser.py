@@ -455,6 +455,60 @@ def build_title(
     return f"[{label}] {name}".strip()[:200]
 
 
+def _title_datetime(value: str) -> Optional[datetime]:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is not None:
+        return parsed.astimezone(TZ)
+    return parsed.replace(tzinfo=TZ)
+
+
+def _is_day_boundary(value: datetime) -> bool:
+    return (value.hour, value.minute) in ((0, 0), (23, 59))
+
+
+def _window_title_suffix(start_at: str, end_at: str) -> str:
+    start = _title_datetime(start_at)
+    end = _title_datetime(end_at)
+    if not end:
+        return ""
+
+    end_date = f"{end.month}月{end.day}日"
+    if not start:
+        end_time = "" if _is_day_boundary(end) else f" {end:%H:%M}"
+        return f"截止{end_date}{end_time}"
+
+    start_date = f"{start.month}月{start.day}日"
+    if start.date() != end.date():
+        return f"{start_date}-{end_date}"
+
+    visible_times = [
+        f"{value:%H:%M}" for value in (start, end) if not _is_day_boundary(value)
+    ]
+    if not visible_times:
+        return start_date
+    return f"{start_date} {'-'.join(visible_times)}"
+
+
+def build_reminder_title(
+    event_type: str,
+    company: str,
+    action: str,
+    start_at: str,
+    end_at: str,
+    subject: str = "",
+) -> str:
+    title = build_title(event_type, company, action, subject)
+    if action == "cancel":
+        return title
+    suffix = _window_title_suffix(start_at, end_at)
+    return f"{title} {suffix}".strip()[:200]
+
+
 def _schedule_invite_title(company: str, subject: str) -> str:
     name = company.strip() or subject.strip()[:40] or "秋招"
     return f"{name} 请预约"[:200]
@@ -753,11 +807,19 @@ def normalize_event(event: CandidateEvent) -> CandidateEvent:
         end_at = end_at or deadline
     company = normalize_company_name(event.company)[:40]
     location = prefer_place(str(event.location or ""), str(event.meeting_url or ""))
-    title = (
-        _schedule_invite_title(company, event.subject)
-        if event_type == "schedule_invite"
-        else build_title(event_type, company, action, event.subject)
-    )
+    if event_type == "schedule_invite":
+        title = _schedule_invite_title(company, event.subject)
+    elif time_precision == "window":
+        title = build_reminder_title(
+            event_type,
+            company,
+            action,
+            str(event.start_at or ""),
+            end_at,
+            event.subject,
+        )
+    else:
+        title = build_title(event_type, company, action, event.subject)
 
     return CandidateEvent(
         message_id=event.message_id,

@@ -116,6 +116,15 @@ def _run_sync(
                 delattr(cli.cmd_sync, name)
 
 
+def test_migrate_reminder_titles_command_supports_dry_run():
+    args = cli.build_parser().parse_args(
+        ["migrate-reminder-titles", "--dry-run"]
+    )
+
+    assert args.func is cli.cmd_migrate_reminder_titles
+    assert args.dry_run is True
+
+
 @pytest.mark.parametrize(
     ("dry_run", "settings_overrides", "error"),
     [

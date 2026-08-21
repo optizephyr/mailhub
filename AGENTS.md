@@ -19,6 +19,7 @@ cp .env.example .env   # 已有 .env 勿覆盖
 uv run mailhub list-calendars
 uv run mailhub list-reminders
 uv run mailhub scan-calendar --days 60
+uv run mailhub migrate-reminder-titles --dry-run
 uv run mailhub sync --dry-run
 uv run mailhub sync --dry-run --json
 uv run mailhub sync

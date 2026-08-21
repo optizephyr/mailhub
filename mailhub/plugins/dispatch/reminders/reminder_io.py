@@ -3,6 +3,8 @@ from __future__ import annotations
 import uuid
 from typing import Optional
 
+from icalendar import Calendar
+
 from mailhub.plugins.caldav import (
     CalDavClient,
     build_todo_ical,
@@ -34,6 +36,23 @@ def update_reminder(
     item = parse_component(current.data, "VTODO")
     uid = component_text(item, "UID") or str(uuid.uuid4())
     client.put_existing(href, build_todo_ical(event, uid, existing=item))
+
+
+def update_reminder_title(
+    href: str,
+    title: str,
+    settings: Settings,
+    client: Optional[CalDavClient] = None,
+) -> None:
+    client = client or CalDavClient(settings)
+    current = client.get(href)
+    calendar = Calendar.from_ical(current.data)
+    for component in calendar.walk():
+        if component.name == "VTODO":
+            component["SUMMARY"] = title
+            client.put_existing(href, calendar.to_ical().decode())
+            return
+    raise RuntimeError("CalDAV 资源中没有 VTODO")
 
 
 def delete_reminder(
