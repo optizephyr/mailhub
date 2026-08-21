@@ -377,6 +377,122 @@ def test_store_finds_fuzzy_company(tmp_path: Path):
     store.close()
 
 
+def _pdd_exam_event(mail: MailItem, *, start_at: str, end_at: str) -> CandidateEvent:
+    return CandidateEvent(
+        message_id=mail.message_id,
+        subject=mail.subject,
+        title="[笔试] 拼多多",
+        event_type="exam",
+        action="create",
+        start_at=start_at,
+        end_at=end_at,
+        location="https://hr.nowcoder.com/v1/s/exam#",
+        company="拼多多",
+        confidence=0.95,
+        sent_at=mail.date or "",
+    )
+
+
+def _patch_parse_map(monkeypatch, events: dict[str, CandidateEvent]) -> None:
+    from mailhub.plugins.policies.qiuzhao import parser as parser_mod
+
+    def fake_parse(mail, settings, *, trace=None):
+        event = events[mail.message_id]
+        if trace is not None:
+            trace.add_stage(
+                {"name": "coarse_filter", "result": "pass", "reason": "recruit_keyword"}
+            )
+            trace.add_stage(
+                {
+                    "name": "parse",
+                    "engine": "test",
+                    "result": "accept",
+                    "event": {
+                        "action": event.action,
+                        "event_type": event.event_type,
+                        "company": event.company,
+                        "title": event.title,
+                        "start_at": event.start_at,
+                        "end_at": event.end_at,
+                    },
+                }
+            )
+        return event
+
+    monkeypatch.setattr(parser_mod, "parse_mail", fake_parse)
+
+
+def test_older_exam_invite_does_not_overwrite_newer_session(tmp_path: Path, monkeypatch):
+    newer = _pdd_exam_mail(
+        message_id="<pdd-new@nowcoder.net>",
+        date="2026-08-20T22:47:16+08:00",
+        text="笔试时间为2026年8月23日 19:00，链接 https://hr.nowcoder.com/v1/s/Hc14mnHY#",
+    )
+    older = _pdd_exam_mail(
+        message_id="<pdd-old@nowcoder.net>",
+        date="2026-08-14T16:31:13+08:00",
+        text="笔试时间为2026年8月16日 19:00，链接 https://hr.nowcoder.com/v1/s/cn5D56G7#",
+    )
+    _patch_parse_map(
+        monkeypatch,
+        {
+            newer.message_id: _pdd_exam_event(
+                newer, start_at="2026-08-23T19:00:00", end_at="2026-08-23T21:00:00"
+            ),
+            older.message_id: _pdd_exam_event(
+                older, start_at="2026-08-16T19:00:00", end_at="2026-08-16T21:00:00"
+            ),
+        },
+    )
+    _run_sync(tmp_path, monkeypatch, mails=[newer, older])
+    store = EventStore(tmp_path / "synced.sqlite")
+    row = store.get_event(1)
+    assert row is not None
+    assert row.start_at == "2026-08-23T19:00:00"
+    store.close()
+    records = _read_lifecycle(tmp_path)
+    apply_new = next(s for s in records[0]["stages"] if s["name"] == "apply")
+    apply_old = next(s for s in records[1]["stages"] if s["name"] == "apply")
+    assert apply_new["result"] == "created"
+    assert apply_old["result"] == "skipped_older"
+    assert records[1]["outcome"]["status"] == "skipped_older"
+
+
+def test_newer_exam_invite_updates_older_session(tmp_path: Path, monkeypatch):
+    newer = _pdd_exam_mail(
+        message_id="<pdd-new2@nowcoder.net>",
+        date="2026-08-20T22:47:16+08:00",
+        text="笔试时间为2026年8月23日 19:00，链接 https://hr.nowcoder.com/v1/s/Hc14mnHY#",
+    )
+    older = _pdd_exam_mail(
+        message_id="<pdd-old2@nowcoder.net>",
+        date="2026-08-14T16:31:13+08:00",
+        text="笔试时间为2026年8月16日 19:00，链接 https://hr.nowcoder.com/v1/s/cn5D56G7#",
+    )
+    _patch_parse_map(
+        monkeypatch,
+        {
+            newer.message_id: _pdd_exam_event(
+                newer, start_at="2026-08-23T19:00:00", end_at="2026-08-23T21:00:00"
+            ),
+            older.message_id: _pdd_exam_event(
+                older, start_at="2026-08-16T19:00:00", end_at="2026-08-16T21:00:00"
+            ),
+        },
+    )
+    _run_sync(tmp_path, monkeypatch, mails=[older, newer])
+    store = EventStore(tmp_path / "synced.sqlite")
+    row = store.get_event(1)
+    assert row is not None
+    assert row.start_at == "2026-08-23T19:00:00"
+    store.close()
+    records = _read_lifecycle(tmp_path)
+    apply_old = next(s for s in records[0]["stages"] if s["name"] == "apply")
+    apply_new = next(s for s in records[1]["stages"] if s["name"] == "apply")
+    assert apply_old["result"] == "created"
+    assert apply_new["result"] == "updated"
+
+
 def test_dry_run_merges_duplicate_pdd_invites(tmp_path: Path, monkeypatch):
     from mailhub.plugins.policies.qiuzhao import parser as parser_mod
 

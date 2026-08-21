@@ -54,6 +54,15 @@ COMPANY_SKIP_NAMES = frozenset(
     }
 )
 
+_COMPANY_SUFFIXES = (
+    "校园招聘",
+    "秋季校园招聘",
+    "春季校园招聘",
+    "校招",
+    "集团",
+    "科技",
+)
+
 # 业务动作邮件：有截止时刻但不建招聘日程
 NON_SCHEDULE_SIGNALS = (
     "岗位流转",
@@ -166,7 +175,6 @@ WINDOW_SIGNALS = (
 )
 RELATIVE_HOURS_RE = re.compile(r"(\d+)\s*小时内")
 RELATIVE_WORKDAYS_RE = re.compile(r"(\d+)\s*个工作日")
-WINDOW_MIN_SPAN = timedelta(hours=4)
 
 # 选时间截止日里的“时间”，不是面试开始时间
 DEADLINE_CONTEXT_RE = re.compile(
@@ -376,14 +384,10 @@ def _default_slot_datetime(text: str, now: datetime) -> Optional[datetime]:
     return parse_datetime(text[min(positions) :], now=now)
 
 
-def is_open_window(text: str, event_type: str, times: list[datetime]) -> bool:
+def is_open_window(text: str, event_type: str) -> bool:
     if event_type == "assessment":
         return True
-    if any(s in text for s in WINDOW_SIGNALS):
-        return True
-    if event_type == "exam" and len(times) >= 2 and (times[-1] - times[0]) >= WINDOW_MIN_SPAN:
-        return True
-    return False
+    return any(signal in text for signal in WINDOW_SIGNALS)
 
 
 def relative_deadline(text: str, now: datetime) -> Optional[datetime]:
@@ -481,7 +485,40 @@ def extract_meeting_url(text: str) -> str:
 
 def extract_location(text: str) -> str:
     m = LOCATION_RE.search(text)
-    return m.group(1).strip() if m else ""
+    if not m:
+        return ""
+    loc = m.group(1).strip()
+    if _is_bare_location_label(loc):
+        return ""
+    return loc
+
+
+def _is_bare_location_label(text: str) -> bool:
+    stripped = (text or "").strip()
+    if not stripped:
+        return True
+    return stripped.endswith((":", "："))
+
+
+def prefer_place(location: str, meeting_url: str) -> str:
+    loc = (location or "").strip()
+    url = (meeting_url or "").strip()
+    if loc and not _is_bare_location_label(loc):
+        return loc[:200]
+    return url[:200] if url else ""
+
+
+def normalize_company_name(company: str) -> str:
+    name = (company or "").strip()
+    changed = True
+    while changed and name:
+        changed = False
+        for suffix in _COMPANY_SUFFIXES:
+            if name.endswith(suffix) and len(name) - len(suffix) >= 2:
+                name = name[: -len(suffix)].rstrip("-_ ")
+                changed = True
+                break
+    return name
 
 
 def _extract_schedule_url(mail: MailItem) -> str:
@@ -644,7 +681,7 @@ def heuristic_parse(mail: MailItem) -> Optional[CandidateEvent]:
     if company:
         confidence += 0.1
 
-    if is_open_window(blob, event_type, times):
+    if is_open_window(blob, event_type):
         start = times[0] if times else None
         end = times[-1] if len(times) >= 2 else None
         if end is None:
@@ -660,6 +697,7 @@ def heuristic_parse(mail: MailItem) -> Optional[CandidateEvent]:
             action=action,
             start_at=_iso(start),
             end_at=_iso(end),
+            deadline=_iso(end),
             location=(location or "")[:200],
             company=company,
             description="",
@@ -674,8 +712,9 @@ def heuristic_parse(mail: MailItem) -> Optional[CandidateEvent]:
     if not start:
         return None
 
-    hours = default_duration_hours(event_type)
-    end = start + timedelta(hours=hours)
+    end = times[1] if len(times) >= 2 else start + timedelta(
+        hours=default_duration_hours(event_type)
+    )
     if not location:
         return None
 
@@ -702,7 +741,18 @@ def normalize_event(event: CandidateEvent) -> CandidateEvent:
     """Stage E: 统一整形字段。"""
     action = event.action if event.action in ("create", "reschedule", "cancel") else "create"
     event_type = event.event_type or "other"
-    company = (event.company or "").strip()[:40]
+    time_precision = (
+        event.time_precision
+        if event.time_precision in ("fixed", "window", "unknown")
+        else "fixed"
+    )
+    end_at = str(event.end_at or "")
+    deadline = str(event.deadline or "")
+    if time_precision == "window":
+        deadline = deadline or end_at
+        end_at = end_at or deadline
+    company = normalize_company_name(event.company)[:40]
+    location = prefer_place(str(event.location or ""), str(event.meeting_url or ""))
     title = (
         _schedule_invite_title(company, event.subject)
         if event_type == "schedule_invite"
@@ -716,20 +766,82 @@ def normalize_event(event: CandidateEvent) -> CandidateEvent:
         event_type=event_type,
         action=action,
         start_at=str(event.start_at or ""),
-        end_at=str(event.end_at or ""),
-        deadline=str(event.deadline or ""),
-        location=str(event.location or "")[:200],
+        end_at=end_at,
+        deadline=deadline,
+        location=location,
         company=company,
         description="",
         meeting_url=str(event.meeting_url or ""),
-        time_precision=(
-            event.time_precision
-            if event.time_precision in ("fixed", "window", "unknown")
-            else "fixed"
-        ),
+        time_precision=time_precision,
         confidence=float(event.confidence or 0.5),
         source_snippet=str(event.source_snippet or "")[:300],
         references=list(event.references or []),
+        sent_at=str(event.sent_at or ""),
+    )
+
+
+def merge_llm_with_heuristic(
+    llm_event: CandidateEvent,
+    heuristic: Optional[CandidateEvent],
+) -> CandidateEvent:
+    def fill(primary: str, fallback: str) -> str:
+        return (primary or "").strip() or (fallback or "").strip()
+
+    heur_start = heuristic.start_at if heuristic else ""
+    heur_end = heuristic.end_at if heuristic else ""
+    heur_deadline = heuristic.deadline if heuristic else ""
+    heur_company = heuristic.company if heuristic else ""
+    heur_url = heuristic.meeting_url if heuristic else ""
+    heur_location = heuristic.location if heuristic else ""
+    heur_type = heuristic.event_type if heuristic else ""
+    heur_precision = heuristic.time_precision if heuristic else ""
+
+    start_at = fill(llm_event.start_at, heur_start)
+    end_at = fill(llm_event.end_at, heur_end)
+    deadline = fill(llm_event.deadline, heur_deadline)
+    meeting_url = fill(llm_event.meeting_url, heur_url)
+    location = prefer_place(llm_event.location, meeting_url)
+    if not location:
+        location = prefer_place(heur_location, meeting_url or heur_url)
+        meeting_url = fill(meeting_url, heur_url)
+        location = prefer_place(location, meeting_url)
+    company = fill(llm_event.company, heur_company)
+    event_type = llm_event.event_type
+    if (not event_type or event_type == "other") and heur_type:
+        event_type = heur_type
+    precision = llm_event.time_precision
+    if precision not in ("fixed", "window", "unknown") and heur_precision:
+        precision = heur_precision
+    if not fill(llm_event.start_at, llm_event.end_at) and heur_precision:
+        precision = heur_precision
+
+    used_heuristic_time = bool(
+        (not (llm_event.start_at or "").strip() and heur_start)
+        or (not (llm_event.end_at or "").strip() and heur_end)
+        or (not (llm_event.deadline or "").strip() and heur_deadline)
+    )
+    confidence = float(llm_event.confidence or 0.8)
+    if used_heuristic_time:
+        confidence = min(confidence, 0.7)
+
+    return CandidateEvent(
+        message_id=llm_event.message_id,
+        subject=llm_event.subject,
+        title=llm_event.title,
+        event_type=event_type,
+        action=llm_event.action,
+        start_at=start_at,
+        end_at=end_at,
+        deadline=deadline,
+        location=location,
+        company=company,
+        description="",
+        meeting_url=meeting_url,
+        time_precision=precision,
+        confidence=confidence,
+        source_snippet=llm_event.source_snippet,
+        references=list(llm_event.references or []),
+        sent_at=llm_event.sent_at or (heuristic.sent_at if heuristic else ""),
     )
 
 
@@ -769,22 +881,17 @@ def _event_from_llm_data(mail: MailItem, data: dict[str, Any]) -> LlmParseResult
             precision = "window"
         else:
             precision = "fixed"
+    incomplete_error: Optional[str] = None
     if action != "cancel":
         if precision == "window":
             if not data.get("start_at") and not data.get("end_at"):
-                return LlmParseResult(
-                    decision="incomplete",
-                    error="missing start_at/end_at for window task",
-                )
+                incomplete_error = "missing start_at/end_at for window task"
         elif (
             not data.get("start_at")
             or not data.get("end_at")
             or not data.get("location")
         ):
-            return LlmParseResult(
-                decision="incomplete",
-                error="missing start_at/end_at/location for non-cancel action",
-            )
+            incomplete_error = "missing start_at/end_at/location for non-cancel action"
 
     title = data.get("title") or mail.subject
     company = str(data.get("company") or "").strip() or guess_company(
@@ -808,7 +915,12 @@ def _event_from_llm_data(mail: MailItem, data: dict[str, Any]) -> LlmParseResult
         confidence=float(data.get("confidence") or 0.8),
         source_snippet=mail.body[:300],
         references=list(mail.references),
+        sent_at=str(mail.date or ""),
     )
+    if incomplete_error:
+        return LlmParseResult(
+            decision="incomplete", event=event, error=incomplete_error
+        )
     return LlmParseResult(decision="accept", event=normalize_event(event))
 
 
@@ -849,6 +961,8 @@ def llm_parse(
                 "- 开放窗口（测评、任选时段完成的笔试、N 小时/工作日内完成）："
                 "time_precision=window，end_at 填截止，start_at 填窗口开始（可空），"
                 "location 可空，链接放 meeting_url。\n"
+                "- 不按时间跨度判断 fixed/window：跨度很长但要求全程按时参加仍是 fixed；"
+                "窗口很短但可任选时间完成仍是 window。\n"
                 "- 改期/时间变更为：action=reschedule，fixed 必须填新的时间和地点；"
                 "window 必须填新的截止或窗口。\n"
                 "- 若是让候选人「选择/预约/挑选」场次且没有可出场时刻："
@@ -1028,21 +1142,27 @@ def parse_mail(
             else "error_fallback"
         )
         event = heuristic_parse(mail)
+        if llm_result.event:
+            merged = merge_llm_with_heuristic(llm_result.event, event)
+            normalized = normalize_event(merged)
+            if event and llm_result.decision != "incomplete":
+                normalized = normalize_event(event)
+            event = normalized
+        elif event:
+            event = normalize_event(event)
         if event:
-            normalized = normalize_event(event)
-            assert normalized is not None
             _add_parse_stage(
                 trace,
                 engine="llm_then_heuristic",
                 result=fallback_result,
                 llm=llm_meta,
-                event=normalized,
+                event=event,
             )
             if own_trace:
                 trace.finish_dry_run(
-                    f"LLM 后启发式解析为{normalized.action}「{normalized.title}」，未执行 apply"
+                    f"LLM 后启发式解析为{event.action}「{event.title}」，未执行 apply"
                 )
-            return normalized
+            return event
 
         _add_parse_stage(
             trace,

@@ -111,6 +111,25 @@ def test_heuristic_exam_open_window_uses_span():
     assert event.time_precision == "window"
     assert event.start_at.startswith("2026-05-17T08:00")
     assert event.end_at.startswith("2026-05-17T21:00")
+    assert event.deadline == event.end_at
+
+
+def test_heuristic_long_exam_without_window_signal_stays_fixed():
+    mail = _mail(
+        subject="【笔试通知】请准时参加现场笔试",
+        text=(
+            "请于2026年5月17日 08:00准时参加，"
+            "考试结束时间为2026年5月17日 14:00。"
+            "考试地点：深圳市南山区科技园。"
+        ),
+    )
+
+    event = heuristic_parse(mail)
+
+    assert event is not None
+    assert event.time_precision == "fixed"
+    assert event.start_at.startswith("2026-05-17T08:00")
+    assert event.end_at.startswith("2026-05-17T14:00")
 
 
 def test_skip_schedule_invite_with_candidate_slots():
@@ -503,6 +522,69 @@ def test_parse_mail_keeps_think_in_raw_but_not_as_separate_field(
     assert "<think>" in record["output_raw"]
     assert reasoning in record["output_raw"]
     assert record["output_parsed"]["start_at"] == "2026-08-20T10:00:00"
+
+
+def test_parse_mail_incomplete_keeps_llm_company_and_url(tmp_path: Path, monkeypatch):
+    settings = _settings(
+        tmp_path,
+        llm_api_base="https://api.example.com/v1",
+        llm_api_key="k",
+    )
+    mail = _mail(
+        message_id="<kuaishou-assess@qq.com>",
+        subject="【快手校园招聘】在线人才测评邀请",
+        date="2026-08-17T15:41:44+08:00",
+        text=(
+            "请于3个工作日内完成测评。进入测评平台：\n"
+            "https://datatalk360.com/225On"
+        ),
+    )
+
+    class FakeResp:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(
+                                {
+                                    "relevant": True,
+                                    "action": "create",
+                                    "event_type": "assessment",
+                                    "time_precision": "window",
+                                    "company": "快手",
+                                    "title": "快手2027届校园招聘在线人才测评",
+                                    "start_at": "",
+                                    "end_at": "",
+                                    "deadline": "",
+                                    "location": "进入测评平台：",
+                                    "meeting_url": "https://datatalk360.com/225On",
+                                    "confidence": 0.95,
+                                },
+                                ensure_ascii=False,
+                            )
+                        }
+                    }
+                ]
+            }
+
+    monkeypatch.setattr(
+        "mailhub.plugins.policies.qiuzhao.parser.requests.post",
+        lambda *a, **k: FakeResp(),
+    )
+    event = parse_mail(mail, settings)
+    assert event is not None
+    assert event.company == "快手"
+    assert event.event_type == "assessment"
+    assert event.time_precision == "window"
+    assert event.end_at.startswith("2026-08-20T15:41")
+    assert "datatalk360.com" in event.meeting_url
+    assert "datatalk360.com" in event.location
+    assert "进入测评平台" not in event.location
+    assert event.confidence < 0.95
 
 
 def test_parse_mail_llm_error_falls_back_heuristic(tmp_path: Path, monkeypatch):

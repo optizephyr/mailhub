@@ -27,6 +27,7 @@ class StoredEvent:
         status: str,
         source_message_id: str,
         sinks: Optional[dict[str, str]] = None,
+        last_mail_sent_at: str = "",
     ) -> None:
         self.id = id
         self.company = company
@@ -37,6 +38,7 @@ class StoredEvent:
         self.status = status
         self.source_message_id = source_message_id
         self.sinks = sinks or {}
+        self.last_mail_sent_at = last_mail_sent_at or ""
 
 
 class EventStore:
@@ -89,6 +91,7 @@ class EventStore:
                 end_at TEXT,
                 status TEXT NOT NULL DEFAULT 'active',
                 source_message_id TEXT,
+                last_mail_sent_at TEXT NOT NULL DEFAULT '',
                 created_at TEXT,
                 updated_at TEXT
             );
@@ -102,6 +105,7 @@ class EventStore:
             """
         )
         self._migrate_processed_source_id()
+        self._migrate_last_mail_sent_at()
         self._conn.commit()
 
     def _migrate_processed_source_id(self) -> None:
@@ -112,6 +116,16 @@ class EventStore:
         if "source_id" not in cols:
             self._conn.execute(
                 "ALTER TABLE processed_messages ADD COLUMN source_id TEXT NOT NULL DEFAULT ''"
+            )
+
+    def _migrate_last_mail_sent_at(self) -> None:
+        cols = {
+            r["name"]
+            for r in self._conn.execute("PRAGMA table_info(calendar_events)").fetchall()
+        }
+        if "last_mail_sent_at" not in cols:
+            self._conn.execute(
+                "ALTER TABLE calendar_events ADD COLUMN last_mail_sent_at TEXT NOT NULL DEFAULT ''"
             )
 
     # --- checkpoints ---
@@ -264,6 +278,7 @@ class EventStore:
             status=row["status"],
             source_message_id=row["source_message_id"] or "",
             sinks=self._load_sinks(row["id"]),
+            last_mail_sent_at=row["last_mail_sent_at"] if "last_mail_sent_at" in row.keys() else "",
         )
 
     def get_event(self, event_row_id: int) -> Optional[StoredEvent]:
@@ -320,14 +335,15 @@ class EventStore:
         end_at: str,
         source_message_id: str,
         sinks: Optional[dict[str, str]] = None,
+        last_mail_sent_at: str = "",
     ) -> int:
         now = datetime.utcnow().isoformat(timespec="seconds")
         cur = self._conn.execute(
             """
             INSERT INTO calendar_events
             (company, event_type, title, start_at, end_at, status,
-             source_message_id, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?)
+             source_message_id, last_mail_sent_at, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)
             """,
             (
                 company,
@@ -336,6 +352,7 @@ class EventStore:
                 start_at,
                 end_at,
                 source_message_id,
+                last_mail_sent_at or "",
                 now,
                 now,
             ),
@@ -361,15 +378,25 @@ class EventStore:
         end_at: str,
         source_message_id: str,
         sinks: Optional[dict[str, str]] = None,
+        last_mail_sent_at: str = "",
     ) -> None:
         now = datetime.utcnow().isoformat(timespec="seconds")
         self._conn.execute(
             """
             UPDATE calendar_events
-            SET title=?, start_at=?, end_at=?, source_message_id=?, updated_at=?
+            SET title=?, start_at=?, end_at=?, source_message_id=?,
+                last_mail_sent_at=?, updated_at=?
             WHERE id=?
             """,
-            (title, start_at, end_at, source_message_id, now, event_row_id),
+            (
+                title,
+                start_at,
+                end_at,
+                source_message_id,
+                last_mail_sent_at or "",
+                now,
+                event_row_id,
+            ),
         )
         for sink, external_id in (sinks or {}).items():
             self._conn.execute(
@@ -381,15 +408,20 @@ class EventStore:
             )
         self._conn.commit()
 
-    def cancel_event(self, event_row_id: int, source_message_id: str) -> None:
+    def cancel_event(
+        self,
+        event_row_id: int,
+        source_message_id: str,
+        last_mail_sent_at: str = "",
+    ) -> None:
         now = datetime.utcnow().isoformat(timespec="seconds")
         self._conn.execute(
             """
             UPDATE calendar_events
-            SET status='cancelled', source_message_id=?, updated_at=?
+            SET status='cancelled', source_message_id=?, last_mail_sent_at=?, updated_at=?
             WHERE id=?
             """,
-            (source_message_id, now, event_row_id),
+            (source_message_id, last_mail_sent_at or "", now, event_row_id),
         )
         self._conn.commit()
 

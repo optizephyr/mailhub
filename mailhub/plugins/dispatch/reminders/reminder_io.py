@@ -33,7 +33,7 @@ def update_reminder(
     current = client.get(href)
     item = parse_component(current.data, "VTODO")
     uid = component_text(item, "UID") or str(uuid.uuid4())
-    client.put_existing(href, build_todo_ical(event, uid))
+    client.put_existing(href, build_todo_ical(event, uid, existing=item))
 
 
 def delete_reminder(

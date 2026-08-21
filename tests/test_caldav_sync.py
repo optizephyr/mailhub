@@ -371,6 +371,67 @@ def test_sync_updates_then_deletes_existing_caldav_todo(
     assert state.resources == {}
 
 
+def test_update_reminder_preserves_user_completion_state(
+    tmp_path: Path, caldav_server
+) -> None:
+    from mailhub.plugins.caldav import CalDavClient
+    from mailhub.plugins.dispatch.reminders.reminder_io import (
+        create_reminder,
+        update_reminder,
+    )
+
+    url, state = caldav_server
+    settings = Settings(
+        data_dir=tmp_path,
+        caldav_url=url,
+        caldav_username="user",
+        caldav_password="secret",
+        reminders_list="秋招提醒",
+    )
+    client = CalDavClient(settings)
+    original = CandidateEvent(
+        message_id="<todo-complete@qq.com>",
+        subject="测评通知",
+        title="[测评] 京东",
+        event_type="assessment",
+        end_at="2026-08-21T03:00:00",
+        company="京东",
+        meeting_url="https://example.com/a",
+        time_precision="window",
+    )
+    href = create_reminder(original, settings, client)
+    resource_path = next(path for path in state.resources if path.endswith(".ics"))
+    state.resources[resource_path] = (
+        state.resources[resource_path]
+        .replace("STATUS:NEEDS-ACTION", "STATUS:COMPLETED")
+        .replace(
+            "SUMMARY:[测评] 京东",
+            "SUMMARY:[测评] 京东\r\n"
+            "COMPLETED:20260821T010000Z\r\n"
+            "PERCENT-COMPLETE:100",
+        )
+    )
+
+    updated = CandidateEvent(
+        message_id="<todo-complete-update@qq.com>",
+        subject="测评延期通知",
+        title="[测评] 京东",
+        event_type="assessment",
+        action="reschedule",
+        end_at="2026-08-22T03:00:00",
+        company="京东",
+        meeting_url="https://example.com/a",
+        time_precision="window",
+    )
+    update_reminder(href, updated, settings, client)
+
+    resource = state.resources[resource_path]
+    assert "DUE:20260822T030000" in resource
+    assert "STATUS:COMPLETED" in resource
+    assert "COMPLETED:20260821T010000Z" in resource
+    assert "PERCENT-COMPLETE:100" in resource
+
+
 def test_disabled_calendar_consumes_mail_without_later_backfill(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caldav_server
 ) -> None:

@@ -90,7 +90,11 @@ def build_event_ical(
     return calendar.to_ical().decode()
 
 
-def build_todo_ical(event: CandidateEvent, uid: str) -> str:
+def build_todo_ical(
+    event: CandidateEvent,
+    uid: str,
+    existing=None,
+) -> str:
     due = event.end_at or event.start_at
     calendar = Calendar()
     calendar.add("prodid", "-//mailhub//CN")
@@ -100,7 +104,17 @@ def build_todo_ical(event: CandidateEvent, uid: str) -> str:
     item.add("dtstamp", datetime.now(timezone.utc))
     item.add("summary", event.title)
     item.add("description", event.meeting_url or "")
-    item.add("status", "NEEDS-ACTION")
+    existing_status = component_text(existing, "STATUS") if existing is not None else ""
+    if existing_status.upper() == "COMPLETED":
+        item.add("status", "COMPLETED")
+        completed = existing.get("COMPLETED")
+        if completed is not None:
+            item.add("completed", completed.dt)
+        percent_complete = existing.get("PERCENT-COMPLETE")
+        if percent_complete is not None:
+            item.add("percent-complete", int(str(percent_complete)))
+    else:
+        item.add("status", "NEEDS-ACTION")
     if due:
         item.add("due", datetime.fromisoformat(due))
     if event.meeting_url:

@@ -55,6 +55,9 @@ def candidate_to_resolved(event: CandidateEvent, message: MailMessage) -> Resolv
             precision="window",
         )
     links = [event.meeting_url] if event.meeting_url else []
+    candidate = event.to_dict()
+    if message.sent_at:
+        candidate["sent_at"] = message.sent_at
     return ResolvedMail(
         source=message.source,
         kind=event.event_type or "other",
@@ -75,7 +78,7 @@ def candidate_to_resolved(event: CandidateEvent, message: MailMessage) -> Resolv
             "references": list(event.references),
             "subject": event.subject,
             "source_snippet": event.source_snippet,
-            "candidate": event.to_dict(),
+            "candidate": candidate,
             "time_precision": event.time_precision,
             "deadline": event.deadline,
         },

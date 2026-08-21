@@ -200,6 +200,8 @@ def run_once(ctx: RunContext) -> RunResult:
                     hit.start_at = event.start_at
                     hit.end_at = event.end_at
                     hit.title = event.title
+                    hit.last_mail_sent_at = event.sent_at
+                    hit.source_message_id = event.message_id
             trace.finish_dry_run(
                 str(payload.get("summary") or ""),
                 result=str(payload.get("result")),
@@ -243,15 +245,15 @@ def run_once(ctx: RunContext) -> RunResult:
         if req.type in SKIP_TYPES:
             result.skipped += 1
             print(f"  - {summary}")
-            status = (
-                "skipped_duplicate"
-                if payload.get("result") == "skipped_duplicate"
-                else (
-                    "skipped_disabled"
-                    if payload.get("result") == "skipped_disabled"
-                    else "skipped_same"
-                )
-            )
+            result_name = str(payload.get("result") or "")
+            status = {
+                "skipped_duplicate": "skipped_duplicate",
+                "would_skip_duplicate": "skipped_duplicate",
+                "skipped_disabled": "skipped_disabled",
+                "would_skip_disabled": "skipped_disabled",
+                "skipped_older": "skipped_older",
+                "would_skip_older": "skipped_older",
+            }.get(result_name, "skipped_same")
             target_sinks = (payload.get("target") or {}).get("sinks")
             _finish_apply(
                 trace,
@@ -384,6 +386,7 @@ def _tally_dry_run(
         "would_skip_duplicate",
         "would_skip_same",
         "would_skip_disabled",
+        "would_skip_older",
     ):
         result.skipped += 1
     elif plan_result == "would_fail":

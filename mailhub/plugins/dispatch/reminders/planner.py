@@ -6,6 +6,7 @@ from typing import Optional
 from mailhub.contracts.actions import ActionRequest
 from mailhub.contracts.resolve import ResolvedMail
 from mailhub.plugins.dispatch.calendar.match import companies_match
+from mailhub.plugins.dispatch.mail_version import is_stale_mail
 from mailhub.plugins.policies.qiuzhao.types import CandidateEvent
 from mailhub.runtime.config import Settings
 from mailhub.store.sqlite import EventStore, StoredEvent
@@ -40,6 +41,7 @@ def _session_event_from_candidate(event: CandidateEvent) -> StoredEvent:
         status="active",
         source_message_id=event.message_id,
         sinks={SINK_REMINDERS: ""},
+        last_mail_sent_at=event.sent_at,
     )
 
 
@@ -143,6 +145,19 @@ class RemindersPlanner:
             return []
 
         row_id = target.id if target and target.id > 0 else None
+
+        if target and is_stale_mail(event.sent_at, target.last_mail_sent_at):
+            return [
+                self._req(
+                    ACTION_SKIP,
+                    event,
+                    result="would_skip_older" if self.dry_run else "skipped_older",
+                    summary="更早的邮件，不覆盖已有提醒事项",
+                    match_via=via,
+                    event_row_id=row_id,
+                    target=target,
+                )
+            ]
 
         if event.action == "cancel":
             if not target:
@@ -261,6 +276,7 @@ class RemindersPlanner:
                 "end_at": target.end_at,
                 "status": target.status,
                 "source_message_id": target.source_message_id,
+                "last_mail_sent_at": target.last_mail_sent_at,
                 "sinks": dict(target.sinks),
             }
         return ActionRequest(

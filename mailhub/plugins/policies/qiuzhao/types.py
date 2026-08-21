@@ -47,6 +47,7 @@ class CandidateEvent:
     confidence: float = 0.5
     source_snippet: str = ""
     references: list[str] = field(default_factory=list)
+    sent_at: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

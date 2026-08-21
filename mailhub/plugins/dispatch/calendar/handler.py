@@ -175,6 +175,7 @@ class CalendarHandler:
             status=str(raw.get("status") or "active"),
             source_message_id=str(raw.get("source_message_id") or ""),
             sinks=dict(raw.get("sinks") or {}),
+            last_mail_sent_at=str(raw.get("last_mail_sent_at") or ""),
         )
 
     def _apply_create(self, event: CandidateEvent) -> int:
@@ -187,6 +188,7 @@ class CalendarHandler:
             end_at=event.end_at,
             source_message_id=event.message_id,
             sinks={"calendar": calendar_event_id},
+            last_mail_sent_at=event.sent_at,
         )
 
     def _apply_update(self, target: StoredEvent, event: CandidateEvent) -> None:
@@ -203,10 +205,13 @@ class CalendarHandler:
             end_at=event.end_at,
             source_message_id=event.message_id,
             sinks=sink_ids,
+            last_mail_sent_at=event.sent_at,
         )
 
     def _apply_cancel(self, target: StoredEvent, event: CandidateEvent) -> None:
         external_id = target.sinks.get("calendar")
         if external_id:
             self.delete_calendar_event(external_id)
-        self.store.cancel_event(target.id, event.message_id)
+        self.store.cancel_event(
+            target.id, event.message_id, last_mail_sent_at=event.sent_at
+        )
