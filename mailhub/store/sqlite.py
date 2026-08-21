@@ -367,6 +367,28 @@ class EventStore:
         ).fetchall()
         return [self._row_to_event(row) for row in rows]
 
+    def list_active_events(self) -> list[StoredEvent]:
+        rows = self._conn.execute(
+            """
+            SELECT *
+            FROM calendar_events
+            WHERE status = 'active'
+            ORDER BY id
+            """
+        ).fetchall()
+        return [self._row_to_event(row) for row in rows]
+
+    def list_sink_external_ids(self, sink: str) -> set[str]:
+        rows = self._conn.execute(
+            """
+            SELECT external_id
+            FROM calendar_sinks
+            WHERE sink = ? AND external_id <> ''
+            """,
+            (sink,),
+        ).fetchall()
+        return {str(row["external_id"]) for row in rows}
+
     def list_events_with_sinks(self) -> list[StoredEvent]:
         rows = self._conn.execute(
             """
@@ -478,6 +500,73 @@ class EventStore:
             (item_uid, now, event_row_id),
         )
         self._conn.commit()
+
+    def adopt_event_sink(
+        self,
+        event_row_id: int,
+        *,
+        sink: str,
+        external_id: str,
+        item_uid: str,
+    ) -> None:
+        """Atomically attach a discovered CalDAV resource to an existing row."""
+        now = datetime.utcnow().isoformat(timespec="seconds")
+        with self._conn:
+            row = self._conn.execute(
+                "SELECT item_uid FROM calendar_events WHERE id=?",
+                (event_row_id,),
+            ).fetchone()
+            if row is None:
+                raise ValueError(f"事项不存在：#{event_row_id}")
+            current_uid = str(row["item_uid"] or "")
+            if current_uid and item_uid and current_uid != item_uid:
+                raise ValueError(
+                    f"事项 #{event_row_id} 的 item_uid 与待认领资源不一致"
+                )
+            uid_owner = (
+                self._conn.execute(
+                    """
+                    SELECT id FROM calendar_events
+                    WHERE item_uid=? AND id<>?
+                    """,
+                    (item_uid, event_row_id),
+                ).fetchone()
+                if item_uid
+                else None
+            )
+            if uid_owner is not None:
+                raise ValueError(
+                    f"UID 已属于事项 #{int(uid_owner['id'])}"
+                )
+            owner = self._conn.execute(
+                """
+                SELECT event_row_id FROM calendar_sinks
+                WHERE sink=? AND external_id=? AND event_row_id<>?
+                """,
+                (sink, external_id, event_row_id),
+            ).fetchone()
+            if owner is not None:
+                raise ValueError(
+                    f"远端资源已属于事项 #{int(owner['event_row_id'])}"
+                )
+            if item_uid:
+                self._conn.execute(
+                    """
+                    UPDATE calendar_events
+                    SET item_uid=?, updated_at=?
+                    WHERE id=?
+                    """,
+                    (item_uid, now, event_row_id),
+                )
+            self._conn.execute(
+                """
+                INSERT INTO calendar_sinks (event_row_id, sink, external_id)
+                VALUES (?, ?, ?)
+                ON CONFLICT(event_row_id, sink) DO UPDATE SET
+                    external_id = excluded.external_id
+                """,
+                (event_row_id, sink, external_id),
+            )
 
     def link_event_message(
         self,

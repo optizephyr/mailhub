@@ -64,7 +64,9 @@ uv run mailhub list-reminders
 # 列出目标日历里已有的日程（核对匹配用）
 uv run mailhub scan-calendar --days 60
 
-# 首次升级身份模型时，从现有 CalDAV UID 回填本地事项身份
+# 首次升级身份模型时，从现有 CalDAV UID 回填本地事项身份。
+# 也会按 UID / Message-ID，或旧资源的「公司 + 到期时间」唯一匹配，
+# 认领数据库中丢失 href 的 VTODO；匹配不唯一时只报告、不写入。
 uv run mailhub migrate-identities --dry-run
 uv run mailhub migrate-identities
 

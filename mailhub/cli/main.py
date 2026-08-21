@@ -127,21 +127,31 @@ def cmd_migrate_identities(args: argparse.Namespace) -> None:
             client,
             source_id=settings.source_id,
             dry_run=bool(args.dry_run),
+            reminders_list=settings.reminders_list,
         )
     finally:
         store.close()
 
     for change in result.changes:
         print(f"  - #{change.event_row_id} item_uid={change.item_uid}")
+    for adopted in result.adopted_sinks:
+        print(
+            f"  - 认领 #{adopted.event_row_id} {adopted.sink}: "
+            f"{adopted.href}（{adopted.match_via}）"
+        )
     for missing in result.missing_resources:
         print(f"  - 资源无 UID：{missing}")
+    for ambiguous in result.ambiguous_matches:
+        print(f"  - 匹配不唯一，已跳过：{ambiguous}")
     for error in result.errors:
         print(f"  - 失败：{error}")
     verb = "将回填" if args.dry_run else "已回填"
     print(
         f"身份迁移完成：{verb} {len(result.changes)} 条 item_uid，"
+        f"认领 {len(result.adopted_sinks)} 个孤儿落点，"
         f"{result.linked_messages} 条邮件关联；"
-        f"资源缺失 {len(result.missing_resources)}，失败 {len(result.errors)}"
+        f"资源缺失 {len(result.missing_resources)}，"
+        f"匹配不唯一 {len(result.ambiguous_matches)}，失败 {len(result.errors)}"
     )
     if result.errors:
         raise SystemExit(1)

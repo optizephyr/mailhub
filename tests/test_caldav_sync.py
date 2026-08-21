@@ -646,6 +646,131 @@ def test_identity_migration_reuses_caldav_uid_and_links_legacy_mail(
     store.close()
 
 
+def test_identity_migration_adopts_unique_orphan_reminder(
+    tmp_path: Path, caldav_server
+) -> None:
+    from mailhub.plugins.caldav import CalDavClient
+    from mailhub.runtime.identity_migrate import migrate_identities
+    from mailhub.store.sqlite import EventStore
+
+    url, state = caldav_server
+    settings = Settings(
+        data_dir=tmp_path,
+        caldav_url=url,
+        caldav_username="user",
+        caldav_password="secret",
+        reminders_list="秋招提醒",
+        source_id="qq.default",
+    )
+    href = "/calendars/user/tasks/orphan.ics"
+    state.resources[href] = """BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VTODO
+UID:legacy-orphan-uid
+SUMMARY:[测评] 京东校招
+DUE:20260821T180000
+STATUS:COMPLETED
+END:VTODO
+END:VCALENDAR
+"""
+    state.etags[href] = '"v1"'
+    store = EventStore(tmp_path / "synced.sqlite")
+    row_id = store.create_event(
+        company="京东校招",
+        event_type="assessment",
+        title="[测评] 京东校招",
+        start_at="",
+        end_at="2026-08-21T18:00:00",
+        source_message_id="<orphan@qq.com>",
+    )
+
+    preview = migrate_identities(
+        store,
+        CalDavClient(settings),
+        source_id=settings.source_id,
+        dry_run=True,
+        reminders_list=settings.reminders_list,
+    )
+    assert [
+        (item.event_row_id, item.href, item.item_uid, item.match_via)
+        for item in preview.adopted_sinks
+    ] == [(row_id, href, "legacy-orphan-uid", "company_due")]
+    assert store.get_event(row_id).sinks == {}
+    assert store.get_event(row_id).item_uid == ""
+    assert store.list_event_messages(row_id) == []
+
+    result = migrate_identities(
+        store,
+        CalDavClient(settings),
+        source_id=settings.source_id,
+        dry_run=False,
+        reminders_list=settings.reminders_list,
+    )
+    assert result.errors == []
+    assert result.ambiguous_matches == []
+    assert store.get_event(row_id).sinks == {"reminders": href}
+    assert store.get_event(row_id).item_uid == "legacy-orphan-uid"
+    assert [
+        (ref.source_id, ref.message_id)
+        for ref in store.list_event_messages(row_id)
+    ] == [("qq.default", "<orphan@qq.com>")]
+    store.close()
+
+
+def test_identity_migration_refuses_ambiguous_orphan_reminder(
+    tmp_path: Path, caldav_server
+) -> None:
+    from mailhub.plugins.caldav import CalDavClient
+    from mailhub.runtime.identity_migrate import migrate_identities
+    from mailhub.store.sqlite import EventStore
+
+    url, state = caldav_server
+    settings = Settings(
+        data_dir=tmp_path,
+        caldav_url=url,
+        caldav_username="user",
+        caldav_password="secret",
+        reminders_list="秋招提醒",
+        source_id="qq.default",
+    )
+    href = "/calendars/user/tasks/ambiguous.ics"
+    state.resources[href] = """BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VTODO
+UID:ambiguous-uid
+SUMMARY:[测评] 京东
+DUE:20260821T180000
+END:VTODO
+END:VCALENDAR
+"""
+    state.etags[href] = '"v1"'
+    store = EventStore(tmp_path / "synced.sqlite")
+    row_ids = [
+        store.create_event(
+            company="京东",
+            event_type="assessment",
+            title="[测评] 京东",
+            start_at="",
+            end_at="2026-08-21T18:00:00",
+            source_message_id=f"<ambiguous-{index}@qq.com>",
+        )
+        for index in range(2)
+    ]
+
+    result = migrate_identities(
+        store,
+        CalDavClient(settings),
+        source_id=settings.source_id,
+        dry_run=False,
+        reminders_list=settings.reminders_list,
+    )
+
+    assert result.adopted_sinks == []
+    assert len(result.ambiguous_matches) == 1
+    assert all(store.get_event(row_id).sinks == {} for row_id in row_ids)
+    store.close()
+
+
 def test_disabled_calendar_consumes_mail_without_later_backfill(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caldav_server
 ) -> None:
