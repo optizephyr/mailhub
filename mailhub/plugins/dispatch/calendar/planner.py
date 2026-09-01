@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import datetime, timedelta
 from typing import Optional
@@ -50,6 +51,14 @@ def _session_event_from_candidate(event: CandidateEvent) -> StoredEvent:
     )
 
 
+def _business_line_of(title: str) -> str:
+    """从 session/store 行 title 中提取业务线（`[面试] 阿里巴巴·千问事业部` → `千问事业部`）。"""
+    if not title or "·" not in title:
+        return ""
+    m = re.match(r"^\s*\[[^\]]{1,16}\]\s*[^·\n]{1,40}·(.+?)\s*$", title)
+    return m.group(1).strip() if m else ""
+
+
 def _match_session(
     event: CandidateEvent,
     session: list[StoredEvent],
@@ -58,13 +67,18 @@ def _match_session(
     if not company or not session:
         return None
     want_type = event.event_type if event.event_type != "other" else ""
+    want_bl = (event.business_line or "").strip()
     for candidate in reversed(session):
         if _is_reminders_only(candidate):
             continue
         if want_type and candidate.event_type not in ("", "other", want_type):
             continue
-        if companies_match(company, candidate.company):
-            return candidate
+        if not companies_match(company, candidate.company):
+            continue
+        # 业务线一致性：同公司不同业务线（千问 / 淘天）不应合并
+        if _business_line_of(candidate.title or "") != want_bl:
+            continue
+        return candidate
     return None
 
 
@@ -149,7 +163,9 @@ def find_target(
         event_type=event.event_type if event.event_type != "other" else "",
     )
     if target:
-        return target, "company_type"
+        # 业务线一致性：同公司不同业务线不能误命中已存在的另一条日程
+        if _business_line_of(target.title or "") == (event.business_line or "").strip():
+            return target, "company_type"
 
     if adopt:
         adopted = _adopt_from_calendar(store, event, settings)

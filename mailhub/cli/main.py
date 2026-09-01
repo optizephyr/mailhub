@@ -13,6 +13,7 @@ from mailhub.plugins.dispatch.calendar.calendar_io import (
     list_calendar_events,
     list_calendars,
 )
+from mailhub.plugins.dispatch.calendar.migrate import migrate_alibaba_divisions
 from mailhub.plugins.dispatch.reminders.migrate import migrate_reminder_titles
 from mailhub.plugins.dispatch.reminders.reminder_io import list_reminder_lists
 from mailhub.plugins.policies.qiuzhao import QiuzhaoResolver
@@ -114,6 +115,46 @@ def cmd_migrate_reminder_titles(args: argparse.Namespace) -> None:
             f"迁移完成：已更新 {len(changes)} 条提醒事项标题，"
             f"跳过 {len(missing_message_ids)} 条"
         )
+
+
+def cmd_migrate_alibaba_divisions(args: argparse.Namespace) -> None:
+    settings = load_settings()
+    require_caldav_config(settings)
+    client = CalDavClient(settings)
+    if settings.calendar_name:
+        client.collection(settings.calendar_name, "VEVENT")
+    store = EventStore(settings.data_dir / "synced.sqlite")
+    try:
+        changes = migrate_alibaba_divisions(
+            store,
+            settings,
+            dry_run=bool(args.dry_run),
+            purge_processed=bool(args.purge_processed),
+            client=client,
+        )
+    finally:
+        store.close()
+
+    if not changes:
+        print("未发现可清理的「同公司不同业务线」旧日程。")
+        return
+    for change in changes:
+        suffix = "（已同步清理 processed_messages）" if change.purged_processed else ""
+        print(
+            f"  - #{change.event_row_id} {change.title!r} "
+            f"company={change.company!r} "
+            f"mid={change.source_message_id!r} "
+            f"uid={change.calendar_uid}{suffix}"
+        )
+    verb = "将清理" if args.dry_run else "已清理"
+    note = (
+        "重跑 sync 后将重建为独立的「公司·业务线」日程。"
+        if not args.dry_run
+        else "仅预览；实际执行会从日历与 store 中删除这些旧条目。"
+    )
+    print(
+        f"阿里巴巴业务线迁移：{verb} {len(changes)} 条旧「[面试] 阿里巴巴」类日程。{note}"
+    )
 
 
 def cmd_migrate_identities(args: argparse.Namespace) -> None:
@@ -320,6 +361,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="只展示将回填的身份，不写入本地数据库",
     )
     identities.set_defaults(func=cmd_migrate_identities)
+
+    alibaba = sub.add_parser(
+        "migrate-alibaba-divisions",
+        help="清理旧的「[面试] 阿里巴巴」合并日程，让 sync 重建为「公司·业务线」独立日程",
+    )
+    alibaba.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="只列出将清理的旧条目，不删除日历与本地数据",
+    )
+    alibaba.add_argument(
+        "--purge-processed",
+        action="store_true",
+        help="同时从 processed_messages 移除受影响邮件，让 sync 重建",
+    )
+    alibaba.set_defaults(func=cmd_migrate_alibaba_divisions)
 
     scan = sub.add_parser("scan-calendar", help="列出目标日历里已有的日程")
     scan.add_argument(

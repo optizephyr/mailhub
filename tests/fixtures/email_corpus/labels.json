@@ -290,6 +290,38 @@
       "notes": "高德地图预约面试；同公司不同业务线不合并"
     },
     {
+      "id": "alibaba_qianwen_interview_confirmed",
+      "eml": "【阿里巴巴校园招聘】千问事业部面试通知.eml",
+      "category": "interview_confirmed",
+      "expect": {
+        "coarse_pass": true,
+        "stage": "confirmed",
+        "action": "create",
+        "event_type": "interview",
+        "should_create_event": true,
+        "company_contains": ["阿里"],
+        "start_at_prefix": "2026-09-07T15:00",
+        "must_not_start_at_prefix": null
+      },
+      "notes": "阿里巴巴校招千问事业部确认面试；同公司不同业务线不合并（与淘天集团独立日程）"
+    },
+    {
+      "id": "alibaba_taobao_interview_confirmed",
+      "eml": "【阿里巴巴校园招聘】淘天集团面试通知.eml",
+      "category": "interview_confirmed",
+      "expect": {
+        "coarse_pass": true,
+        "stage": "confirmed",
+        "action": "create",
+        "event_type": "interview",
+        "should_create_event": true,
+        "company_contains": ["阿里"],
+        "start_at_prefix": "2026-09-04T16:00",
+        "must_not_start_at_prefix": null
+      },
+      "notes": "阿里巴巴校招淘天集团确认面试；同公司不同业务线不合并（与千问事业部独立日程）"
+    },
+    {
       "id": "tencent_interview_confirmed",
       "eml": "腾讯校园招聘——校招面试邀请函.eml",
       "category": "interview_confirmed",

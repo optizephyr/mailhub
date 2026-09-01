@@ -178,3 +178,155 @@ def test_adopted_event_updates_existing_calendar_resource(tmp_path: Path, monkey
     refreshed = store.get_event(target.id)
     assert refreshed is not None and refreshed.start_at == "2026-08-26T10:00:00"
     store.close()
+
+
+def test_alibaba_same_company_different_business_lines_do_not_overwrite(tmp_path: Path):
+    """千问 与 淘天 阿里巴巴邮件应该作为两条独立日程，互不覆盖。
+
+    验证点：
+    - 两封邮件解析后 title 不同（都含 ·业务线 后缀）；
+    - match_calendar_event 在两者同时出现时不会把它们错认为是同一条；
+    - 两封邮件都送进 store 后产生活跃 event 各一条，title 互不相同。
+    """
+    store = EventStore(tmp_path / "synced.sqlite")
+    try:
+        from tests.eml_loader import EMAIL_EXAMPLE_DIR
+        from mailhub.plugins.policies.qiuzhao.parser import heuristic_parse
+
+        qianwen = heuristic_parse(_mail_item(EMAIL_EXAMPLE_DIR / "【阿里巴巴校园招聘】千问事业部面试通知.eml"))
+        taobao = heuristic_parse(_mail_item(EMAIL_EXAMPLE_DIR / "【阿里巴巴校园招聘】淘天集团面试通知.eml"))
+
+        assert qianwen is not None and taobao is not None
+        # 核心：两封同公司不同业务线的邮件 title 不同，避免被 dedup 合并
+        assert qianwen.title != taobao.title, (
+            f"同公司不同业务线 title 应不同，实际都是 {qianwen.title!r}"
+        )
+        assert qianwen.business_line == "千问事业部"
+        assert taobao.business_line == "淘天集团"
+        # company 仍是「阿里巴巴」以保持 labels.json 中 company_contains=[阿里] 约定
+        assert qianwen.company == taobao.company == "阿里巴巴"
+        # 起止时间不同、互不覆盖
+        assert qianwen.start_at != taobao.start_at
+        assert qianwen.start_at.startswith("2026-09-07T15:00")
+        assert taobao.start_at.startswith("2026-09-04T16:00")
+
+        # match_calendar_event：千问 已写入日历后再来淘天，不应误中 千问 那条
+        qianwen_ref = _ref(uid="uid-qianwen", summary=qianwen.title, start_at=qianwen.start_at)
+        hit = match_calendar_event(taobao, [qianwen_ref])
+        assert hit is None, (
+            f"公司相同但业务线不同时不该合并，但 match 返回了 {hit}"
+        )
+
+        # 反过来淘天 已写入日历后再来千问，也不应误中
+        taobao_ref = _ref(uid="uid-taobao", summary=taobao.title, start_at=taobao.start_at)
+        hit = match_calendar_event(qianwen, [taobao_ref])
+        assert hit is None, (
+            f"公司相同但业务线不同时不该合并，但 match 返回了 {hit}"
+        )
+
+        # 两封都走 planner：千问、淘天都应产出 ACTION_CREATE，后到的不会覆盖前者
+        from mailhub.plugins.dispatch.calendar.planner import (
+            CalendarPlanner,
+            ACTION_CREATE,
+            ACTION_UPDATE,
+        )
+        settings = _settings(tmp_path)
+        planner = CalendarPlanner(
+            store, settings, session=[], dry_run=True, source_id=settings.source_id,
+        )
+        # 首次推送：当作新邮件，session 为空
+        actions_q = planner.plan(_resolved(qianwen))
+        assert actions_q and actions_q[0].type == ACTION_CREATE, (
+            f"千问首次推送应 create，实际 {actions_q[0].type if actions_q else 'none'}"
+        )
+
+        # 把千问加入 session，模拟「千问已创建」后续推送淘天
+        from mailhub.plugins.dispatch.calendar.planner import session_event_from_candidate
+        session = [session_event_from_candidate(qianwen)]
+        planner2 = CalendarPlanner(
+            store, settings, session=session, dry_run=True, source_id=settings.source_id,
+        )
+        actions_t = planner2.plan(_resolved(taobao))
+        # 核心诉求：淘天不与千问同 target，不走 ACTION_UPDATE
+        assert actions_t, "淘天应有动作"
+        assert actions_t[0].type == ACTION_CREATE, (
+            f"淘天后续推送应 create（不同业务线），实际 {actions_t[0].type}："
+            "同公司不同业务线不应触发 update"
+        )
+
+        # 反向验证：把淘天加入 session 后推送千问，也仍是 create
+        session = [session_event_from_candidate(taobao)]
+        planner3 = CalendarPlanner(
+            store, settings, session=session, dry_run=True, source_id=settings.source_id,
+        )
+        actions_q2 = planner3.plan(_resolved(qianwen))
+        assert actions_q2 and actions_q2[0].type == ACTION_CREATE, (
+            f"千问后续推送应 create（不同业务线），实际 {actions_q2[0].type}"
+        )
+    finally:
+        store.close()
+
+
+def _mail_item(path):
+    """加载 .eml 为 MailItem（仅给测试用，跳过 SourceRef 等包装）。"""
+    import email as _email
+    from email import policy as _policy
+    from mailhub.plugins.policies.qiuzhao.types import MailItem
+
+    with open(path, "rb") as f:
+        msg = _email.message_from_binary_file(f, policy=_policy.default)
+    text, html = "", ""
+    for part in msg.walk():
+        if part.get_content_type() == "text/plain" and not text:
+            text = part.get_content()
+        if part.get_content_type() == "text/html" and not html:
+            html = part.get_content()
+    return MailItem(
+        message_id=str(msg["Message-ID"] or ""),
+        subject=str(msg["Subject"] or ""),
+        from_=str(msg["From"] or ""),
+        date=str(msg["Date"] or ""),
+        text=text,
+        html=html,
+    )
+
+
+def _resolved(event):
+    """把 CandidateEvent 包装成 ResolvedMail，供 CalendarPlanner.plan 使用。"""
+    from datetime import datetime
+    from mailhub.contracts.resolve import ResolvedMail, TimeConstraint
+    from mailhub.contracts.messages import SourceRef
+
+    time = TimeConstraint(
+        start_at=event.start_at or None,
+        end_at=event.end_at or None,
+        timezone="Asia/Shanghai",
+        precision=event.time_precision or "fixed",
+    )
+    source = SourceRef(source_id=event.source_id or "qq.test", message_id=event.message_id)
+    return ResolvedMail(
+        source=source,
+        kind=event.event_type or "interview",
+        change="new",
+        title=event.title,
+        summary=event.subject,
+        importance="high",
+        time=time,
+        location=event.location or None,
+        links=[event.meeting_url] if event.meeting_url else [],
+        correlation_key=f"{event.company}|{event.event_type}",
+        attributes={
+            "company": event.company,
+            "action": event.action,
+            "event_type": event.event_type,
+            "meeting_url": event.meeting_url,
+            "description": "",
+            "references": list(event.references or []),
+            "subject": event.subject,
+            "source_snippet": event.source_snippet,
+            "candidate": event.to_dict(),
+            "time_precision": event.time_precision,
+            "deadline": event.deadline,
+        },
+        confidence=event.confidence,
+    )

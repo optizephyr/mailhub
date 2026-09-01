@@ -686,5 +686,33 @@ class EventStore:
         )
         self._conn.commit()
 
+    def delete_event(self, event_row_id: int) -> None:
+        """迁移专用：从 store 中硬删除一条事件及其关联行（event_messages、calendar_sinks）。"""
+        with self._conn:
+            self._conn.execute(
+                "DELETE FROM event_messages WHERE event_row_id = ?",
+                (event_row_id,),
+            )
+            self._conn.execute(
+                "DELETE FROM calendar_sinks WHERE event_row_id = ?",
+                (event_row_id,),
+            )
+            self._conn.execute(
+                "DELETE FROM calendar_events WHERE id = ?",
+                (event_row_id,),
+            )
+
+    def unmark_processed(self, message_id: str, source_id: str = "") -> int:
+        """迁移专用：从 processed_messages 中移除一条记录，返回受影响行数。"""
+        cur = self._conn.execute(
+            """
+            DELETE FROM processed_messages
+            WHERE message_id = ? AND source_id = ?
+            """,
+            (message_id, source_id),
+        )
+        self._conn.commit()
+        return cur.rowcount
+
     def close(self) -> None:
         self._conn.close()

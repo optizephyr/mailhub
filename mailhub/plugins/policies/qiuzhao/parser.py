@@ -532,19 +532,108 @@ def default_duration_hours(event_type: str) -> float:
     return 1.0
 
 
+# 主题拼接顺序：业务线长度上限与「业务线」词黑名单，避免把主题描述误当业务线。
+_BUSINESS_LINE_MAX_LEN = 10
+_SUBJECT_LINE_SUFFIXES = (
+    "面试通知", "面试邀约", "面试邀请", "面试邀请函",
+    "笔试通知", "笔试邀约", "笔试邀请",
+    "测评通知", "测评邀请", "在线测评通知",
+    "面试", "笔试", "测评",
+    "通知", "邀约", "邀请", "邀请函",
+)
+_BUSINESS_LINE_BAD_TOKENS = (
+    # 动词/敬语/状态类，应被识别为「描述」而非「业务线」
+    "邀请", "请", "您", "同学", "成功", "已收到", "启动",
+    # 邮件动作/后缀词，出现即说明该片段还是后缀延伸，不是业务线
+    "招聘", "校招", "笔试", "测评", "通知", "邀约",
+    "面试", "改期", "取消", "调整",
+)
+_SUBJECT_BRACKET_RE = re.compile(r"[【\[]([^】\]]{2,40})[】\]]")
+_DEPARTMENT_RE = re.compile(r"面试部门[：:]\s*([^\n\r]+)")
+_DEPARTMENT_SPLIT_RE = re.compile(r"[\-－—–]+")
+_CJK_RE = re.compile(r"[\u4e00-\u9fff]")
+
+
+def _strip_subject_suffix(subject: str) -> str:
+    s = subject.strip()
+    for suf in _SUBJECT_LINE_SUFFIXES:
+        if s.endswith(suf):
+            return s[: -len(suf)].rstrip(" -_、，。,.")
+    return s
+
+
+def _looks_like_business_line(text: str) -> bool:
+    text = text.strip()
+    if not text or len(text) > _BUSINESS_LINE_MAX_LEN:
+        return False
+    for bad in _BUSINESS_LINE_BAD_TOKENS:
+        if bad in text:
+            return False
+    if not _CJK_RE.search(text):
+        return False
+    return True
+
+
+def extract_business_line(
+    subject: str, body: str, *, company: str = ""
+) -> str:
+    """从主题提取业务线（如「千问事业部」），正文「面试部门：xxx-yyy」作为后备。
+
+    返回空串表示未识别出业务线；title 拼接时仅在非空时追加「·业务线」。
+    当提取出的业务线与已识别出的 company 重叠时跳过，避免「[面试] 美团·美团」冗余。
+    """
+    company_norm = (company or "").strip()
+    # 主题路径：「【公司】业务线[面试/笔试/通知]」
+    stripped = _strip_subject_suffix(subject)
+    m = _SUBJECT_BRACKET_RE.search(stripped)
+    if m:
+        after = stripped[m.end():].strip(" -_、，。,.")
+        if _looks_like_business_line(after):
+            line = re.sub(r"\s+", "", after)[:_BUSINESS_LINE_MAX_LEN]
+            if not _overlaps_company(line, company_norm):
+                return line
+
+    # 正文后备：「面试部门：xxx-yyy」取连字符前的主部门
+    body_match = _DEPARTMENT_RE.search(body)
+    if body_match:
+        raw = body_match.group(1).strip()
+        first = _DEPARTMENT_SPLIT_RE.split(raw, maxsplit=1)[0].strip()
+        first = re.sub(r"\s+", "", first)
+        if _looks_like_business_line(first):
+            if not _overlaps_company(first, company_norm):
+                return first[:_BUSINESS_LINE_MAX_LEN]
+
+    return ""
+
+
+def _overlaps_company(text: str, company: str) -> bool:
+    """业务线与 company 重复（相等、子串、超集）时为 True。"""
+    t = (text or "").strip()
+    c = (company or "").strip()
+    if not t or not c:
+        return False
+    return t == c or t in c or c in t
+
+
 def build_title(
     event_type: str,
     company: str,
     action: str,
     subject: str = "",
+    *,
+    business_line: str = "",
 ) -> str:
-    """确定性重建日历标题为「[中文标签] 公司」，供 calendar_match 认领旧日程。
+    """确定性重建日历标题为「[中文标签] 公司[·业务线]」，供 calendar_match 认领旧日程。
 
-    - cancel → [取消] 公司
-    - create / reschedule → [面试|笔试|测评|其他] 公司
+    - cancel → [取消] 公司[·业务线]
+    - create / reschedule → [面试|笔试|测评|其他] 公司[·业务线]
     - 公司为空时回退到主题前 40 字，保证至少带 [标签] 前缀。
+    - 业务线为空时仅输出「公司」；业务线存在时用 · 拼接，避免「同公司不同业务线」合并。
     """
     name = (company or "").strip() or (subject or "").strip()[:40]
+    bl = (business_line or "").strip()
+    if bl:
+        name = f"{name}·{bl}" if name else bl
     labels = {
         "interview": "面试",
         "exam": "笔试",
@@ -605,8 +694,10 @@ def build_reminder_title(
     end_at: str,
     subject: str = "",
     task_duration_minutes: Optional[int] = None,
+    *,
+    business_line: str = "",
 ) -> str:
-    title = build_title(event_type, company, action, subject)
+    title = build_title(event_type, company, action, subject, business_line=business_line)
     if action == "cancel":
         return title
     if task_duration_minutes and task_duration_minutes > 0:
@@ -803,19 +894,23 @@ def heuristic_parse(mail: MailItem) -> Optional[CandidateEvent]:
     action = detect_action(blob)
     company = guess_company(mail.subject, body)
     event_type = detect_event_type(blob)
+    # title 与 company 字段都使用归一后的 company，避免「[面试] 阿里巴巴校园招聘·千问事业部」这种未归一拼接
+    normalized_company = normalize_company_name(company)
+    business_line = extract_business_line(mail.subject, body, company=normalized_company)
 
     if action == "cancel":
         return CandidateEvent(
             message_id=mail.message_id,
             subject=mail.subject,
-            title=build_title(event_type, company, "cancel", mail.subject),
+            title=build_title(event_type, normalized_company, "cancel", mail.subject, business_line=business_line),
             event_type=event_type,
             action="cancel",
-            company=company,
+            company=normalized_company,
             description="",
             confidence=0.8 if company else 0.55,
             source_snippet=body[:300],
             references=list(mail.references),
+            business_line=business_line,
         )
 
     # 岗位流转等：有截止确认时刻，但不建面试/笔试日程
@@ -839,7 +934,7 @@ def heuristic_parse(mail: MailItem) -> Optional[CandidateEvent]:
     times = [default_slot] if default_slot else parse_all_datetimes(blob, now=now)
     meeting_url = extract_meeting_url(body)
     location = extract_location(body) or meeting_url
-    title = build_title(event_type, company, action, mail.subject)
+    title = build_title(event_type, normalized_company, action, mail.subject, business_line=business_line)
     stage = classify_stage(blob)
     confidence = 0.75 if stage == "confirmed" or action == "reschedule" else 0.55
     if company:
@@ -863,7 +958,7 @@ def heuristic_parse(mail: MailItem) -> Optional[CandidateEvent]:
             end_at=_iso(end),
             deadline=_iso(end),
             location=(location or "")[:200],
-            company=company,
+            company=normalized_company,
             description="",
             meeting_url=meeting_url,
             time_precision="window",
@@ -871,6 +966,7 @@ def heuristic_parse(mail: MailItem) -> Optional[CandidateEvent]:
             confidence=min(confidence, 0.95),
             source_snippet=body[:300],
             references=list(mail.references),
+            business_line=business_line,
         )
 
     start = times[0] if times else None
@@ -892,13 +988,14 @@ def heuristic_parse(mail: MailItem) -> Optional[CandidateEvent]:
         start_at=_iso(start),
         end_at=_iso(end),
         location=location[:200],
-        company=company,
+        company=normalized_company,
         description="",
         meeting_url=meeting_url,
         time_precision="fixed",
         confidence=min(confidence, 0.95),
         source_snippet=body[:300],
         references=list(mail.references),
+        business_line=business_line,
     )
 
 
@@ -924,6 +1021,7 @@ def normalize_event(event: CandidateEvent) -> CandidateEvent:
     )
     company = normalize_company_name(event.company)[:40]
     location = prefer_place(str(event.location or ""), str(event.meeting_url or ""))
+    business_line = (event.business_line or "").strip()
     if event_type == "schedule_invite":
         title = _schedule_invite_title(company, event.subject)
     elif time_precision == "window":
@@ -935,9 +1033,10 @@ def normalize_event(event: CandidateEvent) -> CandidateEvent:
             end_at,
             event.subject,
             task_duration_minutes,
+            business_line=business_line,
         )
     else:
-        title = build_title(event_type, company, action, event.subject)
+        title = build_title(event_type, company, action, event.subject, business_line=business_line)
 
     return CandidateEvent(
         message_id=event.message_id,
@@ -958,6 +1057,7 @@ def normalize_event(event: CandidateEvent) -> CandidateEvent:
         source_snippet=str(event.source_snippet or "")[:300],
         references=list(event.references or []),
         sent_at=str(event.sent_at or ""),
+        business_line=business_line,
     )
 
 
@@ -977,6 +1077,7 @@ def merge_llm_with_heuristic(
     heur_type = heuristic.event_type if heuristic else ""
     heur_precision = heuristic.time_precision if heuristic else ""
     heur_duration = heuristic.task_duration_minutes if heuristic else None
+    heur_business_line = heuristic.business_line if heuristic else ""
 
     start_at = fill(llm_event.start_at, heur_start)
     end_at = fill(llm_event.end_at, heur_end)
@@ -1025,6 +1126,7 @@ def merge_llm_with_heuristic(
         source_snippet=llm_event.source_snippet,
         references=list(llm_event.references or []),
         sent_at=llm_event.sent_at or (heuristic.sent_at if heuristic else ""),
+        business_line=fill(llm_event.business_line, heur_business_line),
     )
 
 
@@ -1080,6 +1182,10 @@ def _event_from_llm_data(mail: MailItem, data: dict[str, Any]) -> LlmParseResult
     company = str(data.get("company") or "").strip() or guess_company(
         mail.subject, mail.body
     )
+    business_line = (
+        str(data.get("business_line") or "").strip()
+        or extract_business_line(mail.subject, mail.body, company=company)
+    )
     model_duration = (
         int(data["task_duration_minutes"])
         if isinstance(data.get("task_duration_minutes"), (int, float))
@@ -1111,6 +1217,7 @@ def _event_from_llm_data(mail: MailItem, data: dict[str, Any]) -> LlmParseResult
         source_snippet=mail.body[:300],
         references=list(mail.references),
         sent_at=str(mail.date or ""),
+        business_line=business_line,
     )
     if incomplete_error:
         return LlmParseResult(
@@ -1145,12 +1252,16 @@ def llm_parse(
                 "stage(confirmed|schedule_invite|other), "
                 "event_type(interview|exam|assessment|other), "
                 "time_precision(fixed|window|unknown), "
-                "title, company, start_at(YYYY-MM-DDTHH:MM:SS, Asia/Shanghai), "
+                "title, company, business_line, "
+                "start_at(YYYY-MM-DDTHH:MM:SS, Asia/Shanghai), "
                 "end_at, deadline, location, meeting_url, "
                 "task_duration_minutes(正整数或null), confidence(0-1).\n"
                 "规则:\n"
                 "- company 必填：填招聘方公司/机构简称（如 美团、字节跳动、快手）；"
                 "实在无法判断时填空串。\n"
+                "- business_line：所属业务部/部门/事业群简称（如 千问事业部、淘天集团、阿里云、抖音电商）。"
+                "同一公司不同业务线的面试必须分别抽取，绝不可合并。无法判断时填空串。\n"
+                "- business_line 不要拼进 company，company 仍填招聘方。\n"
                 "- 取消面试/无需参加：action=cancel，relevant=true，可不填时间。\n"
                 "- 已确认时刻的面试、固定开考笔试：time_precision=fixed，"
                 "必须填 start_at、end_at、location；线上日程的 location 填会议链接。\n"

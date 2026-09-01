@@ -51,6 +51,13 @@ def split_title(summary: str) -> tuple[str, str]:
     return match.group(1).strip(), match.group(2).strip()
 
 
+def split_business_line(title_company: str) -> str:
+    """从 title_company 里提取业务线（`阿里巴巴·千问事业部` → `千问事业部`）。"""
+    if not title_company or "·" not in title_company:
+        return ""
+    return title_company.split("·", 1)[1].strip()
+
+
 def _type_conflicts(label: str, event_type: str) -> bool:
     label_type = LABEL_TO_TYPE.get(label)
     if not label_type or event_type in ("", "other"):
@@ -83,6 +90,7 @@ def match_calendar_event(
     company = (event.company or "").strip()
     if not company:
         return None
+    event_business_line = (event.business_line or "").strip()
 
     same_company = []
     for candidate in items:
@@ -90,6 +98,10 @@ def match_calendar_event(
         if not label or not companies_match(company, title_company):
             continue
         if _type_conflicts(label, event.event_type):
+            continue
+        # 业务线差异化：同公司不同业务线不能合并（千问/淘天等场景）
+        candidate_business_line = split_business_line(title_company)
+        if candidate_business_line != event_business_line:
             continue
         same_company.append(candidate)
 
