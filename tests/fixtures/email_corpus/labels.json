@@ -98,6 +98,22 @@
       "notes": "badcase：空中宣讲会直播群发，正文『面试官』曾误判为面试，把直播时间写成面试日程"
     },
     {
+      "id": "synthetic_hikvision_info_session",
+      "eml": "_synthetic_hikvision_info_session.eml",
+      "category": "info_session",
+      "expect": {
+        "coarse_pass": false,
+        "stage": null,
+        "action": null,
+        "event_type": null,
+        "should_create_event": false,
+        "company_contains": null,
+        "start_at_prefix": null,
+        "must_not_start_at_prefix": null
+      },
+      "notes": "合成：海康威视风格「空宣直播开播」邮件，主题含「空宣」+「直播开播」+「今晚」；即使正文提了「面试官」，也应在粗过滤阶段挡掉，不该建日历事件"
+    },
+    {
       "id": "jd_jds_assessment",
       "eml": "【京东校招】2027_JDS测评通知.eml",
       "category": "assessment_open_window",
