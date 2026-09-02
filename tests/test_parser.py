@@ -970,6 +970,42 @@ def test_normalize_fixed_without_end_at_computes_from_duration():
     assert out.end_at == "2026-09-10T15:30:00"
 
 
+def test_normalize_fixed_preserves_explicit_end_at_from_llm():
+    """LLM 显式给了 end_at（如『14:00-15:30」）时，不被代码覆盖。
+    针对有明确起止的邮件（如 拼多多的『2026年8月16日 19:00-21:00」）。
+    """
+    # 1) 面试 14:00-15:30（1.5h 显式结束时间）
+    event = CandidateEvent(
+        message_id="<m@qq.com>",
+        subject="【拼多多】面试",
+        title="[面试] 拼多多",
+        event_type="interview",
+        action="create",
+        start_at="2026-08-16T19:00:00",
+        end_at="2026-08-16T21:00:00",
+        company="拼多多",
+        time_precision="fixed",
+    )
+    out = normalize_event(event)
+    assert out.end_at == "2026-08-16T21:00:00"
+
+    # 2) 即便 task_duration_minutes 存在，也优先用 LLM 的 end_at
+    event = CandidateEvent(
+        message_id="<m@qq.com>",
+        subject="【某公司】面试",
+        title="[面试] 某公司",
+        event_type="interview",
+        action="create",
+        start_at="2026-09-10T14:00:00",
+        end_at="2026-09-10T15:30:00",
+        company="某公司",
+        time_precision="fixed",
+        task_duration_minutes=60,  # 不一致：明示 1.5h end_at
+    )
+    out = normalize_event(event)
+    assert out.end_at == "2026-09-10T15:30:00"
+
+
 def test_normalize_empty_company_falls_back_to_subject():
     event = CandidateEvent(
         message_id="<m@qq.com>",
