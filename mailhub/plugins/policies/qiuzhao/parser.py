@@ -232,12 +232,14 @@ _ENGLISH_WINDOW_DURATION_RE = re.compile(
 )
 
 # 选时间截止日里的“时间”，不是面试开始时间
+# 注意：用 [\s\S] 而不是 . 是因为 BeautifulSoup.get_text('\n') 会在 block
+# 之间插入换行，让「截止」关键词和日期可能跨行；Python 3 默认 . 不匹配 \n。
 DEADLINE_CONTEXT_RE = re.compile(
-    r"(?:前完成|前选择|前预约|前确认|截止|之前选|之前完成).{0,8}"
+    r"(?:前完成|前选择|前预约|前确认|截止|之前选|之前完成)[\s\S]{0,8}"
     r"(?:20\d{2}\s*[年/-]\s*)?\d{1,2}\s*[月/-]\s*\d{1,2}"
     r"|"
     r"(?:20\d{2}\s*[年/-]\s*)?\d{1,2}\s*[月/-]\s*\d{1,2}"
-    r".{0,12}(?:前完成|前选择|前预约|前确认|截止)"
+    r"[\s\S]{0,12}(?:前完成|前选择|前预约|前确认|截止)"
 )
 
 
@@ -422,12 +424,43 @@ def parse_datetime(text: str, now: Optional[datetime] = None) -> Optional[dateti
     return None
 
 
-def parse_all_datetimes(text: str, now: Optional[datetime] = None) -> list[datetime]:
+def parse_all_datetimes(
+    text: str,
+    now: Optional[datetime] = None,
+    *,
+    skip_deadline_context: bool = False,
+) -> list[datetime]:
+    """从 text 里提取所有匹配 DATETIME_PATTERNS 的 datetime。
+
+    skip_deadline_context=True 时：先扫出 DEADLINE_CONTEXT_RE 命中过的所有日期
+    （如 9月4），然后丢掉正文里同一日期的所有 datetime。该策略适用于「正文里有
+    具体开场时刻 + 还有一个『预约/选择截止」时刻」的场景——后者不应被误当作
+    end_at（如【Shopee】预约成功通知 正文里「2026年9月5日 15:30」与
+    「2026年9月4日下午2点」）。
+
+    之所以不是仅仅按 span 重叠过滤，是因为同一天日期在正文里可能出现两次
+    （如 Shopee 邮件倒数第二行「可预约期限时间（2026年9月4日下午2点00分）」），
+    第一处 DEADLINE_CONTEXT_RE 会命中并跳过，但第二处不一定能命中 span 重叠。
+    """
     now = now or datetime.now(TZ)
+
+    deadline_date_keys: set[str] = set()
+    if skip_deadline_context:
+        for m in DEADLINE_CONTEXT_RE.finditer(text):
+            for dm in re.finditer(r"\d{1,2}\s*[月/-]\s*\d{1,2}", m.group()):
+                # 归一到 "9月4" / "9/4" / "9-4" 三个形式之一都能被 `ds in match.group()` 命中
+                deadline_date_keys.add(re.sub(r"\s+", "", dm.group()))
+
     found: list[tuple[int, datetime]] = []
     seen: set[str] = set()
     for pattern in DATETIME_PATTERNS:
         for match in pattern.finditer(text):
+            if skip_deadline_context:
+                normalized_match = re.sub(r"\s+", "", match.group())
+                if any(
+                    ds in normalized_match for ds in deadline_date_keys
+                ):
+                    continue
             dt = _datetime_from_match(match, now)
             if dt is None:
                 continue
@@ -966,7 +999,11 @@ def heuristic_parse(mail: MailItem) -> Optional[CandidateEvent]:
         if default_slot is None:
             return _schedule_invite_event(mail, company=company)
 
-    times = [default_slot] if default_slot else parse_all_datetimes(blob, now=now)
+    times = (
+        [default_slot]
+        if default_slot
+        else parse_all_datetimes(blob, now=now, skip_deadline_context=True)
+    )
     meeting_url = extract_meeting_url(body)
     location = extract_location(body) or meeting_url
     title = build_title(event_type, normalized_company, action, mail.subject, business_line=business_line)

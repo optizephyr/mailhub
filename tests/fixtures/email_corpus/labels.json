@@ -108,7 +108,9 @@
         "event_type": "assessment",
         "should_create_event": false,
         "should_create_reminder": true,
-        "company_contains": ["京东"],
+        "company_contains": [
+          "京东"
+        ],
         "start_at_prefix": null,
         "must_not_start_at_prefix": null
       },
@@ -125,7 +127,9 @@
         "event_type": "assessment",
         "should_create_event": false,
         "should_create_reminder": true,
-        "company_contains": ["快手"],
+        "company_contains": [
+          "快手"
+        ],
         "start_at_prefix": null,
         "must_not_start_at_prefix": null
       },
@@ -141,7 +145,9 @@
         "action": "create",
         "event_type": "exam",
         "should_create_event": true,
-        "company_contains": ["得物"],
+        "company_contains": [
+          "得物"
+        ],
         "start_at_prefix": "2026-05-16T10:00",
         "must_not_start_at_prefix": null
       },
@@ -157,7 +163,9 @@
         "action": "create",
         "event_type": "exam",
         "should_create_event": true,
-        "company_contains": ["拼多多"],
+        "company_contains": [
+          "拼多多"
+        ],
         "start_at_prefix": "2026-08-16T19:00",
         "must_not_start_at_prefix": null
       },
@@ -174,7 +182,9 @@
         "event_type": "exam",
         "should_create_event": false,
         "should_create_reminder": true,
-        "company_contains": ["文远"],
+        "company_contains": [
+          "文远"
+        ],
         "start_at_prefix": "2026-05-17T08:00",
         "end_at_prefix": "2026-05-17T21:00",
         "must_not_start_at_prefix": null
@@ -193,7 +203,9 @@
         "detected_event_type": "interview",
         "should_create_event": false,
         "should_push_bark": true,
-        "company_contains": ["快手"],
+        "company_contains": [
+          "快手"
+        ],
         "start_at_prefix": null,
         "must_not_start_at_prefix": null
       },
@@ -211,7 +223,9 @@
         "detected_event_type": "interview",
         "should_create_event": false,
         "should_push_bark": true,
-        "company_contains": ["讯飞"],
+        "company_contains": [
+          "讯飞"
+        ],
         "start_at_prefix": null,
         "must_not_start_at_prefix": "2026-05-11T23:59"
       },
@@ -229,7 +243,9 @@
         "detected_event_type": "interview",
         "should_create_event": false,
         "should_push_bark": true,
-        "company_contains": ["美团"],
+        "company_contains": [
+          "美团"
+        ],
         "start_at_prefix": null,
         "must_not_start_at_prefix": "2026-04-16T20:21"
       },
@@ -247,7 +263,9 @@
         "detected_event_type": "interview",
         "should_create_event": false,
         "should_push_bark": true,
-        "company_contains": ["阿里"],
+        "company_contains": [
+          "阿里"
+        ],
         "start_at_prefix": null,
         "must_not_start_at_prefix": "2026-04-08T18:00"
       },
@@ -265,7 +283,9 @@
         "detected_event_type": "interview",
         "should_create_event": false,
         "should_push_bark": true,
-        "company_contains": ["阿里"],
+        "company_contains": [
+          "阿里"
+        ],
         "start_at_prefix": null,
         "must_not_start_at_prefix": "2026-04-10T16:00"
       },
@@ -283,7 +303,9 @@
         "detected_event_type": "interview",
         "should_create_event": false,
         "should_push_bark": true,
-        "company_contains": ["阿里"],
+        "company_contains": [
+          "阿里"
+        ],
         "start_at_prefix": null,
         "must_not_start_at_prefix": "2026-04-13T19:00"
       },
@@ -299,7 +321,9 @@
         "action": "create",
         "event_type": "interview",
         "should_create_event": true,
-        "company_contains": ["阿里"],
+        "company_contains": [
+          "阿里"
+        ],
         "start_at_prefix": "2026-09-07T15:00",
         "must_not_start_at_prefix": null
       },
@@ -315,7 +339,9 @@
         "action": "create",
         "event_type": "interview",
         "should_create_event": true,
-        "company_contains": ["阿里"],
+        "company_contains": [
+          "阿里"
+        ],
         "start_at_prefix": "2026-09-04T16:00",
         "must_not_start_at_prefix": null
       },
@@ -331,7 +357,9 @@
         "action": "create",
         "event_type": "interview",
         "should_create_event": true,
-        "company_contains": ["腾讯"],
+        "company_contains": [
+          "腾讯"
+        ],
         "start_at_prefix": "2026-04-19T16:15",
         "must_not_start_at_prefix": null
       },
@@ -347,7 +375,9 @@
         "action": "create",
         "event_type": "other",
         "should_create_event": false,
-        "company_contains": ["网易"],
+        "company_contains": [
+          "网易"
+        ],
         "start_at_prefix": null,
         "must_not_start_at_prefix": "2027-06-07T18:00"
       },
@@ -379,7 +409,9 @@
         "action": "cancel",
         "event_type": "interview",
         "should_create_event": true,
-        "company_contains": ["腾讯"],
+        "company_contains": [
+          "腾讯"
+        ],
         "start_at_prefix": null,
         "must_not_start_at_prefix": null
       },
@@ -395,7 +427,9 @@
         "action": "reschedule",
         "event_type": "interview",
         "should_create_event": true,
-        "company_contains": ["美团"],
+        "company_contains": [
+          "美团"
+        ],
         "start_at_prefix": "2026-08-28T15:00",
         "must_not_start_at_prefix": null
       },
@@ -411,7 +445,10 @@
         "action": "create",
         "event_type": "interview",
         "should_create_event": true,
-        "company_contains": ["Shopee", "shopee"],
+        "company_contains": [
+          "Shopee",
+          "shopee"
+        ],
         "start_at_prefix": "2026-09-05T14:00",
         "end_at_prefix": "2026-09-05T15:00",
         "must_not_start_at_prefix": null
@@ -429,11 +466,34 @@
         "event_type": "interview",
         "should_create_event": false,
         "should_push_bark": false,
-        "company_contains": ["Shopee", "shopee"],
+        "company_contains": [
+          "Shopee",
+          "shopee"
+        ],
         "start_at_prefix": null,
         "must_not_start_at_prefix": null
       },
       "notes": "合成：「预约成功」+ 只给链接 —— 不建日历、不重复推 Bark；由用户到 mokahr 后台查看"
+    },
+    {
+      "id": "real_shopee_booking_confirmed",
+      "eml": "【Shopee】预约面试成功通知.eml",
+      "category": "interview_confirmed",
+      "expect": {
+        "coarse_pass": true,
+        "stage": "confirmed",
+        "action": "create",
+        "event_type": "interview",
+        "should_create_event": true,
+        "company_contains": [
+          "Shopee",
+          "shopee"
+        ],
+        "start_at_prefix": "2026-09-05T15:30",
+        "end_at_prefix": "2026-09-05T16:30",
+        "must_not_start_at_prefix": "2026-09-04T"
+      },
+      "notes": "真实邮件：HTML 正文里含「2026年9月5日 15:30」（视频面试）+ 「2026年9月4日下午2点」（预约修改截止）。新启发式应建日历，end_at 应为 start+1h，start_at 不能是预约截止日。"
     }
   ]
 }
