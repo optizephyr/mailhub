@@ -919,6 +919,57 @@ def test_normalize_reschedule_keeps_stage_label():
     assert out.title == "[面试] 美团"
 
 
+def test_normalize_fixed_without_end_at_computes_from_duration():
+    """fixed-precision 缺 end_at 时按 start_at + duration 算，不会保留空串。
+    针对【Shopee】这种 LLM 不填 end_at 也不被 booking deadline 干扰的场景。
+    """
+    # 1) 面试默认 1h
+    event = CandidateEvent(
+        message_id="<m@qq.com>",
+        subject="【Shopee】预约面试成功通知",
+        title="[面试] Shopee",
+        event_type="interview",
+        action="create",
+        start_at="2026-09-05T15:30:00",
+        end_at="",
+        company="Shopee",
+        time_precision="fixed",
+    )
+    out = normalize_event(event)
+    assert out.end_at == "2026-09-05T16:30:00"
+
+    # 2) 笔试默认 2h
+    event = CandidateEvent(
+        message_id="<m@qq.com>",
+        subject="【某公司】笔试",
+        title="[笔试] 某公司",
+        event_type="exam",
+        action="create",
+        start_at="2026-09-10T19:00:00",
+        end_at="",
+        company="某公司",
+        time_precision="fixed",
+    )
+    out = normalize_event(event)
+    assert out.end_at == "2026-09-10T21:00:00"
+
+    # 3) task_duration_minutes 优先于默认时长
+    event = CandidateEvent(
+        message_id="<m@qq.com>",
+        subject="【某公司】面试",
+        title="[面试] 某公司",
+        event_type="interview",
+        action="create",
+        start_at="2026-09-10T14:00:00",
+        end_at="",
+        company="某公司",
+        time_precision="fixed",
+        task_duration_minutes=90,
+    )
+    out = normalize_event(event)
+    assert out.end_at == "2026-09-10T15:30:00"
+
+
 def test_normalize_empty_company_falls_back_to_subject():
     event = CandidateEvent(
         message_id="<m@qq.com>",

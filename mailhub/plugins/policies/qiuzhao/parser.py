@@ -1091,6 +1091,20 @@ def normalize_event(event: CandidateEvent) -> CandidateEvent:
         if isinstance(raw_duration, (int, float)) and raw_duration > 0
         else None
     )
+    # Defensive: fixed-precision 场景下如果 LLM/启发式都未填 end_at，按 start_at + duration 算
+    # 避免被【Shopee】这种「正文里有预约截止日」错当作 end_at 填入。
+    start_at_str = str(event.start_at or "")
+    if time_precision == "fixed" and not end_at and start_at_str:
+        minutes = task_duration_minutes or int(
+            default_duration_hours(event_type) * 60
+        )
+        try:
+            start_dt = datetime.fromisoformat(start_at_str)
+            end_at = (start_dt + timedelta(minutes=minutes)).isoformat(
+                timespec="seconds"
+            )
+        except ValueError:
+            pass
     company = normalize_company_name(event.company)[:40]
     location = prefer_place(str(event.location or ""), str(event.meeting_url or ""))
     business_line = (event.business_line or "").strip()
@@ -1245,10 +1259,10 @@ def _event_from_llm_data(mail: MailItem, data: dict[str, Any]) -> LlmParseResult
                 incomplete_error = "missing start_at/end_at for window task"
         elif (
             not data.get("start_at")
-            or not data.get("end_at")
             or not data.get("location")
         ):
-            incomplete_error = "missing start_at/end_at/location for non-cancel action"
+            # end_at 不再是必填：fixed-precision 的 end_at 由代码按 start_at + duration 算
+            incomplete_error = "missing start_at/location for non-cancel action"
 
     title = data.get("title") or mail.subject
     company = str(data.get("company") or "").strip() or guess_company(
@@ -1336,7 +1350,11 @@ def llm_parse(
                 "- business_line 不要拼进 company，company 仍填招聘方。\n"
                 "- 取消面试/无需参加：action=cancel，relevant=true，可不填时间。\n"
                 "- 已确认时刻的面试、固定开考笔试：time_precision=fixed，"
-                "必须填 start_at、end_at、location；线上日程的 location 填会议链接。\n"
+                "**只填 start_at 和 location**；end_at 不要从正文提取，"
+                "由代码按 start_at + 时长自动计算（面试默认 1h、笔试默认 2h）。\n"
+                "  · **正文里的『预约/选择截止」日期不能填进 end_at**——"
+                "那是预约修改 deadline，不是面试/笔试结束时间。\n"
+                "  · 线上日程的 location 填会议链接。\n"
                 "- 开放窗口（测评、任选时段完成的笔试、N 小时/工作日内完成）："
                 "time_precision=window，end_at 填截止，start_at 填窗口开始（可空），"
                 "location 可空，链接放 meeting_url。\n"
