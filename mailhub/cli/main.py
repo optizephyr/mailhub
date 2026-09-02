@@ -139,7 +139,14 @@ def cmd_migrate_alibaba_divisions(args: argparse.Namespace) -> None:
         print("未发现可清理的「同公司不同业务线」旧日程。")
         return
     for change in changes:
-        suffix = "（已同步清理 processed_messages）" if change.purged_processed else ""
+        extras = []
+        if change.extra_message_ids:
+            extras.append(f"另有 {len(change.extra_message_ids)} 封关联邮件")
+        if change.purged_processed:
+            extras.append(f"清 mark_processed={change.purged_processed}")
+        if change.purged_action_receipts:
+            extras.append(f"清 action_executions={change.purged_action_receipts}")
+        suffix = f"（{'; '.join(extras)}）" if extras else ""
         print(
             f"  - #{change.event_row_id} {change.title!r} "
             f"company={change.company!r} "

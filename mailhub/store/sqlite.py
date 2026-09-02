@@ -714,5 +714,22 @@ class EventStore:
         self._conn.commit()
         return cur.rowcount
 
+    def delete_action_receipts_for_message(
+        self, source_id: str, message_id: str
+    ) -> int:
+        """迁移专用：按 (source_id, message_id) 删除 action_executions 中所有以该组合开头的记录。
+
+        idempotency_key 格式为 `{source_id}:{message_id}:{action_type}:{result}`，
+        所以前缀匹配能严格按 source+message 区分，不会误删其它邮件。
+        返回受影响行数。
+        """
+        prefix = f"{source_id}:{message_id}:"
+        cur = self._conn.execute(
+            "DELETE FROM action_executions WHERE idempotency_key LIKE ?",
+            (prefix + "%",),
+        )
+        self._conn.commit()
+        return cur.rowcount
+
     def close(self) -> None:
         self._conn.close()
