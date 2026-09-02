@@ -30,6 +30,7 @@ import yaml
 from mailhub.runtime.context import RunContext
 from mailhub.runtime.engine import run_once
 from mailhub.runtime.identity_migrate import migrate_identities
+from mailhub.runtime.migrate_bark_misclassified import reclassify_bark_misclassified
 from mailhub.store.sqlite import EventStore
 
 
@@ -205,6 +206,64 @@ def cmd_migrate_identities(args: argparse.Namespace) -> None:
         raise SystemExit(1)
 
 
+def cmd_migrate_bark_misclassified(args: argparse.Namespace) -> None:
+    """把「已预约成功」类邮件的 bark.push 记录标记为 misclassified，并从 processed_messages 清除。
+
+    背景：旧启发式会把「预约成功通知 / 已成功预约」类邮件识别为 schedule_invite，
+    从而推送「请预约」给已预约的候选人。新启发式 (CONFIRMED_BOOKING_SIGNALS) 会判
+    为 confirmed、正文无具体时间则丢弃。本命令把历史误判记录标注，不重复推 Bark。
+    """
+    settings = load_settings()
+    store = EventStore(settings.data_dir / "synced.sqlite")
+    try:
+        result = reclassify_bark_misclassified(
+            store,
+            settings.lifecycle_log_path,
+            source_id=settings.source_id,
+            dry_run=bool(args.dry_run),
+        )
+    finally:
+        store.close()
+
+    if not result.records:
+        print(
+            f"扫了 {result.scanned_lifecycle_entries} 条 lifecycle，"
+            "未发现需重分类的 bark.push 记录。"
+        )
+        return
+
+    for rec in result.records:
+        status = []
+        if rec.skipped_reason:
+            status.append(f"skip={rec.skipped_reason}")
+        else:
+            if rec.error_annotated:
+                status.append("error 已标注")
+            if rec.purged_processed:
+                status.append("processed_messages 已清")
+        suffix = f"（{'; '.join(status)}）" if status else ""
+        print(
+            f"  - mid={rec.message_id} subj={rec.subject!r} "
+            f"key={rec.keyword!r} ts={rec.ts}{suffix}"
+        )
+    if result.skipped_already_annotated:
+        print(
+            f"跳过 {result.skipped_already_annotated} 条已标注记录（重跑幂等）"
+        )
+    if result.skipped_no_action_record:
+        print(
+            f"跳过 {result.skipped_no_action_record} 条 lifecycle 里推了 Bark "
+            "但 action_executions 缺失 bark.push 行的异常记录"
+        )
+    verb = "将标注 + 清理" if args.dry_run else "已标注 + 清理"
+    # dry-run 时所有 records 都是「将变更」；非 dry-run 只看真正写过的。
+    n = len(result.records) if args.dry_run else len(result.changed)
+    print(
+        f"Bark 误判迁移：{verb} {n} 条记录；"
+        f"重跑后请用 `mailhub sync --full` 重新处理被清掉的邮件。"
+    )
+
+
 def cmd_sync(args: argparse.Namespace) -> None:
     settings = load_settings()
     require_mail_credentials(settings)
@@ -368,6 +427,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="只展示将回填的身份，不写入本地数据库",
     )
     identities.set_defaults(func=cmd_migrate_identities)
+
+    bark_misclassified = sub.add_parser(
+        "migrate-bark-misclassified",
+        help="标注历史「已预约成功」类 Bark 误推记录，清 processed_messages 后用新启发式重跑 sync",
+    )
+    bark_misclassified.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="只列出将被标注 + 清理的记录，不写入数据库",
+    )
+    bark_misclassified.set_defaults(func=cmd_migrate_bark_misclassified)
 
     alibaba = sub.add_parser(
         "migrate-alibaba-divisions",

@@ -208,6 +208,60 @@ def test_confirmed_notice_without_location_is_rejected():
     assert heuristic_parse(mail) is None
 
 
+def test_booking_confirmed_with_time_overrides_schedule_invite_signals():
+    """「预约成功」+ 明确时间：应判为 confirmed 并建日历（不能被「点此预约」等词劫持）。"""
+    mail = _mail(
+        subject="【Shopee】预约面试成功通知",
+        text=(
+            "您好，您已成功预约 Shopee 校招面试。\n"
+            "面试时间已确认：2026年9月5日 14:00-15:00\n"
+            "请点此预约链接登录：https://app.mokahr.com/...\n"
+            "会议链接：https://meeting.tencent.com/dm/shopee-confirmed"
+            "会议号：987654"
+        ),
+    )
+    assert classify_stage(f"{mail.subject}\n{mail.text}") == "confirmed"
+    event = heuristic_parse(mail)
+    assert event is not None
+    assert event.event_type == "interview"
+    assert event.time_precision == "fixed"
+    assert event.start_at.startswith("2026-09-05T14:00")
+    assert event.end_at.startswith("2026-09-05T15:00")
+    assert event.company == "Shopee"
+
+
+def test_booking_confirmed_without_time_is_dropped():
+    """「预约成功」+ 只给链接、无明确时间：不建日历、不重复推 Bark。"""
+    mail = _mail(
+        subject="【Shopee】预约面试成功通知",
+        text=(
+            "您好，您已成功预约 Shopee 校招面试。\n"
+            "请登录候选人后台查看具体时间："
+            "https://app.mokahr.com/m/candidate/applications/deliver-query/shopee"
+        ),
+    )
+    # stage 应是 confirmed（不是 schedule_invite），但启发式没有时间时应返回 None
+    assert classify_stage(f"{mail.subject}\n{mail.text}") == "confirmed"
+    assert heuristic_parse(mail) is None
+
+
+def test_pure_schedule_invite_path_unchanged():
+    """「请预约」+ 无时间路径未破坏：仍归类为 schedule_invite 且能给出 deadline。"""
+    mail = _mail(
+        subject="【Shopee】校园招聘预约面试时间选择",
+        text=(
+            "请点击链接选择面试时间。\n"
+            "请于2026年9月4日 14:00前完成预约。"
+        ),
+    )
+    assert classify_stage(f"{mail.subject}\n{mail.text}") == "schedule_invite"
+    event = heuristic_parse(mail)
+    assert event is not None
+    assert event.event_type == "schedule_invite"
+    # 「2026年9月4日 14:00」是预约截止，不是面试开始时间
+    assert event.start_at == ""
+
+
 def test_cancel_mail_action():
     mail = MailItem(
         message_id="<cancel@qq.com>",

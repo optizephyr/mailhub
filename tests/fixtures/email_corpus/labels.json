@@ -400,6 +400,40 @@
         "must_not_start_at_prefix": null
       },
       "notes": "合成：改期通知"
+    },
+    {
+      "id": "synthetic_shopee_booking_confirmed_with_time",
+      "eml": "_synthetic_shopee_booking_confirmed_with_time.eml",
+      "category": "interview_confirmed",
+      "expect": {
+        "coarse_pass": true,
+        "stage": "confirmed",
+        "action": "create",
+        "event_type": "interview",
+        "should_create_event": true,
+        "company_contains": ["Shopee", "shopee"],
+        "start_at_prefix": "2026-09-05T14:00",
+        "end_at_prefix": "2026-09-05T15:00",
+        "must_not_start_at_prefix": null
+      },
+      "notes": "合成：「预约成功」+ 明确时间 —— 应识别为 confirmed，建日历（不再被「请预约」类信号劫持）"
+    },
+    {
+      "id": "synthetic_shopee_booking_confirmed_no_time",
+      "eml": "_synthetic_shopee_booking_confirmed_no_time.eml",
+      "category": "booking_confirmed_no_time",
+      "expect": {
+        "coarse_pass": true,
+        "stage": "confirmed",
+        "action": "create",
+        "event_type": "interview",
+        "should_create_event": false,
+        "should_push_bark": false,
+        "company_contains": ["Shopee", "shopee"],
+        "start_at_prefix": null,
+        "must_not_start_at_prefix": null
+      },
+      "notes": "合成：「预约成功」+ 只给链接 —— 不建日历、不重复推 Bark；由用户到 mokahr 后台查看"
     }
   ]
 }

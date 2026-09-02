@@ -322,6 +322,18 @@ class EventStore:
         )
         self._conn.commit()
 
+    def annotate_action_error(self, idempotency_key: str, error: str) -> int:
+        """迁移专用：仅更新 action_executions.error 字段，保留其它列原值（包括 executed_at）。
+
+        返回受影响行数（0 表示该 idempotency_key 不存在）。
+        """
+        cur = self._conn.execute(
+            "UPDATE action_executions SET error = ? WHERE idempotency_key = ?",
+            (error, idempotency_key),
+        )
+        self._conn.commit()
+        return cur.rowcount
+
     # --- calendar and reminders rows ---
 
     def _load_sinks(self, event_row_id: int) -> dict[str, str]:
@@ -730,6 +742,53 @@ class EventStore:
         )
         self._conn.commit()
         return cur.rowcount
+
+    def delete_orphan_action_receipts(self) -> tuple[int, list[str]]:
+        """迁移专用：清理指向已不存在 calendar_events 行的 action_executions 条目。
+
+        idempotency_key 为 `{source_id}:{message_id}:{action_type}:{result}`；
+        其中 message_id 可能含 `@` 但不包含 `:`，可从右侧安全 rsplit 两段拆解。
+        同时按对应 message_id 删除 processed_messages，避免后续 sync 因仍走
+        idempotency_key 的 succeeded 旧记录而误返 skipped。
+
+        返回 (action_executions 清理行数, 对应 message_id 列表)。
+        """
+        cur = self._conn.execute(
+            """
+            SELECT idempotency_key FROM action_executions
+            WHERE external_id IS NOT NULL AND external_id <> ''
+              AND external_id NOT IN (SELECT id FROM calendar_events)
+            """
+        )
+        keys = [row["idempotency_key"] for row in cur.fetchall()]
+
+        orphan_message_ids: list[str] = []
+        for key in keys:
+            chunks = key.rsplit(":", 2)
+            if len(chunks) < 3:
+                continue
+            head = chunks[0]
+            sub = head.split(":", 1)
+            if len(sub) != 2:
+                continue
+            source_id, message_id = sub[0], sub[1]
+            if message_id:
+                orphan_message_ids.append(message_id)
+
+        cur2 = self._conn.execute(
+            """
+            DELETE FROM action_executions
+            WHERE external_id IS NOT NULL AND external_id <> ''
+              AND external_id NOT IN (SELECT id FROM calendar_events)
+            """
+        )
+        with self._conn:
+            for mid in orphan_message_ids:
+                self._conn.execute(
+                    "DELETE FROM processed_messages WHERE message_id = ?",
+                    (mid,),
+                )
+        return cur2.rowcount, orphan_message_ids
 
     def close(self) -> None:
         self._conn.close()

@@ -131,6 +131,32 @@ DEFAULT_SLOT_SIGNALS = (
     "否则安排在",
 )
 
+# 「已成功预约 / 场次已敲定」：候选人已确定场次（即便正文未复述具体时间）。
+# 优先级最高，会覆盖 schedule_invite 信号 —— 避免「预约成功通知」被误判为「请预约」。
+CONFIRMED_BOOKING_SIGNALS = (
+    "预约成功",
+    "预约成功通知",
+    "面试成功通知",
+    "预约面试成功",
+    "已成功预约",
+    "已成功安排",
+    "面试已预约",
+    "面试已确认",
+    "时间已敲定",
+    "面试时间已敲定",
+    "已敲定",
+    "已选定",
+    "你已成功",
+    "您已成功",
+    "已为你预约",
+    "已为您预约",
+    "scheduled successfully",
+    "you have been scheduled",
+    "your booking is confirmed",
+    "booking confirmed",
+    "interview booked",
+)
+
 # 「正式通知」：时间已确认，应当建日历
 CONFIRMED_SIGNALS = (
     "面试通知",
@@ -276,6 +302,11 @@ def detect_action(text: str) -> str:
 def classify_stage(text: str) -> str:
     """Return confirmed | schedule_invite | unknown."""
     lower = text.lower()
+
+    # 「已成功预约 / 场次已敲定」优先级最高 —— 避免「预约成功通知」被「点此预约」等同封提醒词误判为 schedule_invite。
+    if any(s in text or s.lower() in lower for s in CONFIRMED_BOOKING_SIGNALS):
+        return "confirmed"
+
     confirmed = any(s.lower() in lower or s in text for s in CONFIRMED_SIGNALS)
     scheduling = any(s.lower() in lower or s in text for s in SCHEDULE_INVITE_SIGNALS)
 
@@ -286,10 +317,14 @@ def classify_stage(text: str) -> str:
             "时间已确认",
             "面试时间已确认",
             "已为您安排",
+            "已成功预约",
+            "预约成功",
+            "面试已确认",
             "请准时参加",
             "请准时出席",
             "会议号",
             "has been scheduled",
+            "scheduled successfully",
             "interview confirmed",
         )
     )
@@ -1278,6 +1313,15 @@ def llm_parse(
                 "- 若是让候选人「选择/预约/挑选」场次且没有可出场时刻："
                 "stage=schedule_invite，relevant=true，time_precision=unknown；"
                 "预约截止填 deadline，不填 start_at/end_at/location。\n"
+                "- 区分「请选择/请预约/点此预约」（stage=schedule_invite）"
+                "与「预约成功/已成功预约/已为您预约/预约成功通知/scheduled successfully」"
+                "（stage=confirmed）：\n"
+                "  · 前者是邀请候选人选时间，后者是候选人已确定场次。\n"
+                "  · 成功预约的邮件若正文给出具体面试时间（如 2026-09-05 14:00），"
+                "按 fixed 提取，填 start_at/end_at/location。\n"
+                "  · 成功预约的邮件若未复述时间但给了 mokahr/会议链接，"
+                "stage=confirmed，time_precision=unknown，不填 start_at/end_at；"
+                "此时 relevant 仍为 true，但本封不产生日历事件（让用户在 mokahr 查看）。\n"
                 "- 若信里给出逾期默认/保底出场时刻，则不是 schedule_invite；"
                 "按该时刻提取 fixed 日程。\n"
                 "- 时间已确认的正式通知、可完成的开放窗口、schedule_invite "
