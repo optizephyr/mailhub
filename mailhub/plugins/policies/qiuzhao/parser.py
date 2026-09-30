@@ -1387,6 +1387,10 @@ def llm_parse(
                 "- 时间已确认的正式通知、可完成的开放窗口、schedule_invite "
                 "都属于 relevant=true。\n"
                 "- 选时间的截止日不是面试开始时间。\n\n"
+                "- 正文里的相对日期和时间（如「明天」「本周五」）必须以邮件发送时间为基准；"
+                "邮件发送时间未知时不要按当前日期猜测。\n\n"
+                f"邮件发送时间: {mail.date or '未知'}\n"
+                "邮件时区: Asia/Shanghai\n"
                 f"主题: {mail.subject}\n"
                 f"正文:\n{mail.body[:4000]}"
             ),

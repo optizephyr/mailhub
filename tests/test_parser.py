@@ -570,6 +570,51 @@ def test_parse_mail_model_accepts_schedule_invite_without_heuristic(
     assert records[0]["output_parsed"]["relevant"] is True
 
 
+def test_llm_prompt_includes_mail_date_as_relative_time_anchor(
+    tmp_path: Path, monkeypatch
+):
+    settings = _settings(
+        tmp_path,
+        llm_api_base="https://api.example.com/v1",
+        llm_api_key="k",
+    )
+    mail = _mail(
+        subject="【美团】面试通知",
+        date="2026-08-17T15:41:44+08:00",
+        text="请于明天下午参加面试。",
+    )
+    captured = {}
+
+    class FakeResp:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps({"relevant": False})
+                        }
+                    }
+                ]
+            }
+
+    def fake_post(*_args, **kwargs):
+        captured.update(kwargs["json"])
+        return FakeResp()
+
+    monkeypatch.setattr(
+        "mailhub.plugins.policies.qiuzhao.parser.requests.post", fake_post
+    )
+
+    assert parse_mail(mail, settings) is None
+    user_prompt = captured["messages"][1]["content"]
+    assert "邮件发送时间: 2026-08-17T15:41:44+08:00" in user_prompt
+    assert "邮件时区: Asia/Shanghai" in user_prompt
+    assert "必须以邮件发送时间为基准" in user_prompt
+
+
 def test_parse_mail_keeps_think_in_raw_but_not_as_separate_field(
     tmp_path: Path, monkeypatch
 ):
